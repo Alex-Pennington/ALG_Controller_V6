@@ -1,9 +1,9 @@
 #include <Arduino.h>
 #include "HX711.h"
-#include <max6675.h>
 #include <PID_v1.h>
 #include <EEPROM.h>
 #include "controller.h"
+#include <OneWire.h>
 
 #define VERSION "0.6.0.1"
 #define SENDDELAY 50
@@ -12,10 +12,17 @@
 #define MY_RF24_PA_LEVEL RF24_PA_LOW
 #define MY_RF24_CE_PIN 49
 #define MY_RF24_CS_PIN 53
-#define MY_DEBUG
+//#define MY_DEBUG
 #include <MySensors.h>
 
 //Structs
+
+struct DS18B20Values {
+  byte addr[8];
+  float C;
+  float F;
+};
+DS18B20Values ds18b20Values[5];
 
 struct ConfigurationValues {
   int SENSORLOOPTIME = 23000;
@@ -98,34 +105,18 @@ static long AREF_V = 0;
 static bool ssrArmed = false;
 
 //Pin Definitions
-#define PressurePIN A15
-#define NTCPin A13
-#define NTCEnable 45
-#define emon_Input_PIN A9
-#define SSRArmed_PIN  29
 #define HX711_dout 9
 #define HX711_sck 10
+#define ElementPowerPin3 25
+#define SSRArmed_PIN 29
+#define speakerPin 39
 #define ElementPowerPin 41
 #define ElementPowerPin2 43
-#define ElementPowerPin3 25
-#define thermo0DO 32
-#define thermo0CS 31
-#define thermo0CLK 30
-#define thermo1DO 35
-#define thermo1CS 34
-#define thermo1CLK 33
-#define thermo2DO 48
-#define thermo2CS 47
-#define thermo2CLK 46
-#define speakerPin 39
-
-//Scale
-HX711 LoadCell;
-
-//Thermocouples
-MAX6675 thermocouple0(thermo0CLK, thermo0CS, thermo0DO);
-MAX6675 thermocouple1(thermo1CLK, thermo1CS, thermo1DO);
-MAX6675 thermocouple2(thermo2CLK, thermo2CS, thermo2DO);
+#define DS18B20_PIN 44
+#define NTCEnable 45
+#define PressurePIN A15
+#define NTCPin A13
+#define emon_Input_PIN A9
 
 // MySensors Child IDs
 enum CHILD_ID {
@@ -254,6 +245,13 @@ MyMessage msgCurCAL(CHILD_ID::Curr_CAL, V_LEVEL);
 MyMessage msgSSRFailAlarm(CHILD_ID::SSRFail_Alarm, V_STATUS);
 MyMessage msgBoardVoltage(CHILD_ID::BoardVoltage, V_LEVEL);
 
+//Scale
+HX711 LoadCell;
+
+//DS18B20
+OneWire  ds(DS18B20_PIN);  // on pin DS18B20_PIN (a 4.7K resistor is necessary)
+
+//PIDs
 PID myPID1(&pid1.input, &pid1.output, &pid1.setpoint, pid1.kp, pid1.ki, pid1.kd, DIRECT);
 int gap1 = 0;
 
@@ -274,15 +272,16 @@ void printConfig();
 long getBandgap(void);
 void receive(const MyMessage & message);
 void sendInfo(String);
+void DS18B20();
 
 void presentation()
 {
   //Send the sensor node sketch version information to the gateway
   sendSketchInfo("Controller", VERSION);
 
-  Serial3.begin(115200);
+  Serial.begin(115200);
 
-  if (configValues.sDebug) {Serial3.println("Presenting Sensors");}
+  if (configValues.sDebug) {Serial.println("Presenting Sensors");}
   present(CHILD_ID::PIDMODE_1, S_BINARY, "PID1 Lower");
   present(CHILD_ID::PIDSETPOINT_1, S_TEMP, "PID1 Setpoint");
   present(CHILD_ID::PIDkP0_1, S_LIGHT_LEVEL, "constKp");
@@ -346,21 +345,22 @@ void presentation()
   present(CHILD_ID::PID3_Threshold, S_TEMP, "PID3A");
 
   if (configValues.sDebug) {
-    Serial3.println("Presentation Complete");
+    Serial.println("Presentation Complete");
   }
 }
 
 void setup() {
-  FactoryResetEEPROM();
   LoadCell.begin(HX711_dout, HX711_sck);
 }
 
 void loop() {
+  
   DutyCycleLoop();
 
   AREF_V = getBandgap();
 
   if ( (millis() - SensorLoop_timer) > (unsigned long)configValues.SENSORLOOPTIME)  {
+    DS18B20();
     //Temp Alarm
     if (pid1.alarmThreshold < pid1.input) {
       sendInfo("PID1!");
@@ -421,14 +421,14 @@ void loop() {
 
 
     //Send Sensors
-    send(msgTemp0.set(thermocouple0.readFahrenheit(), 1), configValues.toACK);
+    send(msgTemp0.set(ds18b20Values[0].F, 1), configValues.toACK);
     wait(SENDDELAY);
-    send(msgTemp1.set(thermocouple1.readFahrenheit(), 1), configValues.toACK);
+    send(msgTemp1.set(ds18b20Values[1].F, 1), configValues.toACK);
     wait(SENDDELAY);
     wait(SENDDELAY);
     send(msgTemp3.set(steinhartValues.steinhart, 1), configValues.toACK);
     wait(SENDDELAY);
-    send(msgTemp4.set(thermocouple2.readFahrenheit(), 1), configValues.toACK);
+    send(msgTemp4.set(ds18b20Values[2].F, 1), configValues.toACK);
     wait(SENDDELAY);
     wait(SENDDELAY);
     send(msgScale.set(valueScale, 1), configValues.toACK);
@@ -460,27 +460,25 @@ void loop() {
     send(msgScaleRate.set(kgpsScale, 2), configValues.toACK);
     wait(SENDDELAY);
     if (configValues.sDebug) {
-      Serial3.println("----------------------------------------");
-      Serial3.print("Sensor Data Time (ms) ");
-      Serial3.println(millis());
-      Serial3.print("Condenser T0: ");
-      Serial3.println(thermocouple0.readFahrenheit());
-      Serial3.print("Upper Spool T1: ");
-      Serial3.println(thermocouple1.readFahrenheit());
-      Serial3.print("lower Spool T2: ");
-      Serial3.println(thermocouple2.readFahrenheit());
-      Serial3.print("Amb Temp DHT: ");
-      Serial3.print("Platter Temp: ");
-      Serial3.println(Steinhart());
-      Serial3.print("Humidity DHT: ");
-      Serial3.print("Scale : ");
-      Serial3.println(valueScale);
-      Serial3.print("Pressure 1: ");
-      Serial3.println(tempPress);
-      Serial3.print("Current : ");
-      Serial3.println(emonVars.rms);
-      Serial3.print("MEGA Voltage : ");
-      Serial3.println(AREF_V);
+      Serial.println("----------------------------------------");
+      Serial.print("Sensor Data Time (ms) ");
+      Serial.println(millis());
+      Serial.print("Condenser T0: ");
+      Serial.println(ds18b20Values[0].F);
+      Serial.print("Upper Spool T1: ");
+      Serial.println(ds18b20Values[1].F);
+      Serial.print("lower Spool T2: ");
+      Serial.println(ds18b20Values[2].F);
+      Serial.print("Platter Temp: ");
+      Serial.println(Steinhart());
+      Serial.print("Scale : ");
+      Serial.println(valueScale);
+      Serial.print("Pressure 1: ");
+      Serial.println(tempPress);
+      Serial.print("Current : ");
+      Serial.println(emonVars.rms);
+      Serial.print("MEGA Voltage : ");
+      Serial.println(AREF_V);
     }
     SensorLoop_timer = millis();
   }
@@ -688,80 +686,80 @@ void FactoryResetEEPROM() {
 }
 
 void printConfig() {
-  Serial3.print("zeroOffsetScale: ");
-  Serial3.println(calValues.zeroOffsetScale);
-  Serial3.print("press1Offset: ");
-  Serial3.println(calValues.press1Offset);
-  Serial3.print("scaleCal: ");
-  Serial3.println(calValues.scaleCal);
-  Serial3.print("pressCal1: ");
-  Serial3.println(calValues.pressCal1);
-  Serial3.print("PID1 Setpoint: ");
-  Serial3.println(pid1.setpoint);
-  Serial3.print("PID1 kp: ");
-  Serial3.println(pid1.kp);
-  Serial3.print("PID1 ki: ");
-  Serial3.println(pid1.ki);
-  Serial3.print("PID1 kd: ");
-  Serial3.println(pid1.kd);
-  Serial3.print("PID1 aggKp: ");
-  Serial3.println(pid1.aggKp);
-  Serial3.print("PID1 aggKi: ");
-  Serial3.println(pid1.aggKi);
-  Serial3.print("PID1 aggKd: ");
-  Serial3.println(pid1.aggKd);
-  Serial3.print("PID2 Setpoint: ");
-  Serial3.println(pid2.setpoint);
-  Serial3.print("PID2 kp: ");
-  Serial3.println(pid2.kp);
-  Serial3.print("PID2 ki: ");
-  Serial3.println(pid2.ki);
-  Serial3.print("PID2 kd: ");
-  Serial3.println(pid2.kd);
-  Serial3.print("PID2 aggKp: ");
-  Serial3.println(pid2.aggKp);
-  Serial3.print("PID2 aggKi: ");
-  Serial3.println(pid2.aggKi);
-  Serial3.print("PID2 aggKd: ");
-  Serial3.println(pid2.aggKd);
-  Serial3.print("PID1 aggSP: ");
-  Serial3.println(pid1.aggSP);
-  Serial3.print("PID2 aggSP: ");
-  Serial3.println(pid2.aggSP);
-  Serial3.print("PID3 Setpoint: ");
-  Serial3.println(pid3.setpoint);
-  Serial3.print("PID3 kp: ");
-  Serial3.println(pid3.kp);
-  Serial3.print("PID3 ki: ");
-  Serial3.println(pid3.ki);
-  Serial3.print("PID3 kd: ");
-  Serial3.println(pid3.kd);
-  Serial3.print("emonCal: ");
-  Serial3.println(calValues.emonCal);
-  Serial3.print("ssrFailThreshold: ");
-  Serial3.println(calValues.ssrFailThreshold);
-  Serial3.print("currOffset: ");
-  Serial3.println(calValues.currOffset);
-  Serial3.print("ssrArmed: ");
-  Serial3.println(ssrArmed);
-  Serial3.print("PID1 mode: ");
-  Serial3.println(pid1.mode);
-  Serial3.print("PID2 mode: ");
-  Serial3.println(pid2.mode);
-  Serial3.print("PID3 mode: ");
-  Serial3.println(pid3.mode);
-  Serial3.print("PID2 adaptiveMode: ");
-  Serial3.println(pid2.adaptiveMode);
-  Serial3.print("PID1 adaptiveMode: ");
-  Serial3.println(pid1.adaptiveMode);
-  Serial3.print("sDebug: ");
-  Serial3.println(configValues.sDebug);
-  Serial3.print("PID1 alarmThreshold: ");
-  Serial3.println(pid1.alarmThreshold);
-  Serial3.print("PID2 alarmThreshold: ");
-  Serial3.println(pid2.alarmThreshold);
-  Serial3.print("PID3 alarmThreshold: ");
-  Serial3.println(pid3.alarmThreshold);
+  Serial.print("zeroOffsetScale: ");
+  Serial.println(calValues.zeroOffsetScale);
+  Serial.print("press1Offset: ");
+  Serial.println(calValues.press1Offset);
+  Serial.print("scaleCal: ");
+  Serial.println(calValues.scaleCal);
+  Serial.print("pressCal1: ");
+  Serial.println(calValues.pressCal1);
+  Serial.print("PID1 Setpoint: ");
+  Serial.println(pid1.setpoint);
+  Serial.print("PID1 kp: ");
+  Serial.println(pid1.kp);
+  Serial.print("PID1 ki: ");
+  Serial.println(pid1.ki);
+  Serial.print("PID1 kd: ");
+  Serial.println(pid1.kd);
+  Serial.print("PID1 aggKp: ");
+  Serial.println(pid1.aggKp);
+  Serial.print("PID1 aggKi: ");
+  Serial.println(pid1.aggKi);
+  Serial.print("PID1 aggKd: ");
+  Serial.println(pid1.aggKd);
+  Serial.print("PID2 Setpoint: ");
+  Serial.println(pid2.setpoint);
+  Serial.print("PID2 kp: ");
+  Serial.println(pid2.kp);
+  Serial.print("PID2 ki: ");
+  Serial.println(pid2.ki);
+  Serial.print("PID2 kd: ");
+  Serial.println(pid2.kd);
+  Serial.print("PID2 aggKp: ");
+  Serial.println(pid2.aggKp);
+  Serial.print("PID2 aggKi: ");
+  Serial.println(pid2.aggKi);
+  Serial.print("PID2 aggKd: ");
+  Serial.println(pid2.aggKd);
+  Serial.print("PID1 aggSP: ");
+  Serial.println(pid1.aggSP);
+  Serial.print("PID2 aggSP: ");
+  Serial.println(pid2.aggSP);
+  Serial.print("PID3 Setpoint: ");
+  Serial.println(pid3.setpoint);
+  Serial.print("PID3 kp: ");
+  Serial.println(pid3.kp);
+  Serial.print("PID3 ki: ");
+  Serial.println(pid3.ki);
+  Serial.print("PID3 kd: ");
+  Serial.println(pid3.kd);
+  Serial.print("emonCal: ");
+  Serial.println(calValues.emonCal);
+  Serial.print("ssrFailThreshold: ");
+  Serial.println(calValues.ssrFailThreshold);
+  Serial.print("currOffset: ");
+  Serial.println(calValues.currOffset);
+  Serial.print("ssrArmed: ");
+  Serial.println(ssrArmed);
+  Serial.print("PID1 mode: ");
+  Serial.println(pid1.mode);
+  Serial.print("PID2 mode: ");
+  Serial.println(pid2.mode);
+  Serial.print("PID3 mode: ");
+  Serial.println(pid3.mode);
+  Serial.print("PID2 adaptiveMode: ");
+  Serial.println(pid2.adaptiveMode);
+  Serial.print("PID1 adaptiveMode: ");
+  Serial.println(pid1.adaptiveMode);
+  Serial.print("sDebug: ");
+  Serial.println(configValues.sDebug);
+  Serial.print("PID1 alarmThreshold: ");
+  Serial.println(pid1.alarmThreshold);
+  Serial.print("PID2 alarmThreshold: ");
+  Serial.println(pid2.alarmThreshold);
+  Serial.print("PID3 alarmThreshold: ");
+  Serial.println(pid3.alarmThreshold);
 }
 
 long getBandgap(void) {
@@ -795,29 +793,29 @@ void receive(const MyMessage & message)  {
   int msgcmd = mGetCommand(message);
   if (configValues.sDebug) {
     if (message.isAck()) {
-      Serial3.print("Ack : ");
-      Serial3.print("Cmd = ");
-      Serial3.print(msgcmd);
-      Serial3.print(" : Set sensor ");
-      Serial3.print(message.sender);
-      Serial3.print("/");
-      Serial3.println(message.sensor);
+      Serial.print("Ack : ");
+      Serial.print("Cmd = ");
+      Serial.print(msgcmd);
+      Serial.print(" : Set sensor ");
+      Serial.print(message.sender);
+      Serial.print("/");
+      Serial.println(message.sensor);
       return;
     }
-    Serial3.print("Cmd = ");
-    Serial3.print(msgcmd);
-    Serial3.print(" : Set sensor ");
-    Serial3.print(message.sender);
-    Serial3.print("/");
-    Serial3.println(message.sensor);
+    Serial.print("Cmd = ");
+    Serial.print(msgcmd);
+    Serial.print(" : Set sensor ");
+    Serial.print(message.sender);
+    Serial.print("/");
+    Serial.println(message.sensor);
   }
 
   switch (message.sensor) {
     case CHILD_ID::ScaleTare:
       if (message.getBool()) {
-        if (configValues.sDebug) Serial3.print("Tare ... ");
+        if (configValues.sDebug) Serial.print("Tare ... ");
         calValues.zeroOffsetScale = LoadCell.read_average(100);
-        if (configValues.sDebug) Serial3.println(" done.");
+        if (configValues.sDebug) Serial.println(" done.");
         EEPROM.put(0, calValues.zeroOffsetScale);
         LoadCell.set_offset(calValues.zeroOffsetScale);
         send(msgScaleTare.set(false), configValues.toACK);
