@@ -8,7 +8,7 @@
 #define VERSION "0.6.0.1"
 #define SENDDELAY 50
 #define MY_NODE_ID 200
-#define MY_RADIO_NRF24
+#define MY_RADIO_RF24
 #define MY_RF24_PA_LEVEL RF24_PA_LOW
 #define MY_RF24_CE_PIN 49
 #define MY_RF24_CS_PIN 53
@@ -49,8 +49,8 @@ struct CalibrationValues {
 };
 
 struct ThermistorConfig {
-    const int seriesResistor = 100000;
-    const int nominalResistance = 100000;
+    const long seriesResistor = 100000;
+    const long nominalResistance = 100000;
     const int nominalTemperature = 25;
     const int bCoefficient = 3950;
 };
@@ -91,24 +91,16 @@ DutyCycle dutyCycle[3];
 EmonVars emonVars;
 
 //Working Variables
-float EDC_Val = 0;
-float EDC_Val_2 = 0;
-float EDC_Val_3 = 0;
-unsigned long time;
-unsigned long timev;
-unsigned long SensorLoop_timer = 0;
-unsigned long old_time = 0;
-unsigned long PID_compute_loop_timer = 0;
-unsigned long dC_loop_timer = 0;
-float dC = 0.0;
-float dC2 = 0.0;
-float dC3 = 0.0;
-float valueScale = 0;
-float value_oldScale = 0;
-unsigned long oldtimeScale = 0;
-float kgpsScale = 0;
-long AREF_V = 0;
-bool ssrArmed = false;
+static unsigned long SensorLoop_timer = 0;
+static float dC = 0.0;
+static float dC2 = 0.0;
+static float dC3 = 0.0;
+static float valueScale = 0;
+static float value_oldScale = 0;
+static unsigned long oldtimeScale = 0;
+static float kgpsScale = 0;
+static long AREF_V = 0;
+static bool ssrArmed = false;
 
 //Pin Definitions
 #define PressurePIN A15
@@ -141,129 +133,131 @@ MAX6675 thermocouple1(thermo1CLK, thermo1CS, thermo1DO);
 MAX6675 thermocouple2(thermo2CLK, thermo2CS, thermo2DO);
 
 // MySensors Child IDs
-#define CHILD_ID_T0           0
-#define CHILD_ID_T1           1
-#define CHILD_ID_T2           2
-#define CHILD_ID_HUM          3
-#define CHILD_ID_Duty         4
-#define CHILD_ID_Scale        5
-#define CHILD_ID_Duty2        6
-#define CHILD_ID_T3           7
-#define CHILD_ID_SSR         9
-#define CHILD_ID_LOAD_MEMORY         10
-#define CHILD_ID_T4           11
-#define CHILD_ID_P1           12
-#define CHILD_ID_P1Cal        13
-#define CHILD_ID_ScaleRate    14
-#define CHILD_ID_ScaleTare    15
-#define CHILD_ID_ScaleOffset  16
-#define CHILD_ID_ScaleRtAccu  17
-#define CHILD_ID_ScaleUntMag  18
-#define CHILD_ID_ScaleAvg     19
-#define CHILD_ID_PIDMODE_1      20
-#define CHILD_ID_PIDSETPOINT_1  21
-#define CHILD_ID_AdaptiveSP_1   22
-#define CHILD_ID_PIDkP0_1       23
-#define CHILD_ID_PIDkI0_1       24
-#define CHILD_ID_PIDkD0_1       25
-#define CHILD_ID_PIDkP1_1       26
-#define CHILD_ID_PIDkI1_1       27
-#define CHILD_ID_PIDkD1_1       28
-#define CHILD_ID_AdaptiveMode_1 29
-#define CHILD_ID_EDC          31
-#define CHILD_ID_Info         32
-#define CHILD_ID_ScaleCal     40
-#define CHILD_ID_PIDMODE_2        60
-#define CHILD_ID_PIDSETPOINT_2    61
-#define CHILD_ID_AdaptiveSP_2     62
-#define CHILD_ID_PIDkP0_2         63
-#define CHILD_ID_PIDkI0_2         64
-#define CHILD_ID_PIDkD0_2         65
-#define CHILD_ID_PIDkP1_2         66
-#define CHILD_ID_PIDkI1_2         67
-#define CHILD_ID_PIDkD1_2         68
-#define CHILD_ID_AdaptiveMode_2   69
-#define CHILD_ID_EDC_2            71
-#define CHILD_ID_Press1Offset     73
-#define CHILD_ID_RMS              74
-#define CHILD_ID_Curr_CAL         75
-#define CHILD_ID_SSRFail_Threshhold 76
-#define CHILD_ID_SSRFail_Alarm    77
-#define CHILD_ID_curr_OFFSET      78
-#define LCD_CHILD_ID_VAR1   1
-#define LCD_CHILD_ID_VAR2   2
-#define LCD_CHILD_ID_PID1   9
-#define LCD_CHILD_ID_PID2   10
-#define LCD_CHILD_ID_Condenser    11
-#define LCD_NODE_ID         10
-#define LCD_CHILD_ID_INFO   32
-#define LCD_CHILD_ID_Platter 33
-#define LCD_CHILD_ID_PID3    34
-#define CHILD_ID_PIDMODE_3        80
-#define CHILD_ID_PIDSETPOINT_3    81
-#define CHILD_ID_Duty3            82
-#define CHILD_ID_PIDkP0_3         83
-#define CHILD_ID_PIDkI0_3         84
-#define CHILD_ID_PIDkD0_3         85
-#define CHILD_ID_EDC_3            91
-#define CHILD_ID_s_debug          92
-#define CHILD_ID_BoardVoltage     93
-#define CHILD_ID_PID1_Threshold   94
-#define CHILD_ID_PID2_Threshold   95
-#define CHILD_ID_PID3_Threshold   96
+enum CHILD_ID {
+  T0 = 0,
+  T1 = 1,
+  T2 = 2,
+  HUM = 3,
+  Duty = 4,
+  Scale = 5,
+  Duty2 = 6,
+  T3 = 7,
+  SSR = 9,
+  LOAD_MEMORY = 10,
+  T4 = 11,
+  P1 = 12,
+  P1Cal = 13,
+  ScaleRate = 14,
+  ScaleTare = 15,
+  ScaleOffset = 16,
+  ScaleRtAccu = 17,
+  ScaleUntMag = 18,
+  ScaleAvg = 19,
+  PIDMODE_1 = 20,
+  PIDSETPOINT_1 = 21,
+  AdaptiveSP_1 = 22,
+  PIDkP0_1 = 23,
+  PIDkI0_1 = 24,
+  PIDkD0_1 = 25,
+  PIDkP1_1 = 26,
+  PIDkI1_1 = 27,
+  PIDkD1_1 = 28,
+  AdaptiveMode_1 = 29,
+  EDC = 31,
+  Info = 32,
+  ScaleCal = 40,
+  PIDMODE_2 = 60,
+  PIDSETPOINT_2 = 61,
+  AdaptiveSP_2 = 62,
+  PIDkP0_2 = 63,
+  PIDkI0_2 = 64,
+  PIDkD0_2 = 65,
+  PIDkP1_2 = 66,
+  PIDkI1_2 = 67,
+  PIDkD1_2 = 68,
+  AdaptiveMode_2 = 69,
+  EDC_2 = 71,
+  Press1Offset = 73,
+  RMS = 74,
+  Curr_CAL = 75,
+  SSRFail_Threshhold = 76,
+  SSRFail_Alarm = 77,
+  curr_OFFSET = 78,
+  LCD_VAR1 = 1,
+  LCD_VAR2 = 2,
+  LCD_PID1 = 9,
+  LCD_PID2 = 10,
+  LCD_Condenser = 11,
+  LCD_NODE_ID = 10,
+  LCD_INFO = 32,
+  LCD_Platter = 33,
+  LCD_PID3 = 34,
+  PIDMODE_3 = 80,
+  PIDSETPOINT_3 = 81,
+  Duty3 = 82,
+  PIDkP0_3 = 83,
+  PIDkI0_3 = 84,
+  PIDkD0_3 = 85,
+  EDC_3 = 91,
+  s_debug = 92,
+  BoardVoltage = 93,
+  PID1_Threshold = 94,
+  PID2_Threshold = 95,
+  PID3_Threshold = 96
+};
 
 //MySensors Message Definitions
-MyMessage msgPIDMODE(CHILD_ID_PIDMODE_1, V_STATUS);
-MyMessage msgPIDSETPOINT(CHILD_ID_PIDSETPOINT_1, V_TEMP);
-MyMessage msgKp(CHILD_ID_PIDkP0_1, V_LEVEL);
-MyMessage msgKi(CHILD_ID_PIDkI0_1, V_LEVEL);
-MyMessage msgKd(CHILD_ID_PIDkD0_1, V_LEVEL);
-MyMessage msgEDC(CHILD_ID_EDC, V_PERCENTAGE );
-MyMessage msgPIDMODE_2(CHILD_ID_PIDMODE_2, V_STATUS);
-MyMessage msgPIDSETPOINT_2(CHILD_ID_PIDSETPOINT_2, V_TEMP);
-MyMessage msgKp_2(CHILD_ID_PIDkP0_2, V_LEVEL);
-MyMessage msgKi_2(CHILD_ID_PIDkI0_2, V_LEVEL);
-MyMessage msgKd_2(CHILD_ID_PIDkD0_2, V_LEVEL);
-MyMessage msgEDC_2(CHILD_ID_EDC_2, V_PERCENTAGE );
-MyMessage msgPIDMODE_3(CHILD_ID_PIDMODE_3, V_STATUS);
-MyMessage msgPIDSETPOINT_3(CHILD_ID_PIDSETPOINT_3, V_TEMP);
-MyMessage msgKp_3(CHILD_ID_PIDkP0_3, V_LEVEL);
-MyMessage msgKi_3(CHILD_ID_PIDkI0_3, V_LEVEL);
-MyMessage msgKd_3(CHILD_ID_PIDkD0_3, V_LEVEL);
-MyMessage msgEDC_3(CHILD_ID_EDC_3, V_PERCENTAGE );
-MyMessage msgINFO(CHILD_ID_Info, V_TEXT);
-MyMessage msgTemp0(CHILD_ID_T0, V_TEMP);
-MyMessage msgTemp1(CHILD_ID_T1, V_TEMP);
-MyMessage msgTemp2(CHILD_ID_T2, V_TEMP);
-MyMessage msgHumidity(CHILD_ID_HUM, V_HUM);
-MyMessage msgScale(CHILD_ID_Scale, V_WEIGHT);
-MyMessage msgTemp3(CHILD_ID_T3, V_TEMP);
-MyMessage msgTemp4(CHILD_ID_T4, V_TEMP);
-//MyMessage msgDBG(CHILD_ID_DBG, V_TEXT);
-MyMessage msgSSR(CHILD_ID_SSR, V_STATUS);
-MyMessage msgSSR2(CHILD_ID_LOAD_MEMORY, V_STATUS);
-MyMessage msgLCD1(LCD_CHILD_ID_VAR1, V_TEXT);
-MyMessage msgLCD2(LCD_CHILD_ID_VAR2, V_TEXT);
-MyMessage msgLCD_Platter(LCD_CHILD_ID_Platter, V_TEXT);
-MyMessage msgPID1(LCD_CHILD_ID_PID1, V_STATUS);
-MyMessage msgPID2(LCD_CHILD_ID_PID2, V_STATUS);
-MyMessage msgPID3(LCD_CHILD_ID_PID3, V_STATUS);
+MyMessage msgPIDMODE(CHILD_ID::PIDMODE_1, V_STATUS);
+MyMessage msgPIDSETPOINT(CHILD_ID::PIDSETPOINT_1, V_TEMP);
+MyMessage msgKp(CHILD_ID::PIDkP0_1, V_LEVEL);
+MyMessage msgKi(CHILD_ID::PIDkI0_1, V_LEVEL);
+MyMessage msgKd(CHILD_ID::PIDkD0_1, V_LEVEL);
+MyMessage msgEDC(CHILD_ID::EDC, V_PERCENTAGE);
+MyMessage msgPIDMODE_2(CHILD_ID::PIDMODE_2, V_STATUS);
+MyMessage msgPIDSETPOINT_2(CHILD_ID::PIDSETPOINT_2, V_TEMP);
+MyMessage msgKp_2(CHILD_ID::PIDkP0_2, V_LEVEL);
+MyMessage msgKi_2(CHILD_ID::PIDkI0_2, V_LEVEL);
+MyMessage msgKd_2(CHILD_ID::PIDkD0_2, V_LEVEL);
+MyMessage msgEDC_2(CHILD_ID::EDC_2, V_PERCENTAGE);
+MyMessage msgPIDMODE_3(CHILD_ID::PIDMODE_3, V_STATUS);
+MyMessage msgPIDSETPOINT_3(CHILD_ID::PIDSETPOINT_3, V_TEMP);
+MyMessage msgKp_3(CHILD_ID::PIDkP0_3, V_LEVEL);
+MyMessage msgKi_3(CHILD_ID::PIDkI0_3, V_LEVEL);
+MyMessage msgKd_3(CHILD_ID::PIDkD0_3, V_LEVEL);
+MyMessage msgEDC_3(CHILD_ID::EDC_3, V_PERCENTAGE);
+MyMessage msgINFO(CHILD_ID::Info, V_TEXT);
+MyMessage msgTemp0(CHILD_ID::T0, V_TEMP);
+MyMessage msgTemp1(CHILD_ID::T1, V_TEMP);
+MyMessage msgTemp2(CHILD_ID::T2, V_TEMP);
+MyMessage msgHumidity(CHILD_ID::HUM, V_HUM);
+MyMessage msgScale(CHILD_ID::Scale, V_WEIGHT);
+MyMessage msgTemp3(CHILD_ID::T3, V_TEMP);
+MyMessage msgTemp4(CHILD_ID::T4, V_TEMP);
+//MyMessage msgDBG(CHILD_ID::DBG, V_TEXT);
+MyMessage msgSSR(CHILD_ID::SSR, V_STATUS);
+MyMessage msgSSR2(CHILD_ID::LOAD_MEMORY, V_STATUS);
+MyMessage msgLCD1(CHILD_ID::LCD_VAR1, V_TEXT);
+MyMessage msgLCD2(CHILD_ID::LCD_VAR2, V_TEXT);
+MyMessage msgLCD_Platter(CHILD_ID::LCD_Platter, V_TEXT);
+MyMessage msgPID1(CHILD_ID::LCD_PID1, V_STATUS);
+MyMessage msgPID2(CHILD_ID::LCD_PID2, V_STATUS);
+MyMessage msgPID3(CHILD_ID::LCD_PID3, V_STATUS);
 MyMessage msgLCDScale(3, V_WEIGHT);
 MyMessage msgLCDPressure(17, V_PRESSURE);
-MyMessage msgLCDINFO(LCD_CHILD_ID_INFO, V_TEXT);
-MyMessage msgLCDCondenser(LCD_CHILD_ID_Condenser, V_TEXT);
-MyMessage msgPressure1(CHILD_ID_P1, V_PRESSURE);
-MyMessage msgPressCal1(CHILD_ID_P1Cal, V_LEVEL);
-MyMessage msgScaleRate(CHILD_ID_ScaleRate, V_WEIGHT);
-MyMessage msgScaleTare(CHILD_ID_ScaleTare, V_STATUS);
-MyMessage msgScaleUntMag(CHILD_ID_ScaleUntMag, V_STATUS);
-MyMessage msgScaleRtAccu(CHILD_ID_ScaleRtAccu, V_STATUS);
-MyMessage msgScaleOffset(CHILD_ID_ScaleOffset, V_LEVEL);
-MyMessage msgPress1Offset(CHILD_ID_Press1Offset, V_LEVEL);
-MyMessage msgRMS(CHILD_ID_RMS, V_LEVEL);
-MyMessage msgCurCAL(CHILD_ID_Curr_CAL, V_LEVEL);
-MyMessage msgSSRFailAlarm(CHILD_ID_SSRFail_Alarm, V_STATUS);
-MyMessage msgBoardVoltage(CHILD_ID_BoardVoltage, V_LEVEL);
+MyMessage msgLCDINFO(CHILD_ID::LCD_INFO, V_TEXT);
+MyMessage msgLCDCondenser(CHILD_ID::LCD_Condenser, V_TEXT);
+MyMessage msgPressure1(CHILD_ID::P1, V_PRESSURE);
+MyMessage msgPressCal1(CHILD_ID::P1Cal, V_LEVEL);
+MyMessage msgScaleRate(CHILD_ID::ScaleRate, V_WEIGHT);
+MyMessage msgScaleTare(CHILD_ID::ScaleTare, V_STATUS);
+MyMessage msgScaleUntMag(CHILD_ID::ScaleUntMag, V_STATUS);
+MyMessage msgScaleRtAccu(CHILD_ID::ScaleRtAccu, V_STATUS);
+MyMessage msgScaleOffset(CHILD_ID::ScaleOffset, V_LEVEL);
+MyMessage msgPress1Offset(CHILD_ID::Press1Offset, V_LEVEL);
+MyMessage msgRMS(CHILD_ID::RMS, V_LEVEL);
+MyMessage msgCurCAL(CHILD_ID::Curr_CAL, V_LEVEL);
+MyMessage msgSSRFailAlarm(CHILD_ID::SSRFail_Alarm, V_STATUS);
+MyMessage msgBoardVoltage(CHILD_ID::BoardVoltage, V_LEVEL);
 
 PID myPID1(&pid1.input, &pid1.output, &pid1.setpoint, pid1.kp, pid1.ki, pid1.kd, DIRECT);
 int gap1 = 0;
@@ -291,70 +285,70 @@ void presentation()
   //Send the sensor node sketch version information to the gateway
   sendSketchInfo("Controller", VERSION);
 
-   Serial3.begin(115200);
+  Serial3.begin(115200);
 
   if (configValues.sDebug) {Serial3.println("Presenting Sensors");}
-  present(CHILD_ID_PIDMODE_1, S_BINARY, "PID1 Lower");
-  present(CHILD_ID_PIDSETPOINT_1, S_TEMP, "PID1 Setpoint");
-  present(CHILD_ID_PIDkP0_1, S_LIGHT_LEVEL, "constKp");
-  present(CHILD_ID_PIDkI0_1, S_LIGHT_LEVEL, "constKi");
-  present(CHILD_ID_PIDkD0_1, S_LIGHT_LEVEL, "constKd");
-  present(CHILD_ID_PIDkP1_1, S_LIGHT_LEVEL, "aggKp");
-  present(CHILD_ID_PIDkI1_1, S_LIGHT_LEVEL, "aggKi");
-  present(CHILD_ID_PIDkD1_1, S_LIGHT_LEVEL, "aggKd");
-  present(CHILD_ID_AdaptiveMode_1, S_BINARY, "Adaptive");
-  present(CHILD_ID_AdaptiveSP_1, S_TEMP, "Adaptive SP");
-  present(CHILD_ID_EDC, S_DIMMER, "L dC");
-  present(CHILD_ID_PIDMODE_2, S_BINARY, "PID2 Upper");
-  present(CHILD_ID_PIDSETPOINT_2, S_TEMP, "PID2 Setpoint");
-  present(CHILD_ID_PIDkP0_2, S_LIGHT_LEVEL, "constKp_2");
-  present(CHILD_ID_PIDkI0_2, S_LIGHT_LEVEL, "constKi_2");
-  present(CHILD_ID_PIDkD0_2, S_LIGHT_LEVEL, "constKd_2");
-  present(CHILD_ID_PIDkP1_2, S_LIGHT_LEVEL, "aggKp_2");
-  present(CHILD_ID_PIDkI1_2, S_LIGHT_LEVEL, "aggKi_2");
-  present(CHILD_ID_PIDkD1_2, S_LIGHT_LEVEL, "aggKd_2");
-  present(CHILD_ID_AdaptiveMode_2, S_BINARY, "Adaptive_2");
-  present(CHILD_ID_AdaptiveSP_2, S_TEMP, "Adaptive SP_2");
-  present(CHILD_ID_EDC_2, S_DIMMER, "U dC");
-  present(CHILD_ID_PIDMODE_3, S_BINARY, "PID3 Platter");
-  present(CHILD_ID_PIDSETPOINT_3, S_TEMP, "PID3 Setpoint");
-  present(CHILD_ID_PIDkP0_3, S_LIGHT_LEVEL, "constKp_3");
-  present(CHILD_ID_PIDkI0_3, S_LIGHT_LEVEL, "constKi_3");
-  present(CHILD_ID_PIDkD0_3, S_LIGHT_LEVEL, "constKd_3");
-  present(CHILD_ID_EDC_3, S_DIMMER, "P dC");
-  present(CHILD_ID_Info, S_INFO, "Debug Info");
-  present(CHILD_ID_T0, S_TEMP, "Condenser T0");
-  present(CHILD_ID_T1, S_TEMP, "Upper Spool T1");
-  present(CHILD_ID_T2, S_TEMP, "Amb Temp");
-  present(CHILD_ID_T3, S_TEMP, "Platter");
-  present(CHILD_ID_T4, S_TEMP, "Lower Spool T2");
-  present(CHILD_ID_HUM, S_HUM, "Amb Hum");
-  present(CHILD_ID_Duty, S_DIMMER, "Duty Cycle");
-  present(CHILD_ID_Scale, S_WEIGHT, "Ref Scale");
-  present(CHILD_ID_Duty2, S_DIMMER, "Duty Cycle2");
-  present(CHILD_ID_Duty3, S_DIMMER, "Duty Cycle3");
-  present(CHILD_ID_SSR, S_BINARY, "SSR Armed");
-  present(CHILD_ID_LOAD_MEMORY, S_BINARY, "Load Memory");
-  present(CHILD_ID_ScaleCal, S_LIGHT_LEVEL, "Scale Cal");
-  present(CHILD_ID_P1, S_BARO, "Pressure 1");
-  present(CHILD_ID_P1Cal, S_LIGHT_LEVEL, "PresCal 1");
-  present(CHILD_ID_ScaleRate, S_WEIGHT, "Scale Delta/T");
-  present(CHILD_ID_ScaleTare, S_BINARY, "Tare Scale");
-  present(CHILD_ID_ScaleUntMag, S_BINARY, "Scale g/Kg");
-  present(CHILD_ID_ScaleRtAccu, S_BINARY, "Rate g/Kg");
-  present(CHILD_ID_ScaleOffset, S_LIGHT_LEVEL, "Scale Zero Offset");
-  present(CHILD_ID_ScaleAvg, S_BINARY, "Scale Accuracy");
-  present(CHILD_ID_Press1Offset, S_LIGHT_LEVEL, "P1 Zero Offset");
-  present(CHILD_ID_RMS, S_LIGHT_LEVEL, "RMS Power");
-  present(CHILD_ID_Curr_CAL, S_LIGHT_LEVEL, "Cur CAL");
-  present(CHILD_ID_SSRFail_Threshhold, S_LIGHT_LEVEL, "SSRFail Threshhold");
-  present(CHILD_ID_SSRFail_Alarm, S_BINARY, "SSR FAIL ALARM");
-  present(CHILD_ID_curr_OFFSET, S_LIGHT_LEVEL, "Current Offset");
-  present(CHILD_ID_s_debug, S_BINARY, "Serial3 Debug");
-  present(CHILD_ID_BoardVoltage, S_LIGHT_LEVEL, "Board Voltage");
-  present(CHILD_ID_PID1_Threshold, S_TEMP, "PID1A");
-  present(CHILD_ID_PID2_Threshold, S_TEMP, "PID2A");
-  present(CHILD_ID_PID3_Threshold, S_TEMP, "PID3A");
+  present(CHILD_ID::PIDMODE_1, S_BINARY, "PID1 Lower");
+  present(CHILD_ID::PIDSETPOINT_1, S_TEMP, "PID1 Setpoint");
+  present(CHILD_ID::PIDkP0_1, S_LIGHT_LEVEL, "constKp");
+  present(CHILD_ID::PIDkI0_1, S_LIGHT_LEVEL, "constKi");
+  present(CHILD_ID::PIDkD0_1, S_LIGHT_LEVEL, "constKd");
+  present(CHILD_ID::PIDkP1_1, S_LIGHT_LEVEL, "aggKp");
+  present(CHILD_ID::PIDkI1_1, S_LIGHT_LEVEL, "aggKi");
+  present(CHILD_ID::PIDkD1_1, S_LIGHT_LEVEL, "aggKd");
+  present(CHILD_ID::AdaptiveMode_1, S_BINARY, "Adaptive");
+  present(CHILD_ID::AdaptiveSP_1, S_TEMP, "Adaptive SP");
+  present(CHILD_ID::EDC, S_DIMMER, "L dC");
+  present(CHILD_ID::PIDMODE_2, S_BINARY, "PID2 Upper");
+  present(CHILD_ID::PIDSETPOINT_2, S_TEMP, "PID2 Setpoint");
+  present(CHILD_ID::PIDkP0_2, S_LIGHT_LEVEL, "constKp_2");
+  present(CHILD_ID::PIDkI0_2, S_LIGHT_LEVEL, "constKi_2");
+  present(CHILD_ID::PIDkD0_2, S_LIGHT_LEVEL, "constKd_2");
+  present(CHILD_ID::PIDkP1_2, S_LIGHT_LEVEL, "aggKp_2");
+  present(CHILD_ID::PIDkI1_2, S_LIGHT_LEVEL, "aggKi_2");
+  present(CHILD_ID::PIDkD1_2, S_LIGHT_LEVEL, "aggKd_2");
+  present(CHILD_ID::AdaptiveMode_2, S_BINARY, "Adaptive_2");
+  present(CHILD_ID::AdaptiveSP_2, S_TEMP, "Adaptive SP_2");
+  present(CHILD_ID::EDC_2, S_DIMMER, "U dC");
+  present(CHILD_ID::PIDMODE_3, S_BINARY, "PID3 Platter");
+  present(CHILD_ID::PIDSETPOINT_3, S_TEMP, "PID3 Setpoint");
+  present(CHILD_ID::PIDkP0_3, S_LIGHT_LEVEL, "constKp_3");
+  present(CHILD_ID::PIDkI0_3, S_LIGHT_LEVEL, "constKi_3");
+  present(CHILD_ID::PIDkD0_3, S_LIGHT_LEVEL, "constKd_3");
+  present(CHILD_ID::EDC_3, S_DIMMER, "P dC");
+  present(CHILD_ID::Info, S_INFO, "Debug Info");
+  present(CHILD_ID::T0, S_TEMP, "Condenser T0");
+  present(CHILD_ID::T1, S_TEMP, "Upper Spool T1");
+  present(CHILD_ID::T2, S_TEMP, "Amb Temp");
+  present(CHILD_ID::T3, S_TEMP, "Platter");
+  present(CHILD_ID::T4, S_TEMP, "Lower Spool T2");
+  present(CHILD_ID::HUM, S_HUM, "Amb Hum");
+  present(CHILD_ID::Duty, S_DIMMER, "Duty Cycle");
+  present(CHILD_ID::Scale, S_WEIGHT, "Ref Scale");
+  present(CHILD_ID::Duty2, S_DIMMER, "Duty Cycle2");
+  present(CHILD_ID::Duty3, S_DIMMER, "Duty Cycle3");
+  present(CHILD_ID::SSR, S_BINARY, "SSR Armed");
+  present(CHILD_ID::LOAD_MEMORY, S_BINARY, "Load Memory");
+  present(CHILD_ID::ScaleCal, S_LIGHT_LEVEL, "Scale Cal");
+  present(CHILD_ID::P1, S_BARO, "Pressure 1");
+  present(CHILD_ID::P1Cal, S_LIGHT_LEVEL, "PresCal 1");
+  present(CHILD_ID::ScaleRate, S_WEIGHT, "Scale Delta/T");
+  present(CHILD_ID::ScaleTare, S_BINARY, "Tare Scale");
+  present(CHILD_ID::ScaleUntMag, S_BINARY, "Scale g/Kg");
+  present(CHILD_ID::ScaleRtAccu, S_BINARY, "Rate g/Kg");
+  present(CHILD_ID::ScaleOffset, S_LIGHT_LEVEL, "Scale Zero Offset");
+  present(CHILD_ID::ScaleAvg, S_BINARY, "Scale Accuracy");
+  present(CHILD_ID::Press1Offset, S_LIGHT_LEVEL, "P1 Zero Offset");
+  present(CHILD_ID::RMS, S_LIGHT_LEVEL, "RMS Power");
+  present(CHILD_ID::Curr_CAL, S_LIGHT_LEVEL, "Cur CAL");
+  present(CHILD_ID::SSRFail_Threshhold, S_LIGHT_LEVEL, "SSRFail Threshhold");
+  present(CHILD_ID::SSRFail_Alarm, S_BINARY, "SSR FAIL ALARM");
+  present(CHILD_ID::curr_OFFSET, S_LIGHT_LEVEL, "Current Offset");
+  present(CHILD_ID::s_debug, S_BINARY, "Serial3 Debug");
+  present(CHILD_ID::BoardVoltage, S_LIGHT_LEVEL, "Board Voltage");
+  present(CHILD_ID::PID1_Threshold, S_TEMP, "PID1A");
+  present(CHILD_ID::PID2_Threshold, S_TEMP, "PID2A");
+  present(CHILD_ID::PID3_Threshold, S_TEMP, "PID3A");
 
   if (configValues.sDebug) {
     Serial3.println("Presentation Complete");
@@ -435,13 +429,11 @@ void loop() {
     wait(SENDDELAY);
     send(msgTemp1.set(thermocouple1.readFahrenheit(), 1), configValues.toACK);
     wait(SENDDELAY);
-    //send(msgTemp2.set(dht.readTemperature(true), 1), ToACK);
     wait(SENDDELAY);
     send(msgTemp3.set(steinhartValues.steinhart, 1), configValues.toACK);
     wait(SENDDELAY);
     send(msgTemp4.set(thermocouple2.readFahrenheit(), 1), configValues.toACK);
     wait(SENDDELAY);
-    //send(msgHumidity.set(dht.readHumidity(), 1), ToACK);
     wait(SENDDELAY);
     send(msgScale.set(valueScale, 1), configValues.toACK);
     wait(SENDDELAY);
@@ -482,11 +474,9 @@ void loop() {
       Serial3.print("lower Spool T2: ");
       Serial3.println(thermocouple2.readFahrenheit());
       Serial3.print("Amb Temp DHT: ");
-      //Serial3.println(dht.readTemperature(true));
       Serial3.print("Platter Temp: ");
       Serial3.println(Steinhart());
       Serial3.print("Humidity DHT: ");
-      //Serial3.println(dht.readHumidity());
       Serial3.print("Scale : ");
       Serial3.println(valueScale);
       Serial3.print("Pressure 1: ");
@@ -525,14 +515,14 @@ void DutyCycleLoop() {
   for (int i = 0; i < 3; i++) {
     if ((dutyCycle[i].loopTime > 0 && ssrArmed == true) && (i == 0 ? pid1.mode : (i == 1 ? pid2.mode : pid3.mode))) {
       if (!dutyCycle[i].element) {
-        if ((millis() - dutyCycle[i].onTime) > (dutyCycle[i].loopTime * 1000)) {
+        if ((millis() - dutyCycle[i].onTime) > (static_cast<unsigned long>(dutyCycle[i].loopTime) * 1000)) {
           dutyCycle[i].offTime = millis();
           dutyCycle[i].onTime = 0;
           digitalWrite(i == 0 ? ElementPowerPin : (i == 1 ? ElementPowerPin2 : ElementPowerPin3), HIGH);
           dutyCycle[i].element = HIGH;
         }
       } else {
-        if ((millis() - dutyCycle[i].offTime) > ((1 - dutyCycle[i].loopTime) * 1000)) {
+        if ((millis() - dutyCycle[i].offTime) > ((1U - static_cast<unsigned long>(dutyCycle[i].loopTime)) * 1000)) {
           dutyCycle[i].onTime = millis();
           dutyCycle[i].offTime = 0;
           digitalWrite(i == 0 ? ElementPowerPin : (i == 1 ? ElementPowerPin2 : ElementPowerPin3), LOW);
@@ -827,10 +817,10 @@ void receive(const MyMessage & message)  {
   }
 
   switch (message.sensor) {
-    case CHILD_ID_ScaleTare:
+    case CHILD_ID::ScaleTare:
       if (message.getBool()) {
         if (configValues.sDebug) Serial3.print("Tare ... ");
-        calValues.zeroOffsetScale = LoadCell.read_average(1000);
+        calValues.zeroOffsetScale = LoadCell.read_average(100);
         if (configValues.sDebug) Serial3.println(" done.");
         EEPROM.put(0, calValues.zeroOffsetScale);
         LoadCell.set_offset(calValues.zeroOffsetScale);
@@ -841,182 +831,182 @@ void receive(const MyMessage & message)  {
         sendInfo("Scale Tare");
       }
       break;
-    case CHILD_ID_ScaleOffset:
+    case CHILD_ID::ScaleOffset:
       calValues.zeroOffsetScale = message.getFloat();
       EEPROM.put(0, calValues.zeroOffsetScale);
       LoadCell.set_offset(calValues.zeroOffsetScale);
       break;
-    case CHILD_ID_ScaleUntMag:
+    case CHILD_ID::ScaleUntMag:
       calValues.mScale = message.getBool() ? 1 : 1000;
       break;
-    case CHILD_ID_ScaleAvg:
+    case CHILD_ID::ScaleAvg:
       calValues.aScale = message.getBool() ? 100000 : 10000;
       break;
-    case CHILD_ID_ScaleRtAccu:
+    case CHILD_ID::ScaleRtAccu:
       calValues.rScale = message.getBool() ? 1000 : 1;
       break;
-    case CHILD_ID_Duty:
+    case CHILD_ID::Duty:
       dC = message.getFloat() / 100.0;
       break;
-    case CHILD_ID_Duty2:
+    case CHILD_ID::Duty2:
       dC2 = message.getFloat() / 100.0;
       break;
-    case CHILD_ID_Duty3:
+    case CHILD_ID::Duty3:
       dC3 = message.getFloat() / 100.0;
       break;
-    case CHILD_ID_SSR:
+    case CHILD_ID::SSR:
       ssrArmed = message.getBool();
       EEPROM.put(100, ssrArmed);
       digitalWrite(SSRArmed_PIN, ssrArmed);
       break;
-    case CHILD_ID_Press1Offset:
+    case CHILD_ID::Press1Offset:
       calValues.press1Offset = message.getInt();
       EEPROM.put(4, calValues.press1Offset);
       break;
-    case CHILD_ID_ScaleCal:
+    case CHILD_ID::ScaleCal:
       calValues.scaleCal = message.getFloat();
       LoadCell.set_scale(calValues.scaleCal);
       EEPROM.put(6, calValues.scaleCal);
       break;
-    case CHILD_ID_P1Cal:
+    case CHILD_ID::P1Cal:
       calValues.pressCal1 = message.getFloat();
       EEPROM.put(10, calValues.pressCal1);
       break;
-    case CHILD_ID_PIDMODE_1:
+    case CHILD_ID::PIDMODE_1:
       pid1.mode = message.getBool();
       myPID1.SetMode(pid1.mode ? AUTOMATIC : MANUAL);
       EEPROM.put(101, pid1.mode);
       break;
-    case CHILD_ID_PIDSETPOINT_1:
+    case CHILD_ID::PIDSETPOINT_1:
       pid1.setpoint = message.getFloat();
       EEPROM.put(14, pid1.setpoint);
       break;
-    case CHILD_ID_PIDkP0_1:
+    case CHILD_ID::PIDkP0_1:
       pid1.kp = message.getFloat();
       EEPROM.put(18, pid1.kp);
       break;
-    case CHILD_ID_PIDkI0_1:
+    case CHILD_ID::PIDkI0_1:
       pid1.ki = message.getFloat();
       EEPROM.put(22, pid1.ki);
       break;
-    case CHILD_ID_PIDkD0_1:
+    case CHILD_ID::PIDkD0_1:
       pid1.kd = message.getFloat();
       EEPROM.put(26, pid1.kd);
       break;
-    case CHILD_ID_PIDkP1_1:
+    case CHILD_ID::PIDkP1_1:
       pid1.aggKp = message.getFloat();
       EEPROM.put(30, pid1.aggKp);
       break;
-    case CHILD_ID_PIDkI1_1:
+    case CHILD_ID::PIDkI1_1:
       pid1.aggKi = message.getFloat();
       EEPROM.put(34, pid1.aggKi);
       break;
-    case CHILD_ID_PIDkD1_1:
+    case CHILD_ID::PIDkD1_1:
       pid1.aggKd = message.getFloat();
       EEPROM.put(38, pid1.aggKd);
       break;
-    case CHILD_ID_AdaptiveSP_1:
+    case CHILD_ID::AdaptiveSP_1:
       pid1.aggSP = message.getByte();
       EEPROM.put(70, pid1.aggSP);
       break;
-    case CHILD_ID_AdaptiveMode_1:
+    case CHILD_ID::AdaptiveMode_1:
       pid1.adaptiveMode = message.getBool();
       EEPROM.put(105, pid1.adaptiveMode);
       break;
-    case CHILD_ID_PIDMODE_2:
+    case CHILD_ID::PIDMODE_2:
       pid2.mode = message.getBool();
       myPID2.SetMode(pid2.mode ? AUTOMATIC : MANUAL);
       EEPROM.put(102, pid2.mode);
       break;
-    case CHILD_ID_PIDSETPOINT_2:
+    case CHILD_ID::PIDSETPOINT_2:
       pid2.setpoint = message.getFloat();
       EEPROM.put(42, pid2.setpoint);
       break;
-    case CHILD_ID_PIDkP0_2:
+    case CHILD_ID::PIDkP0_2:
       pid2.kp = message.getFloat();
       EEPROM.put(46, pid2.kp);
       break;
-    case CHILD_ID_PIDkI0_2:
+    case CHILD_ID::PIDkI0_2:
       pid2.ki = message.getFloat();
       EEPROM.put(50, pid2.ki);
       break;
-    case CHILD_ID_PIDkD0_2:
+    case CHILD_ID::PIDkD0_2:
       pid2.kd = message.getFloat();
       EEPROM.put(54, pid2.kd);
       break;
-    case CHILD_ID_PIDkP1_2:
+    case CHILD_ID::PIDkP1_2:
       pid2.aggKp = message.getFloat();
       EEPROM.put(58, pid2.aggKp);
       break;
-    case CHILD_ID_PIDkI1_2:
+    case CHILD_ID::PIDkI1_2:
       pid2.aggKi = message.getFloat();
       EEPROM.put(62, pid2.aggKi);
       break;
-    case CHILD_ID_PIDkD1_2:
+    case CHILD_ID::PIDkD1_2:
       pid2.aggKd = message.getFloat();
       EEPROM.put(66, pid2.aggKd);
       break;
-    case CHILD_ID_AdaptiveSP_2:
+    case CHILD_ID::AdaptiveSP_2:
       pid2.aggSP = message.getByte();
       EEPROM.put(71, pid2.aggSP);
       break;
-    case CHILD_ID_AdaptiveMode_2:
+    case CHILD_ID::AdaptiveMode_2:
       pid2.adaptiveMode = message.getBool();
       EEPROM.put(104, pid2.adaptiveMode);
       break;
-    case CHILD_ID_PIDMODE_3:
+    case CHILD_ID::PIDMODE_3:
       pid3.mode = message.getBool();
       myPID3.SetMode(pid3.mode ? AUTOMATIC : MANUAL);
       EEPROM.put(103, pid3.mode);
       break;
-    case CHILD_ID_PIDSETPOINT_3:
+    case CHILD_ID::PIDSETPOINT_3:
       pid3.setpoint = message.getFloat();
       EEPROM.put(72, pid3.setpoint);
       break;
-    case CHILD_ID_PIDkP0_3:
+    case CHILD_ID::PIDkP0_3:
       pid3.kp = message.getFloat();
       EEPROM.put(76, pid3.kp);
       break;
-    case CHILD_ID_PIDkI0_3:
+    case CHILD_ID::PIDkI0_3:
       pid3.ki = message.getFloat();
       EEPROM.put(80, pid3.ki);
       break;
-    case CHILD_ID_PIDkD0_3:
+    case CHILD_ID::PIDkD0_3:
       pid3.kd = message.getFloat();
       EEPROM.put(84, pid3.kd);
       break;
-    case CHILD_ID_Curr_CAL:
+    case CHILD_ID::Curr_CAL:
       calValues.emonCal = message.getFloat();
       EEPROM.put(88, calValues.emonCal);
       break;
-    case CHILD_ID_SSRFail_Threshhold:
+    case CHILD_ID::SSRFail_Threshhold:
       calValues.ssrFailThreshold = message.getByte();
       EEPROM.put(96, calValues.ssrFailThreshold);
       break;
-    case CHILD_ID_curr_OFFSET:
+    case CHILD_ID::curr_OFFSET:
       calValues.currOffset = message.getFloat();
       EEPROM.put(92, calValues.currOffset);
       break;
-    case CHILD_ID_LOAD_MEMORY:
+    case CHILD_ID::LOAD_MEMORY:
       if (message.getBool()) {
         StoreEEPROM();
       } else {
         getEEPROM();
       }
       break;
-    case CHILD_ID_s_debug:
+    case CHILD_ID::s_debug:
       configValues.sDebug = message.getBool();
       EEPROM.put(106, configValues.sDebug);
       break;
-    case CHILD_ID_PID1_Threshold:
+    case CHILD_ID::PID1_Threshold:
       pid1.alarmThreshold = message.getInt();
       EEPROM.put(107, pid1.alarmThreshold);
       break;
-    case CHILD_ID_PID2_Threshold:
+    case CHILD_ID::PID2_Threshold:
       pid2.alarmThreshold = message.getInt();
       EEPROM.put(109, pid2.alarmThreshold);
       break;
-    case CHILD_ID_PID3_Threshold:
+    case CHILD_ID::PID3_Threshold:
       pid3.alarmThreshold = message.getInt();
       EEPROM.put(111, pid3.alarmThreshold);
       break;
