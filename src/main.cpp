@@ -1,14 +1,20 @@
 #include <Arduino.h>
 #include "HX711.h"
-#include <max6675.h>
+//#include <max6675.h>
 #include <PID_v1.h>
 #include <EEPROM.h>
 #include "controller.h"
-
+#include <OneWire.h>
 
 #define VERSION "0.6.1.1"
 
 //Structs
+
+struct DS18B20Values {
+  byte addr[8];
+  float C;
+  float F;
+};
 
 struct ConfigurationValues {
   int SENSORLOOPTIME = 23000;
@@ -85,17 +91,22 @@ DutyCycle dutyCycle[3];
 
 EmonVars emonVars;
 
+DS18B20Values ds18b20Values[5];
+
 //Working Variables
 static unsigned long SensorLoop_timer = 0;
+static unsigned long PID_compute_loop_timer = 0;
+static unsigned long dC_loop_timer = 0;
+static unsigned long oldtimeScale = 0;
 static float dC = 0.0;
 static float dC2 = 0.0;
 static float dC3 = 0.0;
 static float valueScale = 0;
 static float value_oldScale = 0;
-static unsigned long oldtimeScale = 0;
 static float kgpsScale = 0;
 static long AREF_V = 0;
 static bool ssrArmed = false;
+float tempPress = 0;
 
 //Pin Definitions
 #define PressurePIN A15
@@ -104,7 +115,7 @@ static bool ssrArmed = false;
 #define emon_Input_PIN A9
 #define SSRArmed_PIN  29
 #define HX711_dout 9
-#define HX711_sck 10
+#define HX711_sck 8
 #define ElementPowerPin 41
 #define ElementPowerPin2 43
 #define ElementPowerPin3 25
@@ -118,16 +129,15 @@ static bool ssrArmed = false;
 #define thermo2CS 47
 #define thermo2CLK 46
 #define speakerPin 39
+#define DS18B20_PIN 49
 
 //Scale
 HX711 LoadCell;
 
-//Thermocouples
-MAX6675 thermocouple0(thermo0CLK, thermo0CS, thermo0DO);
-MAX6675 thermocouple1(thermo1CLK, thermo1CS, thermo1DO);
-MAX6675 thermocouple2(thermo2CLK, thermo2CS, thermo2DO);
+//DS18B20
+OneWire  ds(DS18B20_PIN);  // on pin DS18B20_PIN (a 4.7K resistor is necessary)
 
-// MySensors Child IDs
+// Old MySensors Child IDs
 enum CHILD_ID {
   T0 = 0,                // "Condenser T0"
   T1 = 1,                // "Upper Spool T1"
@@ -212,18 +222,20 @@ void printConfig();
 long getBandgap(void);
 void receiveSerial();
 void sendInfo(String);
+void DS18B20();
 
 void setup() {
   LoadCell.begin(HX711_dout, HX711_sck);
-  Serial3.begin(115200);
+  Serial.begin(9600);
 }
  
 void loop() {
-  DutyCycleLoop();
-
+  // listen for incoming Ethernet connectionss
+  DS18B20();
+  //DutyCycleLoop();
   AREF_V = getBandgap();
 
-  if ( (millis() - SensorLoop_timer) > (unsigned long)configValues.SENSORLOOPTIME)  {
+  if ( ( (millis() - SensorLoop_timer) > (unsigned long)configValues.SENSORLOOPTIME) ) {
     //Temp Alarm
     if (pid1.alarmThreshold < pid1.input) {
       sendInfo("PID1!");
@@ -246,9 +258,7 @@ void loop() {
     digitalWrite(ElementPowerPin2, HIGH);
     digitalWrite(ElementPowerPin3, HIGH);
     float sum = 0;
-
     emonVars.sampleTime = millis();
-
     int N = 1000;
     for (int i = 0; i < N; i++) {
       float current = calValues.emonCal * (analogRead(emon_Input_PIN) - 512) ;  // in amps I presume
@@ -281,70 +291,117 @@ void loop() {
     }
     kgpsScale = calValues.rScale * ((valueScale - value_oldScale) / ((millis() - oldtimeScale) / 1000));
     oldtimeScale = millis();
-
-
-    //Send Sensors
-    Serial3.print("Temp0: ");
-    Serial3.println(thermocouple0.readFahrenheit());
-    Serial3.print("Temp1: ");
-    Serial3.println(thermocouple1.readFahrenheit());
-    Serial3.print("Temp3: ");
-    Serial3.println(steinhartValues.steinhart);
-    Serial3.print("Temp4: ");
-    Serial3.println(thermocouple2.readFahrenheit());
-    Serial3.print("Scale: ");
-    Serial3.println(valueScale);
-    Serial3.print("RMS: ");
-    Serial3.println(emonVars.rms);
-    Serial3.print("SSR Armed: ");
-    Serial3.println(ssrArmed);
-    Serial3.print("PID1 Output: ");
-    Serial3.println(pid1.output);
-    Serial3.print("PID2 Output: ");
-    Serial3.println(pid2.output);
-    Serial3.print("PID3 Output: ");
-    Serial3.println(pid3.output);
-    Serial3.print("Board Voltage: ");
-    Serial3.println((float)AREF_V);
-
-
-
     int RawADCavg = 0;
     int i = 0;
     for (i = 0; i < 10; i++) {
       delayMicroseconds(10);
       RawADCavg += analogRead(PressurePIN);
     }
-    float tempPress = (((float)RawADCavg / 10.0 )  - calValues.press1Offset ) * (1 / calValues.pressCal1);
-    Serial3.print("Pressure 1: ");
-    Serial3.println(tempPress, 2);
-    Serial3.print("Scale Rate: ");
-    Serial3.println(kgpsScale, 2);
-    if (configValues.sDebug) {
-      Serial3.println("----------------------------------------");
-      Serial3.print("Sensor Data Time (ms) ");
-      Serial3.println(millis());
-      Serial3.print("Condenser T0: ");
-      Serial3.println(thermocouple0.readFahrenheit());
-      Serial3.print("Upper Spool T1: ");
-      Serial3.println(thermocouple1.readFahrenheit());
-      Serial3.print("lower Spool T2: ");
-      Serial3.println(thermocouple2.readFahrenheit());
-      Serial3.print("Amb Temp DHT: ");
-      Serial3.print("Platter Temp: ");
-      Serial3.println(Steinhart());
-      Serial3.print("Humidity DHT: ");
-      Serial3.print("Scale : ");
-      Serial3.println(valueScale);
-      Serial3.print("Pressure 1: ");
-      Serial3.println(tempPress);
-      Serial3.print("Current : ");
-      Serial3.println(emonVars.rms);
-      Serial3.print("MEGA Voltage : ");
-      Serial3.println(AREF_V);
-    }
+    tempPress = (((float)RawADCavg / 10.0 )  - calValues.press1Offset ) * (1 / calValues.pressCal1);
+
+    //Send Sensors
+    Serial.print("Sensor Data Time (ms) ");
+    Serial.println(millis());
+    Serial.print("Temp0: ");
+    Serial.println(ds18b20Values[0].F);
+    Serial.print("Temp1: ");
+    Serial.println(ds18b20Values[1].F);
+    Serial.print("Temp2: ");
+    Serial.println(steinhartValues.steinhart);
+    Serial.print("Temp3: ");
+    Serial.println(ds18b20Values[2].F);
+    Serial.print("Scale: ");
+    Serial.println(valueScale);
+    Serial.print("RMS: ");
+    Serial.println(emonVars.rms);
+    Serial.print("SSR Armed: ");
+    Serial.println(ssrArmed);
+    Serial.print("PID1 mode: ");
+    Serial.println(pid1.mode);
+    Serial.print("PID2 mode: ");
+    Serial.println(pid2.mode);
+    Serial.print("PID3 mode: ");
+    Serial.println(pid3.mode);
+    Serial.print("PID1 Output: ");
+    Serial.println(pid1.output);
+    Serial.print("PID2 Output: ");
+    Serial.println(pid2.output);
+    Serial.print("PID3 Output: ");
+    Serial.println(pid3.output);
+    Serial.print("Pressure 1: ");
+    Serial.println(tempPress, 2);
+    Serial.print("Scale Rate: ");
+    Serial.println(kgpsScale, 2);
+    Serial.print("Current : ");
+    Serial.println(emonVars.rms);
+    Serial.print("MEGA Voltage : ");
+    Serial.println(AREF_V);
     SensorLoop_timer = millis();
   }
+
+
+if ((millis() - PID_compute_loop_timer) > 10000)  {
+    pid3.input = Steinhart();
+    pid2.input = ds18b20Values[1].F;
+    pid1.input = ds18b20Values[0].F;
+    int gap = 0;
+    gap = (pid1.setpoint - pid1.input); //distance away from setpoint
+    if ((gap > pid1.aggSP && pid1.adaptiveMode == true) || pid1.adaptiveMode == false)
+    { //we're close to setpoint, use conservative tuning parameters
+      myPID1.SetTunings(pid1.kp, pid1.ki, pid1.kd);
+    }
+    else if (gap > pid1.aggSP && pid1.adaptiveMode == true) // && tuning == false
+    {
+      //we're far from setpoint, use aggressive tuning parameters
+      myPID1.SetTunings(pid1.aggKp, pid1.aggKi, pid1.aggKd);
+    }
+    gap = (pid2.setpoint - pid2.input); //distance away from setpoint
+    if ((gap < pid2.aggSP && pid2.adaptiveMode == true) || pid2.adaptiveMode == false)
+    { //we're close to setpoint, use conservative tuning parameters
+      myPID2.SetTunings(pid2.kp, pid2.ki, pid2.kd);
+    }
+    else if (gap > pid2.aggSP && pid2.adaptiveMode == true) // && tuning_2 == false
+    {
+      //we're far from setpoint, use aggressive tuning parameters
+      myPID2.SetTunings(pid2.aggKp, pid2.aggKi, pid2.aggKd);
+    }
+
+    myPID3.SetTunings(pid3.kp, pid3.ki, pid3.kd);
+
+    PID_compute_loop_timer = millis();
+    // end of old_time local
+  }
+
+  myPID1.Compute();
+  myPID2.Compute();
+  myPID3.Compute();
+
+  if ( (millis() - dC_loop_timer) > 10000) {
+    if ((pid1.mode == true)) {
+      dC = (pid1.output / 100.0);
+    } else {
+      dC = 0;
+      pid1.output = 0;
+    }
+
+    if ((pid2.mode == true)) {
+      dC2 = (pid2.output / 100.0);
+    } else {
+      dC2 = 0;
+      pid2.output = 0;
+    }
+
+    if ((pid3.mode == true)) {
+      dC3 = (pid3.output / 100.0);
+    } else {
+      dC3 = 0;
+      pid3.output = 0;
+    }
+
+    dC_loop_timer = millis();
+  }
+
+  // end of void loop
 }
 
 float Steinhart() {
@@ -710,11 +767,11 @@ long getBandgap(void) {
  * If the debug mode is enabled (configValues.sDebug), the received message is printed to Serial3.
  */
 void receiveSerial() {
-  if (Serial3.available() > 0) {
+  if (Serial.available() > 0) {
     String message = Serial3.readStringUntil('\n');
     if (configValues.sDebug) {
-      Serial3.print("Received: ");
-      Serial3.println(message);
+      Serial.print("Received: ");
+      Serial.println(message);
     }
 
     int sensor = message.substring(0, message.indexOf(':')).toInt();
@@ -917,4 +974,83 @@ void receiveSerial() {
 void sendInfo(String payload) {
   Serial3.print("INFO: ");
   Serial3.println(payload);
+}
+
+void DS18B20() {
+  //Serial.println("DS18B20()");
+  byte addr[8];
+  int count = 0;
+   
+  while (ds.search(addr)) {
+    byte i;
+    byte type_s;
+    byte data[9];
+    
+    // Serial.print("ROM =");
+    // for( i = 0; i < 8; i++) {
+    //   Serial.write(' ');
+    //   Serial.print(addr[i], HEX);
+    // }
+    
+    switch (addr[0]) {
+      case 0x10:
+        // Serial.println("  Chip = DS18S20");  // or old DS1820
+        type_s = 1;
+        break;
+      case 0x28:
+        // Serial.println("  Chip = DS18B20");
+        type_s = 0;
+        break;
+      case 0x22:
+        // Serial.println("  Chip = DS1822");
+        type_s = 0;
+        break;
+      default:
+        // Serial.println("Device is not a DS18x20 family device.");
+        return;
+    } 
+
+    ds.reset();
+    ds.select(addr);
+    ds.write(0x44, 0);
+    delay(10); 
+    ds.reset();
+    ds.select(addr);    
+    ds.write(0xBE);
+    for ( i = 0; i < 9; i++) { data[i] = ds.read(); }
+    // Convert the data to actual temperature
+    // because the result is a 16 bit signed integer, it should
+    // be stored to an "int16_t" type, which is always 16 bits
+    // even when compiled on a 32 bit processor.
+    int16_t raw = (data[1] << 8) | data[0];
+    if (type_s) {
+      raw = raw << 3; // 9 bit resolution default
+      if (data[7] == 0x10) {
+        // "count remain" gives full 12 bit resolution
+        raw = (raw & 0xFFF0) + 12 - data[6];
+      }
+    } else {
+      byte cfg = (data[4] & 0x60);
+      // at lower res, the low bits are undefined, so let's zero them
+      if (cfg == 0x00) raw = raw & ~7;  // 9 bit resolution, 93.75 ms
+      else if (cfg == 0x20) raw = raw & ~3; // 10 bit res, 187.5 ms
+      else if (cfg == 0x40) raw = raw & ~1; // 11 bit res, 375 ms
+      //// default is 12 bit resolution, 750 ms conversion time
+    }
+    ds18b20Values[count].C = (float)raw / 16.0;
+    ds18b20Values[count].F = ds18b20Values[count].C * 1.8 + 32.0;
+    // Serial.print("Count = ");
+    // Serial.print(count);
+    // Serial.print("  Temperature = ");
+    // Serial.print(ds18b20Values[count].C);
+    // Serial.print(" Celsius, ");
+    // Serial.print(ds18b20Values[count].F);
+    // Serial.println(" Fahrenheit");
+    count = count + 1;
+}
+  // Serial.println("No more addresses.");
+  // Serial.println();
+  ds.reset_search();
+  delay(1000);
+  return;
 }
