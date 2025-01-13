@@ -5,6 +5,7 @@
 #include <EEPROM.h>
 #include "controller.h"
 
+
 #define VERSION "0.6.1.1"
 
 //Structs
@@ -65,6 +66,7 @@ struct DutyCycle {
 ConfigurationValues configValues;
 
 ThermistorConfig thermistorConfig;
+
 struct SteinhartValues {
   float resistance = 0.0;
   float adcValue = 0;
@@ -176,15 +178,6 @@ enum CHILD_ID {
   SSRFail_Threshhold = 76,// "SSRFail Threshhold"
   SSRFail_Alarm = 77,    // "SSR FAIL ALARM"
   curr_OFFSET = 78,      // "Current Offset"
-  LCD_VAR1 = 1,
-  LCD_VAR2 = 2,
-  LCD_PID1 = 9,
-  LCD_PID2 = 10,
-  LCD_Condenser = 11,
-  LCD_NODE_ID = 10,
-  LCD_INFO = 32,
-  LCD_Platter = 33,
-  LCD_PID3 = 34,
   PIDMODE_3 = 80,        // "PID3 Platter"
   PIDSETPOINT_3 = 81,    // "PID3 Setpoint"
   Duty3 = 82,            // "Duty Cycle3"
@@ -224,7 +217,7 @@ void setup() {
   LoadCell.begin(HX711_dout, HX711_sck);
   Serial3.begin(115200);
 }
-
+ 
 void loop() {
   DutyCycleLoop();
 
