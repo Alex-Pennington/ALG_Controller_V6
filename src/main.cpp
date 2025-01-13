@@ -7,11 +7,12 @@
 
 #define VERSION "0.6.0.1"
 #define SENDDELAY 50
-#define MY_NODE_ID 200
+#define MY_NODE_ID 201
 #define MY_RADIO_RF24
 #define MY_RF24_PA_LEVEL RF24_PA_LOW
 #define MY_RF24_CE_PIN 49
 #define MY_RF24_CS_PIN 53
+#define MY_DEBUG
 #include <MySensors.h>
 
 //Structs
@@ -22,6 +23,7 @@ struct ConfigurationValues {
   int scale_stabilisingtime = 10000;
   bool toACK = false;
 };
+ConfigurationValues configValues;
 
 struct PIDConfig {
     bool mode;
@@ -34,6 +36,9 @@ struct PIDConfig {
     double input;
     double output;
 };
+PIDConfig pid1 = {false, 150, 0.5, 0.005, 0, 1, 0, 0, 10, false, 0, 0, 0};
+PIDConfig pid2 = {false, 150, 0.35, 0, 0, 5, 0, 0, 10, false, 0, 0, 0};
+PIDConfig pid3 = {false, 120, 1.2, 0.01, 0, 0, 0, 0, 10, false, 0, 0, 0};
 
 struct CalibrationValues {
     float pressCal1 = 20.77;
@@ -47,6 +52,7 @@ struct CalibrationValues {
     int mScale  = 1000;
     int rScale =  1000;
 };
+CalibrationValues calValues;
 
 struct ThermistorConfig {
     const long seriesResistor = 100000;
@@ -54,6 +60,7 @@ struct ThermistorConfig {
     const int nominalTemperature = 25;
     const int bCoefficient = 3950;
 };
+ThermistorConfig thermistorConfig;
 
 struct EmonVars {
     unsigned long sampleTime = 0;
@@ -61,6 +68,7 @@ struct EmonVars {
     int ssrFailCount = 0;
     float rms = 0.0;
 };
+EmonVars emonVars;
 
 struct DutyCycle {
     bool element = false;
@@ -68,27 +76,14 @@ struct DutyCycle {
     unsigned long onTime = 0;
     unsigned long offTime = 0;
 };
+DutyCycle dutyCycle[3];
 
-ConfigurationValues configValues;
-
-ThermistorConfig thermistorConfig;
 struct SteinhartValues {
   float resistance = 0.0;
   float adcValue = 0;
   float steinhart = 0;
 };
-
 SteinhartValues steinhartValues;
-
-CalibrationValues calValues;
-
-PIDConfig pid1 = {false, 150, 0.5, 0.005, 0, 1, 0, 0, 10, false, 0, 0, 0};
-PIDConfig pid2 = {false, 150, 0.35, 0, 0, 5, 0, 0, 10, false, 0, 0, 0};
-PIDConfig pid3 = {false, 120, 1.2, 0.01, 0, 0, 0, 0, 10, false, 0, 0, 0};
-
-DutyCycle dutyCycle[3];
-
-EmonVars emonVars;
 
 //Working Variables
 static unsigned long SensorLoop_timer = 0;
@@ -356,6 +351,7 @@ void presentation()
 }
 
 void setup() {
+  FactoryResetEEPROM();
   LoadCell.begin(HX711_dout, HX711_sck);
 }
 
