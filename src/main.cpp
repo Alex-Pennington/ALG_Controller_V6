@@ -10,6 +10,159 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
+#define MY_DEBUG
+
+// Enable and select radio type attached
+#define MY_NODE_ID 201
+#define MY_RADIO_RF24
+#define MY_RF24_PA_LEVEL RF24_PA_LOW
+#define MY_RF24_CE_PIN 49
+#define MY_RF24_CS_PIN 53
+// #define MY_DEBUG
+#include <MySensors.h>
+
+// MySensors Child IDs
+enum CHILD_ID {
+  T0 = 0,
+  T1 = 1,
+  T2 = 2,
+  T3 = 3,
+  T4 = 4,
+
+  dC_1 = 5,
+  SSR_Armed = 6,
+  PIDMODE_1 = 7,
+  PIDSETPOINT_1 = 8,
+  AdaptiveSP_1 = 9,
+  PIDkP0_1 = 10,
+  PIDkI0_1 = 11,
+  PIDkD0_1 = 12,
+  PIDkP1_1 = 13,
+  PIDkI1_1 = 14,
+  PIDkD1_1 = 15,
+  AdaptiveMode_1 = 16,
+  //EDC_1 = 17,
+  PIDThreshold_1 = 18,
+  
+  dC_2 = 19,
+  PIDMODE_2 = 20,
+  PIDSETPOINT_2 = 21,
+  AdaptiveSP_2 = 22,
+  PIDkP0_2 = 23,
+  PIDkI0_2 = 24,
+  PIDkD0_2 = 25,
+  PIDkP1_2 = 26,
+  PIDkI1_2 = 27,
+  PIDkD1_2 = 28,
+  AdaptiveMode_2 = 29,
+  //EDC_2 = 31,
+  PIDThreshold_2 = 32,
+  
+  dC_3 = 33,
+  PIDMODE_3 = 34,
+  PIDSETPOINT_3 = 35,
+  Duty3 = 36,
+  PIDkP0_3 = 37,
+  PIDkI0_3 = 38,
+  PIDkD0_3 = 39,
+  //EDC_3 = 40,
+  PIDThreshold_3 = 41,
+
+  
+  Scale = 42,
+  ScaleTare = 43,
+  ScaleCal = 44,
+  ScaleOffset = 45,
+    
+  MainsCurrent = 46,
+  MainsCurrentMultiplier = 47,
+  SSRFail_Threshhold = 48,
+  SSRFail_Alarm = 49,
+  MainsCurrentOffset = 50,
+
+  P1 = 51,
+  P1Cal = 52,
+  Press1Offset = 53,    
+  P2 = 54,
+  P2Cal = 55,
+  Press2Offset = 56,
+  P3 = 57,
+  P3Cal = 58,
+  Press3Offset = 59,  
+  P4 = 60,
+  P4Cal = 61,
+  Press4Offset = 62,  
+  
+  VccCurrent = 63,
+  VccVoltage = 64,
+  
+  THMS1 = 65,
+  THMS2 = 66,
+
+  s_debug = 67,
+  Info = 68,
+  LOAD_MEMORY = 69,
+
+  dTscale = 70,
+  T5 = 71
+};
+
+// MySensors Message Definitions
+
+MyMessage msgSSRArmed(CHILD_ID::SSR_Armed, V_STATUS);
+MyMessage msgLoadEEPROM(CHILD_ID::LOAD_MEMORY, V_STATUS);
+MyMessage msgINFO(CHILD_ID::Info, V_TEXT);
+
+MyMessage msgPIDMODE(CHILD_ID::PIDMODE_1, V_STATUS);
+MyMessage msgPIDSETPOINT(CHILD_ID::PIDSETPOINT_1, V_TEMP);
+MyMessage msgKp(CHILD_ID::PIDkP0_1, V_LEVEL);
+MyMessage msgKi(CHILD_ID::PIDkI0_1, V_LEVEL);
+MyMessage msgKd(CHILD_ID::PIDkD0_1, V_LEVEL);
+//MyMessage msgEDC(CHILD_ID::EDC_1, V_PERCENTAGE);
+
+
+MyMessage msgPIDMODE_2(CHILD_ID::PIDMODE_2, V_STATUS);
+MyMessage msgPIDSETPOINT_2(CHILD_ID::PIDSETPOINT_2, V_TEMP);
+MyMessage msgKp_2(CHILD_ID::PIDkP0_2, V_LEVEL);
+MyMessage msgKi_2(CHILD_ID::PIDkI0_2, V_LEVEL);
+MyMessage msgKd_2(CHILD_ID::PIDkD0_2, V_LEVEL);
+//MyMessage msgEDC_2(CHILD_ID::EDC_2, V_PERCENTAGE);
+
+MyMessage msgPIDMODE_3(CHILD_ID::PIDMODE_3, V_STATUS);
+MyMessage msgPIDSETPOINT_3(CHILD_ID::PIDSETPOINT_3, V_TEMP);
+MyMessage msgKp_3(CHILD_ID::PIDkP0_3, V_LEVEL);
+MyMessage msgKi_3(CHILD_ID::PIDkI0_3, V_LEVEL);
+MyMessage msgKd_3(CHILD_ID::PIDkD0_3, V_LEVEL);
+//MyMessage msgEDC_3(CHILD_ID::EDC_3, V_PERCENTAGE);
+
+MyMessage msgTemp0(CHILD_ID::T0, V_TEMP);
+MyMessage msgTemp1(CHILD_ID::T1, V_TEMP);
+MyMessage msgTemp2(CHILD_ID::T2, V_TEMP);
+MyMessage msgTemp3(CHILD_ID::T3, V_TEMP);
+MyMessage msgTemp4(CHILD_ID::T4, V_TEMP);
+MyMessage msgTemp5(CHILD_ID::T5, V_TEMP);
+MyMessage msgTHMS1(CHILD_ID::THMS1, V_TEMP);
+MyMessage msgTHMS2(CHILD_ID::THMS2, V_TEMP);
+
+MyMessage msgScale(CHILD_ID::Scale, V_WEIGHT);
+MyMessage msgScaleTare(CHILD_ID::ScaleTare, V_STATUS);
+MyMessage msgScaleOffset(CHILD_ID::ScaleOffset, V_LEVEL);
+MyMessage msgScaleRate(CHILD_ID::dTscale, V_LEVEL);
+
+MyMessage msgPressure1(CHILD_ID::P1, V_PRESSURE);
+MyMessage msgPress1Offset(CHILD_ID::Press1Offset, V_LEVEL);
+
+MyMessage msgPressure2(CHILD_ID::P2, V_PRESSURE);
+MyMessage msgPressure3(CHILD_ID::P3, V_PRESSURE);
+MyMessage msgPressure4(CHILD_ID::P4, V_PRESSURE);
+
+MyMessage msgMainsCurrent(CHILD_ID::MainsCurrent, V_LEVEL);
+MyMessage msgMainsCurrentMultiplier(CHILD_ID::MainsCurrentMultiplier, V_LEVEL);
+MyMessage msgSSRFailAlarm(CHILD_ID::SSRFail_Alarm, V_STATUS);
+MyMessage msgVccVoltage(CHILD_ID::VccVoltage, V_LEVEL);
+MyMessage msgVccCurrent(CHILD_ID::VccCurrent, V_LEVEL);
+
+
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
@@ -118,14 +271,14 @@ float dC3 = 0.0;
 float valueScale = 0;
 float value_oldScale = 0;
 unsigned long oldtimeScale = 0;
-float kgpsScale = 0; //rate of change of scale in kilograms per second
+float gramsPerSecondScale = 0; //rate of change of scale in kilograms per second
 long AREF_V = 0;
 bool ssrArmed = false;
 float pressure1Var = 0;
 float pressure2Var = 0;
 float pressure3Var = 0;
 float pressure4Var = 0;
-float VccCurrent = 0;
+float VccCurrentVar = 0;
 extern unsigned int __heap_start;
 extern void *__brkval;
 
@@ -243,6 +396,68 @@ enum EEPROMAddresses {
   VCC_CURRENT_MULTIPLIER = 138 // float, 4 bytes
 };
 
+void presentation() {
+  //Send the sensor node sketch version information to the gateway
+  sendSketchInfo("Controller", VERSION);
+
+  present(CHILD_ID::T0, S_TEMP, "DS18B20 1");
+  present(CHILD_ID::T1, S_TEMP, "DS18B20 2");
+  present(CHILD_ID::T2, S_TEMP, "DS18B20 3");
+  present(CHILD_ID::T3, S_TEMP, "DS18B20 4");
+  present(CHILD_ID::T4, S_TEMP, "DS18B20 5");
+  present(CHILD_ID::T5, S_TEMP, "Steinhart");
+
+  present(CHILD_ID::THMS1, S_TEMP, "Thermistor 1");
+  present(CHILD_ID::THMS2, S_TEMP, "Thermistor 2");
+  
+  present(CHILD_ID::Scale, S_WEIGHT, "Scale");
+  present(CHILD_ID::ScaleTare, S_BINARY, "Scale Tare");
+  present(CHILD_ID::ScaleOffset, S_LIGHT_LEVEL, "Scale Offset");
+  present(CHILD_ID::ScaleCal, S_LIGHT_LEVEL, "Scale Calibration");
+
+  present(CHILD_ID::P1, S_BARO, "Pressure 1");
+  present(CHILD_ID::P2, S_BARO, "Pressure 2");
+  present(CHILD_ID::P3, S_BARO, "Pressure 3");
+  present(CHILD_ID::P4, S_BARO, "Pressure 4");
+
+  present(CHILD_ID::MainsCurrent, S_MULTIMETER, "Mains Current");
+  present(CHILD_ID::MainsCurrentMultiplier, S_LIGHT_LEVEL, "Mains Current Multiplier");
+  present(CHILD_ID::MainsCurrentOffset, S_LIGHT_LEVEL, "Mains Current Offset");
+  
+  present(CHILD_ID::SSRFail_Threshhold, S_LIGHT_LEVEL, "SSR Fail Threshold");
+    
+  present(CHILD_ID::VccCurrent, S_MULTIMETER, "Vcc Current");
+  present(CHILD_ID::VccVoltage, S_LIGHT_LEVEL, "Vcc Voltage");
+
+  present(CHILD_ID::dC_1, S_DIMMER, "dC 1");
+  present(CHILD_ID::PIDMODE_1, S_BINARY, "PID Mode 1");
+  present(CHILD_ID::PIDSETPOINT_1, S_TEMP, "PID Setpoint 1");
+  present(CHILD_ID::PIDkP0_1, S_LIGHT_LEVEL, "PID kP 1");
+  present(CHILD_ID::PIDkI0_1, S_LIGHT_LEVEL, "PID kI 1");
+  present(CHILD_ID::PIDkD0_1, S_LIGHT_LEVEL, "PID kD 1");
+
+  present(CHILD_ID::dC_2, S_DIMMER, "dC 2");
+  present(CHILD_ID::PIDMODE_2, S_BINARY, "PID Mode 2");
+  present(CHILD_ID::PIDSETPOINT_2, S_TEMP, "PID Setpoint 2");
+  present(CHILD_ID::PIDkP0_2, S_LIGHT_LEVEL, "PID kP 2");
+  present(CHILD_ID::PIDkI0_2, S_LIGHT_LEVEL, "PID kI 2");
+  present(CHILD_ID::PIDkD0_2, S_LIGHT_LEVEL, "PID kD 2");
+
+  present(CHILD_ID::dC_3, S_DIMMER, "dC 3");
+  present(CHILD_ID::PIDMODE_3, S_BINARY, "PID Mode 3");
+  present(CHILD_ID::PIDSETPOINT_3, S_TEMP, "PID Setpoint 3");
+  present(CHILD_ID::PIDkP0_3, S_LIGHT_LEVEL, "PID kP 3");
+  present(CHILD_ID::PIDkI0_3, S_LIGHT_LEVEL, "PID kI 3");
+  present(CHILD_ID::PIDkD0_3, S_LIGHT_LEVEL, "PID kD 3");
+
+  present(CHILD_ID::dTscale, S_LIGHT_LEVEL, "Scale Rate");
+  present(CHILD_ID::SSR_Armed, S_BINARY, "SSR Armed");
+  present(CHILD_ID::SSRFail_Alarm, S_BINARY, "SSR Fail Alarm");
+  present(CHILD_ID::Info, S_INFO, "Info");
+  present(CHILD_ID::LOAD_MEMORY, S_BINARY, "Load Memory");
+
+}
+
 void setup() {
   Serial.begin(115200);
   getEEPROM();
@@ -273,16 +488,30 @@ void setup() {
 
 void loop() {
   DutyCycleLoop();
-  serialReceiveData();
 
   if ( (millis() - SensorLoop_timer) > (unsigned long)configValues.SENSORLOOPTIME)  {
     Serial.println("-");
     AREF_V = getBandgap();
 
-    getVccCurrent(); 
+    getVccCurrent();
+    msgVccCurrent.set(VccCurrentVar, 2); send(msgVccCurrent);
+    
     DS18B20();
-    emon(); 
+    msgTemp0.set(ds18b20Values[0].F, 2); send(msgTemp0);
+    msgTemp1.set(ds18b20Values[1].F, 2); send(msgTemp1);
+    msgTemp2.set(ds18b20Values[2].F, 2); send(msgTemp2);
+    msgTemp3.set(ds18b20Values[3].F, 2); send(msgTemp3);
+    msgTemp4.set(ds18b20Values[4].F, 2); send(msgTemp4);
+    
+    float steinhartVar = Steinhart();
+    msgTemp5.set(steinhartVar, 2); send(msgTemp5);
+
+    emon();
+    msgMainsCurrent.set(emonVars.rms, 2); send(msgMainsCurrent);
+    
     getScale();
+    msgScale.set(valueScale, 2); send(msgScale);
+    msgScaleRate.set(gramsPerSecondScale, 2); send(msgScaleRate);
 
     char buffer[16];
     dtostrf(valueScale, 6, 2, buffer);
@@ -303,21 +532,19 @@ void getVccCurrent()
 {
   for (int i = 0; i < 10; i++)
   {
-    VccCurrent += analogRead(VccCurrentSensor);
+    VccCurrentVar += analogRead(VccCurrentSensor);
     delay(10); // Small delay for better averaging
   }
-  VccCurrent /= 10;                                                                        // Average the readings
-  VccCurrent = (VccCurrent - calValues.VccCurrentOffset) * calValues.VccCurrentMultiplier; //
+  VccCurrentVar /= 10;                                                                        // Average the readings
+  VccCurrentVar = (VccCurrentVar - calValues.VccCurrentOffset) * calValues.VccCurrentMultiplier; //
   return;
-}
-
-void serialPrintSensorData()
-{
+  }
+void serialPrintSensorData() {
   if (configValues.sDebug) {
     Serial.print("Time: ");
     Serial.println((float)millis()/1000.0/60.0/60.0,2);
-    Serial.print("VccCurrent: ");
-    Serial.println(VccCurrent);
+    Serial.print("VccCurrentVar: ");
+    Serial.println(VccCurrentVar);
     Serial.print("AREF_V: ");
     Serial.println(AREF_V);
     Serial.print("Pressure1: ");
@@ -330,8 +557,8 @@ void serialPrintSensorData()
     Serial.println(pressure4Var);
     Serial.print("Scale: ");
     Serial.println(valueScale);
-    Serial.print("kgpsScale: ");
-    Serial.println(kgpsScale);
+    Serial.print("gramsPerSecondScale: ");
+    Serial.println(gramsPerSecondScale);
     for (int i = 0; i < static_cast<int>(sizeof(ds18b20Values) / sizeof(ds18b20Values[0])); i++) {
       Serial.print("DS18B20 Sensor ");
       Serial.print(i);
@@ -349,7 +576,6 @@ void serialPrintSensorData()
   }
   return;
 }
-
 void TempAlarm()
 {
   // Temp Alarm
@@ -372,7 +598,6 @@ void TempAlarm()
     AllStop();
   }
 }
-
 void emon()
 {
   // SSRFail-Emon
@@ -408,9 +633,7 @@ void emon()
   emonVars.rms = sqrt(sum / N) - calValues.currOffset;
   return;
 }
-
-void getScale()
-{
+void getScale() {
   value_oldScale = valueScale;
   if (LoadCell.is_ready())
   {
@@ -430,11 +653,10 @@ void getScale()
   // float tempCompensation = ds18b20Values[0].C * 0.0002; // Adjust the factor as needed
   // valueScale += tempCompensation;
 
-  kgpsScale = calValues.rScale * ((valueScale - value_oldScale) / ((millis() - oldtimeScale) / 1000));
+  gramsPerSecondScale = ((valueScale - value_oldScale) / ((millis() - oldtimeScale)));
   oldtimeScale = millis();
   return;
 }
-
 float readPressure(int pin, int offset, float cal) {
   int RawADCavg = 0;
   int i = 0;
@@ -446,7 +668,6 @@ float readPressure(int pin, int offset, float cal) {
   float offsetCorrected1 = avgADC1 - (float)offset;
   return offsetCorrected1 * (1.0 / cal);
 }
-
 float Steinhart() {
   digitalWrite(SteinhartEnable, HIGH);
   for (int n = 0; n < 10; n++)
@@ -467,7 +688,6 @@ float Steinhart() {
   steinhartValues.steinhart = (((steinhartValues.steinhart * 9 ) / 5 ) + 32);
   return steinhartValues.steinhart;
 }
-
 float getThermistor(const int pinVar) {
   int ADCvalue = 0;
         const float seriesResistor = 981.0;
@@ -509,7 +729,6 @@ float getThermistor(const int pinVar) {
         */
   return tempF;
 }
-
 void DutyCycleLoop() {
   for (int i = 0; i < 3; i++) {
     if ((dutyCycle[i].loopTime > 0 && ssrArmed == true) && (i == 0 ? pid1.mode : (i == 1 ? pid2.mode : pid3.mode))) {
@@ -535,7 +754,6 @@ void DutyCycleLoop() {
     }
   }
 }
-
 void AllStop() {
   digitalWrite(SSRArmed_PIN, LOW);
   pid1.mode = false;
@@ -546,7 +764,6 @@ void AllStop() {
   myPID2.SetMode(MANUAL);
   myPID3.SetMode(MANUAL);
   }
-
 void StoreEEPROM() {
   EEPROM.put(EEPROMAddresses::PRESSURE3_CAL, calValues.pressure3Cal);
   EEPROM.put(EEPROMAddresses::PRESSURE4_CAL, calValues.pressure4Cal);
@@ -596,7 +813,6 @@ void StoreEEPROM() {
 
   printConfig();
 }
-
 void getEEPROM() {
   EEPROM.get(EEPROMAddresses::PRESSURE3_CAL, calValues.pressure3Cal);
   EEPROM.get(EEPROMAddresses::PRESSURE4_CAL, calValues.pressure4Cal);
@@ -645,7 +861,6 @@ void getEEPROM() {
   EEPROM.get(EEPROMAddresses::PRESSURE2_CAL, calValues.pressure2Cal);
   printConfig();
 }
-
 void FactoryResetEEPROM() {
   // Reset Calibration Values
   calValues.pressure1Cal = 20.77;
@@ -719,7 +934,6 @@ void FactoryResetEEPROM() {
 
   StoreEEPROM();
 }
-
 void printConfig() {
   Serial.print("zeroOffsetScale: ");
   Serial.println(calValues.zeroOffsetScale);
@@ -834,8 +1048,6 @@ void printConfig() {
   Serial.print("toACK: ");
   Serial.println(configValues.toACK);
 }
-
-
 long getBandgap(void) {
   // Read 1.1V reference against AVcc
   // set the reference to Vcc and the measurement to the internal 1.1V reference
@@ -862,12 +1074,10 @@ long getBandgap(void) {
   result = 1125300L / result; // Calculate Vcc (in mV); 1125300 = 1.1*1023*1000
   return result; // Vcc in millivolts
 }
-
 void sendInfo(String payload) {
   Serial.print("INFO : ");
   Serial.println(payload);
 }
-
 void DS18B20() {
   byte addr[8];
   int count = 0;
@@ -944,7 +1154,6 @@ void DS18B20() {
   ds.reset_search();
   return;
 }
-
 void displayLine(const char* line) {
   display.clearDisplay();
   display.setCursor(0,0);
@@ -953,7 +1162,6 @@ void displayLine(const char* line) {
   display.print(line); 
   display.display();
 }
-
 int freeMemory() {
   int free_memory;
   if ((int)__brkval == 0) {
@@ -963,248 +1171,224 @@ int freeMemory() {
   }
   return free_memory;
 }
-
-/**
- * @brief Receives configuration data from the serial port and updates calibration values.
- * 
- * This function reads a line of data from the serial port, parses it into a key-value pair,
- * and updates the corresponding calibration value in memory and EEPROM. The expected format
- * for the received data is a string with a key and a value separated by a space, followed by
- * a newline character. For example:
- * 
- * "pressure1Cal 1.23\n"
- * "pressure1Offset 10\n"
- * "pressure2Cal 2.34\n"
- * "pressure2Offset 20\n"
- * "pressure3Cal 3.45\n"
- * "pressure3Offset 30\n"
- * "pressure4Cal 4.56\n"
- * "pressure4Offset 40\n"
- * "emonCal 5.67\n"
- * "ssrFailThreshold 6\n"
- * "currOffset 7.89\n"
- * "zeroOffsetScale 8.90\n"
- * "scaleCal 9.01\n"
- * "VccCurrentOffset 50\n"
- * "VccCurrentMultiplier 1.23\n"
- * "sDebug 1\n"
- * 
- * The function supports the following keys:
- * - "pressure1Cal": Updates calValues.pressure1Cal (float)
- * - "pressure1Offset": Updates calValues.pressure1Offset (int)
- * - "pressure2Cal": Updates calValues.pressure2Cal (float)
- * - "pressure2Offset": Updates calValues.pressure2Offset (int)
- * - "pressure3Cal": Updates calValues.pressure3Cal (float)
- * - "pressure3Offset": Updates calValues.pressure3Offset (int)
- * - "pressure4Cal": Updates calValues.pressure4Cal (float)
- * - "pressure4Offset": Updates calValues.pressure4Offset (int)
- * - "emonCal": Updates calValues.emonCal (float)
- * - "ssrFailThreshold": Updates calValues.ssrFailThreshold (byte)
- * - "currOffset": Updates calValues.currOffset (float)
- * - "zeroOffsetScale": Updates calValues.zeroOffsetScale (float)
- * - "scaleCal": Updates calValues.scaleCal (float)
- * - "VccCurrentOffset": Updates calValues.VccCurrentOffset (int)
- * - "VccCurrentMultiplier": Updates calValues.VccCurrentMultiplier (float)
- * - "sDebug": Updates configValues.sDebug (bool)
- * 
- * Additional keys can be added as needed.
- */
-void serialReceiveData() {
-  if (Serial.available() > 0) {
-    String receivedData = Serial.readStringUntil('\n');
-    int index = receivedData.indexOf(' ');
-    String key = receivedData.substring(0, index);
-
-    float value = receivedData.substring(index+1).toFloat();
-    
-    if (strcmp(key.c_str(), "pressure1Cal") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      calValues.pressure1Cal = value;
-      EEPROM.put(EEPROMAddresses::PRESSURE1_CAL, calValues.pressure1Cal);
-    } else if (strcmp(key.c_str(), "pressure1Offset") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      calValues.pressure1Offset = (int)value;
-      EEPROM.put(EEPROMAddresses::PRESSURE1_OFFSET, calValues.pressure1Offset);
-    } else if (strcmp(key.c_str(), "pressure2Cal") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      calValues.pressure2Cal = value;
-      EEPROM.put(EEPROMAddresses::PRESSURE2_CAL, calValues.pressure2Cal);
-    } else if (strcmp(key.c_str(), "pressure2Offset") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      calValues.pressure2Offset = (int)value;
-      EEPROM.put(EEPROMAddresses::PRESSURE2_OFFSET, calValues.pressure2Offset);
-    } else if (strcmp(key.c_str(), "pressure3Cal") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      calValues.pressure3Cal = value;
-      EEPROM.put(EEPROMAddresses::PRESSURE3_CAL, calValues.pressure3Cal);
-    } else if (strcmp(key.c_str(), "pressure3Offset") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      calValues.pressure3Offset = (int)value;
-      EEPROM.put(EEPROMAddresses::PRESSURE3_OFFSET, calValues.pressure3Offset);
-    } else if (strcmp(key.c_str(), "pressure4Cal") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      calValues.pressure4Cal = value;
-      EEPROM.put(EEPROMAddresses::PRESSURE4_CAL, calValues.pressure4Cal);
-    } else if (strcmp(key.c_str(), "pressure4Offset") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      calValues.pressure4Offset = (int)value;
-      EEPROM.put(EEPROMAddresses::PRESSURE4_OFFSET, calValues.pressure4Offset);
-    } else if (strcmp(key.c_str(), "emonCal") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      calValues.emonCal = value;
-      EEPROM.put(EEPROMAddresses::EMON_CAL, calValues.emonCal);
-    } else if (strcmp(key.c_str(), "ssrFailThreshold") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      calValues.ssrFailThreshold = (byte)value;
-      EEPROM.put(EEPROMAddresses::SSR_FAIL_THRESHOLD, calValues.ssrFailThreshold);
-    } else if (strcmp(key.c_str(), "currOffset") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      calValues.currOffset = value;
-      EEPROM.put(EEPROMAddresses::CURR_OFFSET, calValues.currOffset);
-    } else if (strcmp(key.c_str(), "zeroOffsetScale") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      calValues.zeroOffsetScale = value;
-      LoadCell.set_offset(calValues.zeroOffsetScale);
-      EEPROM.put(EEPROMAddresses::ZERO_OFFSET_SCALE, calValues.zeroOffsetScale);
-    } else if (strcmp(key.c_str(), "scaleCal") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      calValues.scaleCal = value;
-      EEPROM.put(EEPROMAddresses::SCALE_CAL, calValues.scaleCal);
-      LoadCell.set_scale(calValues.scaleCal);
-    } else if (strcmp(key.c_str(), "VccCurrentOffset") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      calValues.VccCurrentOffset = (int)value;
-      EEPROM.put(EEPROMAddresses::VCC_CURRENT_OFFSET, calValues.VccCurrentOffset);
-    } else if (strcmp(key.c_str(), "VccCurrentMultiplier") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      calValues.VccCurrentMultiplier = value;
-      EEPROM.put(EEPROMAddresses::VCC_CURRENT_MULTIPLIER, calValues.VccCurrentMultiplier);
-    } else if (strcmp(key.c_str(), "sDebug") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      configValues.sDebug = (bool)value;
-      EEPROM.put(EEPROMAddresses::S_DEBUG, configValues.sDebug);
-    } else if (strcmp(key.c_str(), "pid1Setpoint") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid1.setpoint = value;
-      EEPROM.put(EEPROMAddresses::PID1_SETPOINT, pid1.setpoint);
-    } else if (strcmp(key.c_str(), "pid1Kp") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid1.kp = value;
-      EEPROM.put(EEPROMAddresses::PID1_KP, pid1.kp);
-    } else if (strcmp(key.c_str(), "pid1Ki") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid1.ki = value;
-      EEPROM.put(EEPROMAddresses::PID1_KI, pid1.ki);
-    } else if (strcmp(key.c_str(), "pid1Kd") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid1.kd = value;
-      EEPROM.put(EEPROMAddresses::PID1_KD, pid1.kd);
-    } else if (strcmp(key.c_str(), "pid1AggKp") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid1.aggKp = value;
-      EEPROM.put(EEPROMAddresses::PID1_AGG_KP, pid1.aggKp);
-    } else if (strcmp(key.c_str(), "pid1AggKi") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid1.aggKi = value;
-      EEPROM.put(EEPROMAddresses::PID1_AGG_KI, pid1.aggKi);
-    } else if (strcmp(key.c_str(), "pid1AggKd") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid1.aggKd = value;
-      EEPROM.put(EEPROMAddresses::PID1_AGG_KD, pid1.aggKd);
-    } else if (strcmp(key.c_str(), "pid1AggSP") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid1.aggSP = (byte)value;
-      EEPROM.put(EEPROMAddresses::PID1_AGG_SP, pid1.aggSP);
-    } else if (strcmp(key.c_str(), "pid1AdaptiveMode") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid1.adaptiveMode = (bool)value;
-      EEPROM.put(EEPROMAddresses::PID1_ADAPTIVE_MODE, pid1.adaptiveMode);
-    } else if (strcmp(key.c_str(), "pid1AlarmThreshold") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid1.alarmThreshold = (int)value;
-      EEPROM.put(EEPROMAddresses::PID1_ALARM_THRESHOLD, pid1.alarmThreshold);
-    } else if (strcmp(key.c_str(), "pid2Setpoint") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid2.setpoint = value;
-      EEPROM.put(EEPROMAddresses::PID2_SETPOINT, pid2.setpoint);
-    } else if (strcmp(key.c_str(), "pid2Kp") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid2.kp = value;
-      EEPROM.put(EEPROMAddresses::PID2_KP, pid2.kp);
-    } else if (strcmp(key.c_str(), "pid2Ki") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid2.ki = value;
-      EEPROM.put(EEPROMAddresses::PID2_KI, pid2.ki);
-    } else if (strcmp(key.c_str(), "pid2Kd") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid2.kd = value;
-      EEPROM.put(EEPROMAddresses::PID2_KD, pid2.kd);
-    } else if (strcmp(key.c_str(), "pid2AggKp") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid2.aggKp = value;
-      EEPROM.put(EEPROMAddresses::PID2_AGG_KP, pid2.aggKp);
-    } else if (strcmp(key.c_str(), "pid2AggKi") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid2.aggKi = value;
-      EEPROM.put(EEPROMAddresses::PID2_AGG_KI, pid2.aggKi);
-    } else if (strcmp(key.c_str(), "pid2AggKd") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid2.aggKd = value;
-      EEPROM.put(EEPROMAddresses::PID2_AGG_KD, pid2.aggKd);
-    } else if (strcmp(key.c_str(), "pid2AggSP") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid2.aggSP = (byte)value;
-      EEPROM.put(EEPROMAddresses::PID2_AGG_SP, pid2.aggSP);
-    } else if (strcmp(key.c_str(), "pid2AdaptiveMode") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid2.adaptiveMode = (bool)value;
-      EEPROM.put(EEPROMAddresses::PID2_ADAPTIVE_MODE, pid2.adaptiveMode);
-    } else if (strcmp(key.c_str(), "pid2AlarmThreshold") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid2.alarmThreshold = (int)value;
-      EEPROM.put(EEPROMAddresses::PID2_ALARM_THRESHOLD, pid2.alarmThreshold);
-    } else if (strcmp(key.c_str(), "pid3Setpoint") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid3.setpoint = value;
-      EEPROM.put(EEPROMAddresses::PID3_SETPOINT, pid3.setpoint);
-    } else if (strcmp(key.c_str(), "pid3Kp") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid3.kp = value;
-      EEPROM.put(EEPROMAddresses::PID3_KP, pid3.kp);
-    } else if (strcmp(key.c_str(), "pid3Ki") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid3.ki = value;
-      EEPROM.put(EEPROMAddresses::PID3_KI, pid3.ki);
-    } else if (strcmp(key.c_str(), "pid3Kd") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid3.kd = value;
-      EEPROM.put(EEPROMAddresses::PID3_KD, pid3.kd);
-    } else if (strcmp(key.c_str(), "pid3AlarmThreshold") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid3.alarmThreshold = (int)value;
-      EEPROM.put(EEPROMAddresses::PID3_ALARM_THRESHOLD, pid3.alarmThreshold);
-    } else if (strcmp(key.c_str(), "pid1Mode") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid1.mode = (bool)value;
-      EEPROM.put(EEPROMAddresses::PID1_MODE, pid1.mode);
-    } else if (strcmp(key.c_str(), "pid2Mode") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid2.mode = (bool)value;
-      EEPROM.put(EEPROMAddresses::PID2_MODE, pid2.mode);
-    } else if (strcmp(key.c_str(), "pid3Mode") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      pid3.mode = (bool)value;
-      EEPROM.put(EEPROMAddresses::PID3_MODE, pid3.mode);
-    } else if (strcmp(key.c_str(), "FactoryReset") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      FactoryResetEEPROM();
-    } else if (strcmp(key.c_str(), "tare") == 0) {
-      Serial.print(key); Serial.print(" : "); Serial.print(value); Serial.println(" ok");
-      LoadCell.tare(255);
-      calValues.zeroOffsetScale = LoadCell.get_offset();
-      EEPROM.put(EEPROMAddresses::ZERO_OFFSET_SCALE, calValues.zeroOffsetScale);
-      Serial.print("Tare Complete");
+void receive(const MyMessage & message)  {
+  int msgcmd = mGetCommand(message);
+  if (configValues.sDebug) {
+    if (message.isAck()) {
+      Serial.print("Ack : ");
+      Serial.print("Cmd = ");
+      Serial.print(msgcmd);
+      Serial.print(" : Set sensor ");
+      Serial.print(message.sender);
+      Serial.print("/");
+      Serial.println(message.sensor);
+      return;
     }
-    // Add more keys as needed
+    Serial.print("Cmd = ");
+    Serial.print(msgcmd);
+    Serial.print(" : Set sensor ");
+    Serial.print(message.sender);
+    Serial.print("/");
+    Serial.println(message.sensor);
+  }
+
+  switch (message.sensor) {
+    case CHILD_ID::ScaleTare:
+      if (message.getBool()) {
+        if (configValues.sDebug) Serial.print("Tare ... ");
+        calValues.zeroOffsetScale = LoadCell.read_average(100);
+        if (configValues.sDebug) Serial.println(" done.");
+        EEPROM.put(EEPROMAddresses::ZERO_OFFSET_SCALE, calValues.zeroOffsetScale);
+        LoadCell.set_offset(calValues.zeroOffsetScale);
+        send(msgScaleTare.set(false), configValues.toACK);
+        wait(SENDDELAY);
+        send(msgScaleOffset.set(calValues.zeroOffsetScale, 1));
+        wait(SENDDELAY);
+        if (configValues.sDebug) { Serial.print("Scale Offset = "); Serial.println(calValues.zeroOffsetScale); }
+        sendInfo("Scale Tare");
+      }
+      break;
+    case CHILD_ID::ScaleOffset:
+      calValues.zeroOffsetScale = message.getFloat();
+      EEPROM.put(EEPROMAddresses::ZERO_OFFSET_SCALE, calValues.zeroOffsetScale);
+      LoadCell.set_offset(calValues.zeroOffsetScale);
+      break;
+    case CHILD_ID::dC_1:
+      dC = message.getFloat() / 100.0;
+      break;
+    case CHILD_ID::dC_2:
+      dC2 = message.getFloat() / 100.0;
+      break;
+    case CHILD_ID::dC_3:
+      dC3 = message.getFloat() / 100.0;
+      break;
+    case CHILD_ID::SSR_Armed:
+      ssrArmed = message.getBool();
+      EEPROM.put(EEPROMAddresses::SSR_ARMED, ssrArmed);
+      digitalWrite(SSRArmed_PIN, ssrArmed);
+      break;
+    case CHILD_ID::Press1Offset:
+      calValues.pressure1Offset = message.getInt();
+      EEPROM.put(EEPROMAddresses::PRESSURE1_OFFSET, calValues.pressure1Offset);
+      break;
+    case CHILD_ID::ScaleCal:
+      calValues.scaleCal = message.getFloat();
+      LoadCell.set_scale(calValues.scaleCal);
+      EEPROM.put(EEPROMAddresses::SCALE_CAL, calValues.scaleCal);
+      break;
+        case CHILD_ID::P1Cal:
+      calValues.pressure1Cal = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PRESSURE1_CAL, calValues.pressure1Cal);
+      break;
+        case CHILD_ID::P2Cal:
+      calValues.pressure2Cal = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PRESSURE2_CAL, calValues.pressure2Cal);
+      break;
+        case CHILD_ID::P3Cal:
+      calValues.pressure3Cal = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PRESSURE3_CAL, calValues.pressure3Cal);
+      break;
+        case CHILD_ID::P4Cal:
+      calValues.pressure4Cal = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PRESSURE4_CAL, calValues.pressure4Cal);
+      break;
+        case CHILD_ID::PIDMODE_1:
+      pid1.mode = message.getBool();
+      myPID1.SetMode(pid1.mode ? AUTOMATIC : MANUAL);
+      EEPROM.put(EEPROMAddresses::PID1_MODE, pid1.mode);
+      break;
+    case CHILD_ID::PIDSETPOINT_1:
+      pid1.setpoint = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PID1_SETPOINT, pid1.setpoint);
+      break;
+    case CHILD_ID::PIDkP0_1:
+      pid1.kp = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PID1_KP, pid1.kp);
+      break;
+    case CHILD_ID::PIDkI0_1:
+      pid1.ki = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PID1_KI, pid1.ki);
+      break;
+    case CHILD_ID::PIDkD0_1:
+      pid1.kd = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PID1_KD, pid1.kd);
+      break;
+    case CHILD_ID::PIDkP1_1:
+      pid1.aggKp = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PID1_AGG_KP, pid1.aggKp);
+      break;
+    case CHILD_ID::PIDkI1_1:
+      pid1.aggKi = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PID1_AGG_KI, pid1.aggKi);
+      break;
+    case CHILD_ID::PIDkD1_1:
+      pid1.aggKd = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PID1_AGG_KD, pid1.aggKd);
+      break;
+    case CHILD_ID::AdaptiveSP_1:
+      pid1.aggSP = message.getByte();
+      EEPROM.put(EEPROMAddresses::PID1_AGG_SP, pid1.aggSP);
+      break;
+    case CHILD_ID::AdaptiveMode_1:
+      pid1.adaptiveMode = message.getBool();
+      EEPROM.put(EEPROMAddresses::PID1_ADAPTIVE_MODE, pid1.adaptiveMode);
+      break;
+    case CHILD_ID::PIDMODE_2:
+      pid2.mode = message.getBool();
+      myPID2.SetMode(pid2.mode ? AUTOMATIC : MANUAL);
+      EEPROM.put(EEPROMAddresses::PID2_MODE, pid2.mode);
+      break;
+    case CHILD_ID::PIDSETPOINT_2:
+      pid2.setpoint = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PID2_SETPOINT, pid2.setpoint);
+      break;
+    case CHILD_ID::PIDkP0_2:
+      pid2.kp = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PID2_KP, pid2.kp);
+      break;
+    case CHILD_ID::PIDkI0_2:
+      pid2.ki = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PID2_KI, pid2.ki);
+      break;
+    case CHILD_ID::PIDkD0_2:
+      pid2.kd = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PID2_KD, pid2.kd);
+      break;
+    case CHILD_ID::PIDkP1_2:
+      pid2.aggKp = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PID2_AGG_KP, pid2.aggKp);
+      break;
+    case CHILD_ID::PIDkI1_2:
+      pid2.aggKi = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PID2_AGG_KI, pid2.aggKi);
+      break;
+    case CHILD_ID::PIDkD1_2:
+      pid2.aggKd = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PID2_AGG_KD, pid2.aggKd);
+      break;
+    case CHILD_ID::AdaptiveSP_2:
+      pid2.aggSP = message.getByte();
+      EEPROM.put(EEPROMAddresses::PID2_AGG_SP, pid2.aggSP);
+      break;
+    case CHILD_ID::AdaptiveMode_2:
+      pid2.adaptiveMode = message.getBool();
+      EEPROM.put(EEPROMAddresses::PID2_ADAPTIVE_MODE, pid2.adaptiveMode);
+      break;
+    case CHILD_ID::PIDMODE_3:
+      pid3.mode = message.getBool();
+      myPID3.SetMode(pid3.mode ? AUTOMATIC : MANUAL);
+      EEPROM.put(EEPROMAddresses::PID3_MODE, pid3.mode);
+      break;
+    case CHILD_ID::PIDSETPOINT_3:
+      pid3.setpoint = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PID3_SETPOINT, pid3.setpoint);
+      break;
+    case CHILD_ID::PIDkP0_3:
+      pid3.kp = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PID3_KP, pid3.kp);
+      break;
+    case CHILD_ID::PIDkI0_3:
+      pid3.ki = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PID3_KI, pid3.ki);
+      break;
+    case CHILD_ID::PIDkD0_3:
+      pid3.kd = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PID3_KD, pid3.kd);
+      break;
+    case CHILD_ID::MainsCurrentMultiplier:
+      calValues.emonCal = message.getFloat();
+      EEPROM.put(EEPROMAddresses::EMON_CAL, calValues.emonCal);
+      break;
+    case CHILD_ID::SSRFail_Threshhold:
+      calValues.ssrFailThreshold = message.getByte();
+      EEPROM.put(EEPROMAddresses::SSR_FAIL_THRESHOLD, calValues.ssrFailThreshold);
+      break;
+    case CHILD_ID::MainsCurrentOffset:
+      calValues.currOffset = message.getFloat();
+      EEPROM.put(EEPROMAddresses::CURR_OFFSET, calValues.currOffset);
+      break;
+    case CHILD_ID::LOAD_MEMORY:
+      if (message.getBool()) {
+        StoreEEPROM();
+      } else {
+        getEEPROM();
+      }
+      break;
+    case CHILD_ID::s_debug:
+      configValues.sDebug = message.getBool();
+      EEPROM.put(EEPROMAddresses::S_DEBUG, configValues.sDebug);
+      break;
+    case CHILD_ID::PIDThreshold_1:
+      pid1.alarmThreshold = message.getInt();
+      EEPROM.put(EEPROMAddresses::PID1_ALARM_THRESHOLD, pid1.alarmThreshold);
+      break;
+    case CHILD_ID::PIDThreshold_2:
+      pid2.alarmThreshold = message.getInt();
+      EEPROM.put(EEPROMAddresses::PID2_ALARM_THRESHOLD, pid2.alarmThreshold);
+      break;
+    case CHILD_ID::PIDThreshold_3:
+      pid3.alarmThreshold = message.getInt();
+      EEPROM.put(EEPROMAddresses::PID3_ALARM_THRESHOLD, pid3.alarmThreshold);
+      break;
   }
 }
