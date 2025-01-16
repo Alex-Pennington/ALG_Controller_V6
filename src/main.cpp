@@ -112,26 +112,26 @@ MyMessage msgSSRArmed(CHILD_ID::SSR_Armed, V_STATUS);
 MyMessage msgLoadEEPROM(CHILD_ID::LOAD_MEMORY, V_STATUS);
 MyMessage msgINFO(CHILD_ID::Info, V_TEXT);
 
-MyMessage msgPIDMODE(CHILD_ID::PIDMODE_1, V_STATUS);
-MyMessage msgPIDSETPOINT(CHILD_ID::PIDSETPOINT_1, V_TEMP);
-MyMessage msgKp(CHILD_ID::PIDkP0_1, V_LEVEL);
-MyMessage msgKi(CHILD_ID::PIDkI0_1, V_LEVEL);
-MyMessage msgKd(CHILD_ID::PIDkD0_1, V_LEVEL);
+MyMessage msgPIDMODE_1(CHILD_ID::PIDMODE_1, V_STATUS);
+//MyMessage msgPIDSETPOINT(CHILD_ID::PIDSETPOINT_1, V_TEMP);
+//MyMessage msgKp(CHILD_ID::PIDkP0_1, V_LEVEL);
+//MyMessage msgKi(CHILD_ID::PIDkI0_1, V_LEVEL);
+//MyMessage msgKd(CHILD_ID::PIDkD0_1, V_LEVEL);
 //MyMessage msgEDC(CHILD_ID::EDC_1, V_PERCENTAGE);
 
 
 MyMessage msgPIDMODE_2(CHILD_ID::PIDMODE_2, V_STATUS);
-MyMessage msgPIDSETPOINT_2(CHILD_ID::PIDSETPOINT_2, V_TEMP);
-MyMessage msgKp_2(CHILD_ID::PIDkP0_2, V_LEVEL);
-MyMessage msgKi_2(CHILD_ID::PIDkI0_2, V_LEVEL);
-MyMessage msgKd_2(CHILD_ID::PIDkD0_2, V_LEVEL);
+//MyMessage msgPIDSETPOINT_2(CHILD_ID::PIDSETPOINT_2, V_TEMP);
+//MyMessage msgKp_2(CHILD_ID::PIDkP0_2, V_LEVEL);
+//MyMessage msgKi_2(CHILD_ID::PIDkI0_2, V_LEVEL);
+//MyMessage msgKd_2(CHILD_ID::PIDkD0_2, V_LEVEL);
 //MyMessage msgEDC_2(CHILD_ID::EDC_2, V_PERCENTAGE);
 
 MyMessage msgPIDMODE_3(CHILD_ID::PIDMODE_3, V_STATUS);
-MyMessage msgPIDSETPOINT_3(CHILD_ID::PIDSETPOINT_3, V_TEMP);
-MyMessage msgKp_3(CHILD_ID::PIDkP0_3, V_LEVEL);
-MyMessage msgKi_3(CHILD_ID::PIDkI0_3, V_LEVEL);
-MyMessage msgKd_3(CHILD_ID::PIDkD0_3, V_LEVEL);
+//MyMessage msgPIDSETPOINT_3(CHILD_ID::PIDSETPOINT_3, V_TEMP);
+//MyMessage msgKp_3(CHILD_ID::PIDkP0_3, V_LEVEL);
+//MyMessage msgKi_3(CHILD_ID::PIDkI0_3, V_LEVEL);
+//MyMessage msgKd_3(CHILD_ID::PIDkD0_3, V_LEVEL);
 //MyMessage msgEDC_3(CHILD_ID::EDC_3, V_PERCENTAGE);
 
 MyMessage msgTemp0(CHILD_ID::T0, V_TEMP);
@@ -149,14 +149,14 @@ MyMessage msgScaleOffset(CHILD_ID::ScaleOffset, V_LEVEL);
 MyMessage msgScaleRate(CHILD_ID::dTscale, V_LEVEL);
 
 MyMessage msgPressure1(CHILD_ID::P1, V_PRESSURE);
-MyMessage msgPress1Offset(CHILD_ID::Press1Offset, V_LEVEL);
+//MyMessage msgPress1Offset(CHILD_ID::Press1Offset, V_LEVEL);
 
 MyMessage msgPressure2(CHILD_ID::P2, V_PRESSURE);
 MyMessage msgPressure3(CHILD_ID::P3, V_PRESSURE);
 MyMessage msgPressure4(CHILD_ID::P4, V_PRESSURE);
 
 MyMessage msgMainsCurrent(CHILD_ID::MainsCurrent, V_CURRENT);
-MyMessage msgMainsCurrentMultiplier(CHILD_ID::MainsCurrentMultiplier, V_LEVEL);
+//MyMessage msgMainsCurrentMultiplier(CHILD_ID::MainsCurrentMultiplier, V_LEVEL);
 MyMessage msgSSRFailAlarm(CHILD_ID::SSRFail_Alarm, V_STATUS);
 MyMessage msgVccVoltage(CHILD_ID::VccVoltage, V_VOLTAGE);
 MyMessage msgVccCurrent(CHILD_ID::VccCurrent, V_CURRENT);
@@ -417,9 +417,13 @@ void presentation() {
   present(CHILD_ID::ScaleCal, S_LIGHT_LEVEL, "Scale Calibration");
 
   present(CHILD_ID::P1, S_BARO, "Pressure 1");
+  present(CHILD_ID::P1Cal, S_LIGHT_LEVEL, "Pressure 1 Calibration");
   present(CHILD_ID::P2, S_BARO, "Pressure 2");
+  present(CHILD_ID::P2Cal, S_LIGHT_LEVEL, "Pressure 2 Calibration");
   present(CHILD_ID::P3, S_BARO, "Pressure 3");
+  present(CHILD_ID::P3Cal, S_LIGHT_LEVEL, "Pressure 3 Calibration");
   present(CHILD_ID::P4, S_BARO, "Pressure 4");
+  present(CHILD_ID::P4Cal, S_LIGHT_LEVEL, "Pressure 4 Calibration");
 
   present(CHILD_ID::MainsCurrent, S_MULTIMETER, "Mains Current");
   present(CHILD_ID::MainsCurrentMultiplier, S_LIGHT_LEVEL, "Mains Current Multiplier");
@@ -498,7 +502,8 @@ void setup() {
 
 void loop() {
   DutyCycleLoop();
-
+  _process();
+  
   if ( (millis() - SensorLoop_timer) > (unsigned long)configValues.SENSORLOOPTIME)  {
     Serial.println("-");
     AREF_V = getBandgap();
@@ -506,27 +511,33 @@ void loop() {
     getVccCurrent();
     msgVccCurrent.set(VccCurrentVar, 2); send(msgVccCurrent);
     msgVccVoltage.set(AREF_V, 2); send(msgVccVoltage);
-    
+    _process();
+
     emon();
     msgMainsCurrent.set(emonVars.rms, 2); send(msgMainsCurrent);
-    
+    _process();
+
     DS18B20();
     msgTemp0.set(ds18b20Values[0].F, 2); send(msgTemp0);
     msgTemp1.set(ds18b20Values[1].F, 2); send(msgTemp1);
     msgTemp2.set(ds18b20Values[2].F, 2); send(msgTemp2);
     msgTemp3.set(ds18b20Values[3].F, 2); send(msgTemp3);
     msgTemp4.set(ds18b20Values[4].F, 2); send(msgTemp4);
+    _process();
     
     float steinhartVar = Steinhart();
     msgTemp5.set(steinhartVar, 2); send(msgTemp5);
+    _process();
 
     getScale();
     msgScale.set(valueScale, 2); send(msgScale);
     msgScaleRate.set(gramsPerSecondScale, 2); send(msgScaleRate);
+    _process();
 
     char buffer[16];
     dtostrf(valueScale, 6, 2, buffer);
     displayLine(buffer);
+    _process();
 
     pressure1Var = readPressure(Pressure1PIN, calValues.pressure1Offset, calValues.pressure1Cal);
     msgPressure1.set(pressure1Var, 2); send(msgPressure1);
@@ -536,20 +547,25 @@ void loop() {
     msgPressure3.set(pressure3Var, 2); send(msgPressure3);
     pressure4Var = readPressure(Pressure4PIN, calValues.pressure4Offset, calValues.pressure4Cal);
     msgPressure4.set(pressure4Var, 2); send(msgPressure4);
+    _process();
     
     msgTHMS1.set(getThermistor(Thermistor1PIN), 2); send(msgTHMS1);
     msgTHMS2.set(getThermistor(Thermistor2PIN), 2); send(msgTHMS2);
+    _process();
     
     msgRunTime.set((float)(millis()/1000.0/60.0/60.0),2); send(msgRunTime);
+    _process();
             
     TempAlarm();
+    _process();
     serialPrintSensorData();
+    _process();
     SensorLoop_timer = millis();
 
 // get PID inputs, set agg constants, send LCD vars
     
   }
-if ((millis() - pid_compute_loop_time) > configValues.pidLoopTime)  {
+  if ((millis() - pid_compute_loop_time) > configValues.pidLoopTime)  {
   pid1.input = (double)getThermistor(Thermistor1PIN);
   pid2.input = (double)55.0;
   //pid2.input = (double)getThermistor(Thermistor2PIN);
@@ -583,7 +599,7 @@ if ((millis() - pid_compute_loop_time) > configValues.pidLoopTime)  {
   pid_compute_loop_time = millis();
 }
 
-// if (tuning == true) { //pid_1 comp
+  // if (tuning == true) { //pid_1 comp
 //   byte val = (aTune.Runtime());
 //   if (val != 0) {
 //     tuning = false;
@@ -747,15 +763,14 @@ void emon()
     delay(10);
   }
   emonVars.rms = sqrt(sum / N) - calValues.currOffset;
-  if (int(emonVars.rms) > int(calValues.ssrFailThreshold))  {
+    if ((1 == 2) & (int(emonVars.rms) > int(calValues.ssrFailThreshold)))  {
     red_alert();
     AllStop();
-    sendInfo("SSR Failed");
+    sendInfo("emon SSR Fail");
   }  else  {
     digitalWrite(ElementPowerPin, dutyCycle[0].element);
     digitalWrite(ElementPowerPin2, dutyCycle[1].element);
     digitalWrite(ElementPowerPin3, dutyCycle[2].element);
-    //      digitalWrite(SSRArmed_PIN, SSRArmed);
   }
   for (int i = 0; i < N; i++)  {
     float current = calValues.emonCal * (analogRead(emon_Input_PIN) - 512); // in amps I presume
@@ -895,7 +910,9 @@ void AllStop() {
   myPID1.SetMode(MANUAL);
   myPID2.SetMode(MANUAL);
   myPID3.SetMode(MANUAL);
-  sendInfo("All Stop");
+  msgPIDMODE_1.set(pid1.mode); send(msgPIDMODE_1);
+  msgPIDMODE_2.set(pid2.mode); send(msgPIDMODE_2);
+  msgPIDMODE_3.set(pid3.mode); send(msgPIDMODE_3);
   }
 void StoreEEPROM() {
   EEPROM.put(EEPROMAddresses::PRESSURE3_CAL, calValues.pressure3Cal);
