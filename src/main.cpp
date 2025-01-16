@@ -4,7 +4,7 @@
 #include <EEPROM.h>
 #include "controller.h"
 #include <OneWire.h>
-#include <ArxContainer.h>
+#include <vector>
 
 #include <SPI.h>
 #include <Wire.h>
@@ -30,7 +30,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define MY_RF24_PA_LEVEL RF24_PA_LOW
 #define MY_RF24_CE_PIN 49
 #define MY_RF24_CS_PIN 53
-//#define MY_DEBUG
+#define MY_DEBUG
 #include <MySensors.h>
 
 //Structs
@@ -63,7 +63,7 @@ struct PIDConfig {
 };
 PIDConfig pid1 = {false, 150, 0.5, 0.005, 0, 1, 0, 0, 10, false, 0, 0, 0};
 PIDConfig pid2 = {false, 150, 0.35, 0, 0, 5, 0, 0, 10, false, 0, 0, 0};
-PIDConfig pid3 = {false, 120, 1.2, 0.01, 0, 0, 0, 0, 10, false, 0, 0, 0};
+PIDConfig pid3 = {false, 120, 1.2, 0.01, 0, 0, 0, 10, false, 0, 0, 0};
 
 struct CalibrationValues {
   float pressure1Cal = 20.77;
@@ -134,6 +134,8 @@ float pressure2Var = 0;
 float pressure3Var = 0;
 float pressure4Var = 0;
 float VccCurrent = 0;
+extern unsigned int __heap_start;
+extern void *__brkval;
 
 //Pin Definitions
 #define HX711_dout 9 //
@@ -245,58 +247,53 @@ enum CHILD_ID {
   THMS2 = 108
 };
 
-// //MySensors Message Definitions
-// MyMessage msgPIDMODE(CHILD_ID::PIDMODE_1, V_STATUS);
-// MyMessage msgPIDSETPOINT(CHILD_ID::PIDSETPOINT_1, V_TEMP);
-// MyMessage msgKp(CHILD_ID::PIDkP0_1, V_LEVEL);
-// MyMessage msgKi(CHILD_ID::PIDkI0_1, V_LEVEL);
-// MyMessage msgKd(CHILD_ID::PIDkD0_1, V_LEVEL);
-// MyMessage msgEDC(CHILD_ID::EDC, V_PERCENTAGE);
-// MyMessage msgPIDMODE_2(CHILD_ID::PIDMODE_2, V_STATUS);
-// MyMessage msgPIDSETPOINT_2(CHILD_ID::PIDSETPOINT_2, V_TEMP);
-// MyMessage msgKp_2(CHILD_ID::PIDkP0_2, V_LEVEL);
-// MyMessage msgKi_2(CHILD_ID::PIDkI0_2, V_LEVEL);
-// MyMessage msgKd_2(CHILD_ID::PIDkD0_2, V_LEVEL);
-// MyMessage msgEDC_2(CHILD_ID::EDC_2, V_PERCENTAGE);
-// MyMessage msgPIDMODE_3(CHILD_ID::PIDMODE_3, V_STATUS);
-// MyMessage msgPIDSETPOINT_3(CHILD_ID::PIDSETPOINT_3, V_TEMP);
-// MyMessage msgKp_3(CHILD_ID::PIDkP0_3, V_LEVEL);
-// MyMessage msgKi_3(CHILD_ID::PIDkI0_3, V_LEVEL);
-// MyMessage msgKd_3(CHILD_ID::PIDkD0_3, V_LEVEL);
-// MyMessage msgEDC_3(CHILD_ID::EDC_3, V_PERCENTAGE);
-// MyMessage msgINFO(CHILD_ID::Info, V_TEXT);
-// MyMessage msgTemp0(CHILD_ID::T0, V_TEMP);
-// MyMessage msgTemp1(CHILD_ID::T1, V_TEMP);
-// MyMessage msgTemp2(CHILD_ID::T2, V_TEMP);
-// MyMessage msgHumidity(CHILD_ID::HUM, V_HUM);
-// MyMessage msgScale(CHILD_ID::Scale, V_WEIGHT);
-// MyMessage msgSteinhart(CHILD_ID::T3, V_TEMP);
-// //MyMessage msgDBG(CHILD_ID::DBG, V_TEXT);
-// MyMessage msgSSR(CHILD_ID::SSR, V_STATUS);
-// MyMessage msgSSR2(CHILD_ID::LOAD_MEMORY, V_STATUS);
-// MyMessage msgLCDScale(3, V_WEIGHT);
-// MyMessage msgLCDPressure(17, V_PRESSURE);
-// MyMessage msgPressure1(CHILD_ID::P1, V_PRESSURE);
-// // MyMessage msgPressCal1(CHILD_ID::P1Cal, V_LEVEL);
-// MyMessage msgPressure2(CHILD_ID::P2, V_PRESSURE);
-// // MyMessage msgPressCal2(CHILD_ID::P2Cal, V_LEVEL);
-// MyMessage msgPressure3(CHILD_ID::P3, V_PRESSURE);
-// // MyMessage msgPressCal3(CHILD_ID::P3Cal, V_LEVEL);
-// MyMessage msgPressure4(CHILD_ID::P4, V_PRESSURE);
-// // MyMessage msgPressCal4(CHILD_ID::P4Cal, V_LEVEL);
-// MyMessage msgScaleRate(CHILD_ID::ScaleRate, V_WEIGHT);
-// MyMessage msgScaleTare(CHILD_ID::ScaleTare, V_STATUS);
-// MyMessage msgScaleUntMag(CHILD_ID::ScaleUntMag, V_STATUS);
-// MyMessage msgScaleRtAccu(CHILD_ID::ScaleRtAccu, V_STATUS);
-// MyMessage msgScaleOffset(CHILD_ID::ScaleOffset, V_LEVEL);
-// MyMessage msgPress1Offset(CHILD_ID::Press1Offset, V_LEVEL);
-// MyMessage msgRMS(CHILD_ID::RMS, V_LEVEL);
-// MyMessage msgCurCAL(CHILD_ID::Curr_CAL, V_LEVEL);
-// MyMessage msgSSRFailAlarm(CHILD_ID::SSRFail_Alarm, V_STATUS);
-// MyMessage msgBoardVoltage(CHILD_ID::BoardVoltage, V_LEVEL);
-// MyMessage msgBoardCurrent(CHILD_ID::BoardCurrent, V_LEVEL);
-// MyMessage msgTHMS1(CHILD_ID::THMS1, V_TEMP);
-// MyMessage msgTHMS2(CHILD_ID::THMS2, V_TEMP);
+// MySensors Message Definitions
+MyMessage msgPIDMODE(CHILD_ID::PIDMODE_1, V_STATUS);
+MyMessage msgPIDSETPOINT(CHILD_ID::PIDSETPOINT_1, V_TEMP);
+MyMessage msgKp(CHILD_ID::PIDkP0_1, V_LEVEL);
+MyMessage msgKi(CHILD_ID::PIDkI0_1, V_LEVEL);
+MyMessage msgKd(CHILD_ID::PIDkD0_1, V_LEVEL);
+MyMessage msgEDC(CHILD_ID::EDC, V_PERCENTAGE);
+MyMessage msgPIDMODE_2(CHILD_ID::PIDMODE_2, V_STATUS);
+MyMessage msgPIDSETPOINT_2(CHILD_ID::PIDSETPOINT_2, V_TEMP);
+MyMessage msgKp_2(CHILD_ID::PIDkP0_2, V_LEVEL);
+MyMessage msgKi_2(CHILD_ID::PIDkI0_2, V_LEVEL);
+MyMessage msgKd_2(CHILD_ID::PIDkD0_2, V_LEVEL);
+MyMessage msgEDC_2(CHILD_ID::EDC_2, V_PERCENTAGE);
+MyMessage msgPIDMODE_3(CHILD_ID::PIDMODE_3, V_STATUS);
+MyMessage msgPIDSETPOINT_3(CHILD_ID::PIDSETPOINT_3, V_TEMP);
+MyMessage msgKp_3(CHILD_ID::PIDkP0_3, V_LEVEL);
+MyMessage msgKi_3(CHILD_ID::PIDkI0_3, V_LEVEL);
+MyMessage msgKd_3(CHILD_ID::PIDkD0_3, V_LEVEL);
+MyMessage msgEDC_3(CHILD_ID::EDC_3, V_PERCENTAGE);
+MyMessage msgINFO(CHILD_ID::Info, V_TEXT);
+MyMessage msgTemp0(CHILD_ID::T0, V_TEMP);
+MyMessage msgTemp1(CHILD_ID::T1, V_TEMP);
+MyMessage msgTemp2(CHILD_ID::T2, V_TEMP);
+MyMessage msgHumidity(CHILD_ID::HUM, V_HUM);
+MyMessage msgScale(CHILD_ID::Scale, V_WEIGHT);
+MyMessage msgSteinhart(CHILD_ID::T3, V_TEMP);
+MyMessage msgSSR(CHILD_ID::SSR, V_STATUS);
+MyMessage msgSSR2(CHILD_ID::LOAD_MEMORY, V_STATUS);
+MyMessage msgLCDScale(3, V_WEIGHT);
+MyMessage msgLCDPressure(17, V_PRESSURE);
+MyMessage msgPressure1(CHILD_ID::P1, V_PRESSURE);
+MyMessage msgPressure2(CHILD_ID::P2, V_PRESSURE);
+MyMessage msgPressure3(CHILD_ID::P3, V_PRESSURE);
+MyMessage msgPressure4(CHILD_ID::P4, V_PRESSURE);
+MyMessage msgScaleRate(CHILD_ID::ScaleRate, V_WEIGHT);
+MyMessage msgScaleTare(CHILD_ID::ScaleTare, V_STATUS);
+MyMessage msgScaleUntMag(CHILD_ID::ScaleUntMag, V_STATUS);
+MyMessage msgScaleRtAccu(CHILD_ID::ScaleRtAccu, V_STATUS);
+MyMessage msgScaleOffset(CHILD_ID::ScaleOffset, V_LEVEL);
+MyMessage msgPress1Offset(CHILD_ID::Press1Offset, V_LEVEL);
+MyMessage msgRMS(CHILD_ID::RMS, V_LEVEL);
+MyMessage msgCurCAL(CHILD_ID::Curr_CAL, V_LEVEL);
+MyMessage msgSSRFailAlarm(CHILD_ID::SSRFail_Alarm, V_STATUS);
+MyMessage msgBoardVoltage(CHILD_ID::BoardVoltage, V_LEVEL);
+MyMessage msgBoardCurrent(CHILD_ID::BoardCurrent, V_LEVEL);
+MyMessage msgTHMS1(CHILD_ID::THMS1, V_TEMP);
+MyMessage msgTHMS2(CHILD_ID::THMS2, V_TEMP);
 
 //Scale
 HX711 LoadCell;
@@ -330,11 +327,7 @@ void DS18B20();
 float getThermistor(int);
 float readPressure(int pin, int offset, float cal);
 void displayLine(const char* line);
-
-
-void testdrawchar();      // Draw characters of the default font
-void testdrawstyles();    // Draw 'stylized' characters
-void testscrolltext();    // Draw scrolling text
+int freeMemory();
 
 enum EEPROMAddresses {
   ZERO_OFFSET_SCALE = 0,       // float, 4 bytes
@@ -380,76 +373,31 @@ enum EEPROMAddresses {
   PRESSURE4_CAL = 122          // float, 4 bytes
 };
 
-// Define a struct to hold sensor data and the corresponding MyMessage object
-struct Sensor {
-  CHILD_ID childId;
-  MyMessage message;
-  const char* type;
-  float sensorData; // Add this line to include the sensorData member
-};
-
-// Initialize an array of sensors
-std::vector<Sensor> sensors = {
-  {CHILD_ID::PIDMODE_1, MyMessage(CHILD_ID::PIDMODE_1, V_STATUS), "PID Mode 1", 0.0},
-  {CHILD_ID::PIDSETPOINT_1, MyMessage(CHILD_ID::PIDSETPOINT_1, V_TEMP), "PID Setpoint 1", 0.0},
-  {CHILD_ID::PIDkP0_1, MyMessage(CHILD_ID::PIDkP0_1, V_LEVEL), "PID Kp 1", 0.0},
-  {CHILD_ID::PIDkI0_1, MyMessage(CHILD_ID::PIDkI0_1, V_LEVEL), "PID Ki 1", 0.0},
-  {CHILD_ID::PIDkD0_1, MyMessage(CHILD_ID::PIDkD0_1, V_LEVEL), "PID Kd 1", 0.0},
-  {CHILD_ID::EDC, MyMessage(CHILD_ID::EDC, V_PERCENTAGE), "EDC", 0.0},
-  {CHILD_ID::PIDMODE_2, MyMessage(CHILD_ID::PIDMODE_2, V_STATUS), "PID Mode 2", 0.0},
-  {CHILD_ID::PIDSETPOINT_2, MyMessage(CHILD_ID::PIDSETPOINT_2, V_TEMP), "PID Setpoint 2", 0.0},
-  {CHILD_ID::PIDkP0_2, MyMessage(CHILD_ID::PIDkP0_2, V_LEVEL), "PID Kp 2", 0.0},
-  {CHILD_ID::PIDkI0_2, MyMessage(CHILD_ID::PIDkI0_2, V_LEVEL), "PID Ki 2", 0.0},
-  {CHILD_ID::PIDkD0_2, MyMessage(CHILD_ID::PIDkD0_2, V_LEVEL), "PID Kd 2", 0.0},
-  {CHILD_ID::EDC_2, MyMessage(CHILD_ID::EDC_2, V_PERCENTAGE), "EDC 2", 0.0},
-  {CHILD_ID::PIDMODE_3, MyMessage(CHILD_ID::PIDMODE_3, V_STATUS), "PID Mode 3", 0.0},
-  {CHILD_ID::PIDSETPOINT_3, MyMessage(CHILD_ID::PIDSETPOINT_3, V_TEMP), "PID Setpoint 3", 0.0},
-  {CHILD_ID::PIDkP0_3, MyMessage(CHILD_ID::PIDkP0_3, V_LEVEL), "PID Kp 3", 0.0},
-  {CHILD_ID::PIDkI0_3, MyMessage(CHILD_ID::PIDkI0_3, V_LEVEL), "PID Ki 3", 0.0},
-  {CHILD_ID::PIDkD0_3, MyMessage(CHILD_ID::PIDkD0_3, V_LEVEL), "PID Kd 3", 0.0},
-  {CHILD_ID::EDC_3, MyMessage(CHILD_ID::EDC_3, V_PERCENTAGE), "EDC 3", 0.0},
-  {CHILD_ID::Info, MyMessage(CHILD_ID::Info, V_TEXT), "Info", 0.0},
-  {CHILD_ID::T0, MyMessage(CHILD_ID::T0, V_TEMP), "Temp 0", 0.0},
-  {CHILD_ID::T1, MyMessage(CHILD_ID::T1, V_TEMP), "Temp 1", 0.0},
-  {CHILD_ID::T2, MyMessage(CHILD_ID::T2, V_TEMP), "Temp 2", 0.0},
-  {CHILD_ID::HUM, MyMessage(CHILD_ID::HUM, V_HUM), "Humidity", 0.0},
-  {CHILD_ID::Scale, MyMessage(CHILD_ID::Scale, V_WEIGHT), "Scale", 0.0},
-  {CHILD_ID::T3, MyMessage(CHILD_ID::T3, V_TEMP), "Steinhart", 0.0},
-  {CHILD_ID::SSR, MyMessage(CHILD_ID::SSR, V_STATUS), "SSR", 0.0},
-  {CHILD_ID::LOAD_MEMORY, MyMessage(CHILD_ID::LOAD_MEMORY, V_STATUS), "SSR2", 0.0},
-  {CHILD_ID::P1, MyMessage(CHILD_ID::P1, V_PRESSURE), "Pressure 1", 0.0},
-  {CHILD_ID::P2, MyMessage(CHILD_ID::P2, V_PRESSURE), "Pressure 2", 0.0},
-  {CHILD_ID::P3, MyMessage(CHILD_ID::P3, V_PRESSURE), "Pressure 3", 0.0},
-  {CHILD_ID::P4, MyMessage(CHILD_ID::P4, V_PRESSURE), "Pressure 4", 0.0},
-  {CHILD_ID::ScaleRate, MyMessage(CHILD_ID::ScaleRate, V_WEIGHT), "Scale Rate", 0.0},
-  {CHILD_ID::ScaleTare, MyMessage(CHILD_ID::ScaleTare, V_STATUS), "Scale Tare", 0.0},
-  {CHILD_ID::ScaleUntMag, MyMessage(CHILD_ID::ScaleUntMag, V_STATUS), "Sc Mag", 0.0},
-  {CHILD_ID::ScaleRtAccu, MyMessage(CHILD_ID::ScaleRtAccu, V_STATUS), "Sc Rt Acc", 0.0},
-  {CHILD_ID::ScaleOffset, MyMessage(CHILD_ID::ScaleOffset, V_LEVEL), "Scale Offset", 0.0},
-  {CHILD_ID::Press1Offset, MyMessage(CHILD_ID::Press1Offset, V_LEVEL), "Pressure 1 Offset", 0.0},
-  {CHILD_ID::RMS, MyMessage(CHILD_ID::RMS, V_LEVEL), "RMS", 0.0},
-  {CHILD_ID::Curr_CAL, MyMessage(CHILD_ID::Curr_CAL, V_LEVEL), "Current Calibration", 0.0},
-  {CHILD_ID::SSRFail_Alarm, MyMessage(CHILD_ID::SSRFail_Alarm, V_STATUS), "SSR Fail Alarm", 0.0},
-  {CHILD_ID::BoardVoltage, MyMessage(CHILD_ID::BoardVoltage, V_LEVEL), "Board Voltage", 0.0},
-  {CHILD_ID::BoardCurrent, MyMessage(CHILD_ID::BoardCurrent, V_LEVEL), "Board Current", 0.0},
-  {CHILD_ID::THMS1, MyMessage(CHILD_ID::THMS1, V_TEMP), "THMS1", 0.0},
-  {CHILD_ID::THMS2, MyMessage(CHILD_ID::THMS2, V_TEMP), "THMS2", 0.0}
-};
-
 void presentation()
 {
+  Serial.begin(115200);
   unsigned long start = millis();
+
   //Send the sensor node sketch version information to the gateway
   sendSketchInfo("Controller", VERSION);
 
-  Serial.begin(115200);
-
-  if (configValues.sDebug) {Serial.println("Presenting Sensors");}
   for (auto& sensor : sensors) {
-    present(sensor.childId, static_cast<mysensors_sensor_t>(sensor.message.getType()), sensor.type);
+    Serial.print("childId : ");
+    Serial.print(sensor.childId);
+    Serial.print(" : static : ");
+    Serial.print(static_cast<mysensors_sensor_t>(sensor.message.getType()));
+    Serial.print(" : type : ");
+    Serial.print(sensor.message.getType());
+    Serial.print(" : ");
+    Serial.println(present(sensor.childId, static_cast<mysensors_sensor_t>(sensor.message.getType()), sensor.type));
+    delay(1000);
+    wait(SENDDELAY);
   }
-
-  if (configValues.sDebug) { Serial.print("Presentation Timer = "); Serial.println((millis() - start)/1000.0,2);}
+  Serial.print("Vector size after initialization: ");
+  Serial.println(sensors.size());
+  Serial.print("Free memory at END PRESENTATION: ");
+  Serial.println(freeMemory());
+  if (configValues.sDebug) { Serial.print("Presentation Timer = "); Serial.println((millis() - start)/1000.0,2); delay(1000);}
 }
 
 void setup() {
@@ -477,15 +425,30 @@ void setup() {
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {Serial.println(F("SSD1306 allocation failed"));}  
   displayLine("Booting...");
+
+  Serial.print("Free memory at setup: ");
+  Serial.println(freeMemory());
+
   if (configValues.sDebug) { Serial.print("Setup Timer = "); Serial.println((millis() - start)/1000.0,2);}
   SensorLoop_timer = millis();
+}
 
-  // Initialize sensors
-  for (auto& sensor : sensors) {
-    // Perform any necessary initialization for each sensor
-    Serial.print("Initializing sensor: ");
-    Serial.println(sensor.type);
-  }
+void updateSensorData() {
+  // Update sensor data with working variables
+  msgTemp0.set(ds18b20Values[0].F, 1);
+  msgTemp1.set(ds18b20Values[1].F, 1);
+  msgTemp2.set(ds18b20Values[2].F, 1);
+  msgSteinhart.set(ds18b20Values[3].F, 1);
+  msgTemp2.set(ds18b20Values[4].F, 1);
+  msgScale.set(valueScale, 1);
+  msgScaleRate.set(kgpsScale, 1);
+  msgPressure1.set(pressure1Var, 1);
+  msgPressure2.set(pressure2Var, 1);
+  msgPressure3.set(pressure3Var, 1);
+  msgPressure4.set(pressure4Var, 1);
+  msgRMS.set(emonVars.rms, 1);
+  msgBoardVoltage.set(AREF_V, 1);
+  msgBoardCurrent.set(VccCurrent, 1);
 }
 
 void loop() {
@@ -497,33 +460,41 @@ void loop() {
     AREF_V = getBandgap();
     unsigned long loopTime = millis();
 
-    getVccCurrent();
-    DS18B20();
-    TempAlarm();
-    emon();
-    getScale();
+    getVccCurrent(); //VccCurrent
+    DS18B20(); //ds18b20Values[].F
+    emon(); //emonVars
+    getScale(); //valueScale kgpsScale
 
     char buffer[16];
     dtostrf(valueScale, 6, 2, buffer);
     displayLine(buffer);
 
     pressure1Var = readPressure(Pressure1PIN, calValues.pressure1Offset, calValues.pressure1Cal);
-    if (configValues.sDebug) { calValues.pressure2Offset = calValues.pressure1Offset; calValues.pressure2Cal = calValues.pressure1Cal;} //remove this line when sensor is installed
     pressure2Var = readPressure(Pressure2PIN, calValues.pressure2Offset, calValues.pressure2Cal);
-    if (configValues.sDebug) { calValues.pressure3Offset = calValues.pressure1Offset; calValues.pressure3Cal = calValues.pressure1Cal;} //remove this line when sensor is installed
     pressure3Var = readPressure(Pressure3PIN, calValues.pressure3Offset, calValues.pressure3Cal);
-    if (configValues.sDebug) { calValues.pressure4Offset = calValues.pressure1Offset; calValues.pressure4Cal = calValues.pressure1Cal;} //remove this line when sensor is installed
     pressure4Var = readPressure(Pressure4PIN, calValues.pressure4Offset, calValues.pressure4Cal);
-
+    
+    TempAlarm();
     serialPrintSensorData();
+    updateSensorData();
+    send(msgTemp0, configValues.toACK);
+    send(msgTemp1, configValues.toACK);
+    send(msgTemp2, configValues.toACK);
+    send(msgSteinhart, configValues.toACK);
+    send(msgTemp2, configValues.toACK);
+    send(msgScale, configValues.toACK);
+    send(msgScaleRate, configValues.toACK);
+    send(msgPressure1, configValues.toACK);
+    send(msgPressure2, configValues.toACK);
+    send(msgPressure3, configValues.toACK);
+    send(msgPressure4, configValues.toACK);
+    send(msgRMS, configValues.toACK);
+    send(msgBoardVoltage, configValues.toACK);
+    send(msgBoardCurrent, configValues.toACK);
+    Serial.print("Free memory in loop: ");
+    Serial.println(freeMemory());
     if (configValues.sDebug) { Serial.print("Looptime = "); Serial.println((millis() - loopTime)/1000.0,2);}
     SensorLoop_timer = millis();
-  }
-
-  // Read and send sensor data
-  for (auto& sensor : sensors) {
-    // Read sensor data and send message
-    send(sensor.message.set(sensor.sensorData,1), true);
   }
 }
 
@@ -543,6 +514,7 @@ void getVccCurrent()
 
 void serialPrintSensorData()
 {
+  unsigned long start = millis(); 
   if (configValues.sDebug) {
     Serial.print("Time: ");
     Serial.println((float)millis()/1000.0/60.0/60.0,2);
@@ -552,6 +524,7 @@ void serialPrintSensorData()
       Serial.println(sensor.sensorData);
     }
   }
+  if (configValues.sDebug) { Serial.print("SendSensors Timer = "); Serial.println((millis() - start)/1000.0,2);}
   return;
 }
 
@@ -760,15 +733,15 @@ void AllStop() {
   myPID1.SetMode(MANUAL);
   myPID2.SetMode(MANUAL);
   myPID3.SetMode(MANUAL);
-  // send(msgPIDMODE.set(false), configValues.toACK);
-  // wait(SENDDELAY);
-  // send(msgPIDMODE_2.set(false), configValues.toACK);
-  // wait(SENDDELAY);
-  // send(msgPIDMODE_3.set(false), configValues.toACK);
-  // wait(SENDDELAY);
-  // send(msgSSRFailAlarm.set(true), configValues.toACK);
-  // wait(SENDDELAY);
-  // send(msgSSR.set(false), configValues.toACK);
+  send(msgPIDMODE.set(false), configValues.toACK);
+  wait(SENDDELAY);
+  send(msgPIDMODE_2.set(false), configValues.toACK);
+  wait(SENDDELAY);
+  send(msgPIDMODE_3.set(false), configValues.toACK);
+  wait(SENDDELAY);
+  send(msgSSRFailAlarm.set(true), configValues.toACK);
+  wait(SENDDELAY);
+  send(msgSSR.set(false), configValues.toACK);
 }
 
 void StoreEEPROM() {
@@ -1052,10 +1025,10 @@ void receive(const MyMessage & message)  {
         if (configValues.sDebug) Serial.println(" done.");
         EEPROM.put(EEPROMAddresses::ZERO_OFFSET_SCALE, calValues.zeroOffsetScale);
         LoadCell.set_offset(calValues.zeroOffsetScale);
-        // send(msgScaleTare.set(false), configValues.toACK);
-        // wait(SENDDELAY);
-        // send(msgScaleOffset.set(calValues.zeroOffsetScale, 1));
-        // wait(SENDDELAY);
+        send(msgScaleTare.set(false), configValues.toACK);
+        wait(SENDDELAY);
+        send(msgScaleOffset.set(calValues.zeroOffsetScale, 1));
+        wait(SENDDELAY);
         if (configValues.sDebug) { Serial.print("Scale Offset = "); Serial.println(calValues.zeroOffsetScale); }
         sendInfo("Scale Tare");
       }
@@ -1255,7 +1228,7 @@ void receive(const MyMessage & message)  {
 }
 
 void sendInfo(String payload) {
-  // send(msgINFO.set(payload.c_str()), configValues.toACK);
+  send(msgINFO.set(payload.c_str()), configValues.toACK);
   wait(SENDDELAY);
 }
 
@@ -1345,4 +1318,16 @@ void displayLine(const char* line) {
   display.setTextColor(SSD1306_WHITE);
   display.print(line); 
   display.display();
+}
+
+
+
+int freeMemory() {
+  int free_memory;
+  if ((int)__brkval == 0) {
+    free_memory = ((int)&free_memory) - ((int)&__heap_start);
+  } else {
+    free_memory = ((int)&free_memory) - ((int)__brkval);
+  }
+  return free_memory;
 }
