@@ -4,6 +4,7 @@
 #include <EEPROM.h>
 #include "controller.h"
 #include <OneWire.h>
+#include <ArxContainer.h>
 
 #include <SPI.h>
 #include <Wire.h>
@@ -239,60 +240,63 @@ enum CHILD_ID {
   BoardCurrent = 103,
   Press2Offset = 104,
   Press3Offset = 105,
-  Press4Offset = 106
+  Press4Offset = 106,
+  THMS1 = 107,
+  THMS2 = 108
 };
 
-//MySensors Message Definitions
-MyMessage msgPIDMODE(CHILD_ID::PIDMODE_1, V_STATUS);
-MyMessage msgPIDSETPOINT(CHILD_ID::PIDSETPOINT_1, V_TEMP);
-MyMessage msgKp(CHILD_ID::PIDkP0_1, V_LEVEL);
-MyMessage msgKi(CHILD_ID::PIDkI0_1, V_LEVEL);
-MyMessage msgKd(CHILD_ID::PIDkD0_1, V_LEVEL);
-MyMessage msgEDC(CHILD_ID::EDC, V_PERCENTAGE);
-MyMessage msgPIDMODE_2(CHILD_ID::PIDMODE_2, V_STATUS);
-MyMessage msgPIDSETPOINT_2(CHILD_ID::PIDSETPOINT_2, V_TEMP);
-MyMessage msgKp_2(CHILD_ID::PIDkP0_2, V_LEVEL);
-MyMessage msgKi_2(CHILD_ID::PIDkI0_2, V_LEVEL);
-MyMessage msgKd_2(CHILD_ID::PIDkD0_2, V_LEVEL);
-MyMessage msgEDC_2(CHILD_ID::EDC_2, V_PERCENTAGE);
-MyMessage msgPIDMODE_3(CHILD_ID::PIDMODE_3, V_STATUS);
-MyMessage msgPIDSETPOINT_3(CHILD_ID::PIDSETPOINT_3, V_TEMP);
-MyMessage msgKp_3(CHILD_ID::PIDkP0_3, V_LEVEL);
-MyMessage msgKi_3(CHILD_ID::PIDkI0_3, V_LEVEL);
-MyMessage msgKd_3(CHILD_ID::PIDkD0_3, V_LEVEL);
-MyMessage msgEDC_3(CHILD_ID::EDC_3, V_PERCENTAGE);
-MyMessage msgINFO(CHILD_ID::Info, V_TEXT);
-MyMessage msgTemp0(CHILD_ID::T0, V_TEMP);
-MyMessage msgTemp1(CHILD_ID::T1, V_TEMP);
-MyMessage msgTemp2(CHILD_ID::T2, V_TEMP);
-MyMessage msgHumidity(CHILD_ID::HUM, V_HUM);
-MyMessage msgScale(CHILD_ID::Scale, V_WEIGHT);
-MyMessage msgSteinhart(CHILD_ID::T3, V_TEMP);
-MyMessage msgTemp3(CHILD_ID::T4, V_TEMP);
-//MyMessage msgDBG(CHILD_ID::DBG, V_TEXT);
-MyMessage msgSSR(CHILD_ID::SSR, V_STATUS);
-MyMessage msgSSR2(CHILD_ID::LOAD_MEMORY, V_STATUS);
-MyMessage msgLCDScale(3, V_WEIGHT);
-MyMessage msgLCDPressure(17, V_PRESSURE);
-MyMessage msgPressure1(CHILD_ID::P1, V_PRESSURE);
-// MyMessage msgPressCal1(CHILD_ID::P1Cal, V_LEVEL);
-MyMessage msgPressure2(CHILD_ID::P2, V_PRESSURE);
-// MyMessage msgPressCal2(CHILD_ID::P2Cal, V_LEVEL);
-MyMessage msgPressure3(CHILD_ID::P3, V_PRESSURE);
-// MyMessage msgPressCal3(CHILD_ID::P3Cal, V_LEVEL);
-MyMessage msgPressure4(CHILD_ID::P4, V_PRESSURE);
-// MyMessage msgPressCal4(CHILD_ID::P4Cal, V_LEVEL);
-MyMessage msgScaleRate(CHILD_ID::ScaleRate, V_WEIGHT);
-MyMessage msgScaleTare(CHILD_ID::ScaleTare, V_STATUS);
-MyMessage msgScaleUntMag(CHILD_ID::ScaleUntMag, V_STATUS);
-MyMessage msgScaleRtAccu(CHILD_ID::ScaleRtAccu, V_STATUS);
-MyMessage msgScaleOffset(CHILD_ID::ScaleOffset, V_LEVEL);
-MyMessage msgPress1Offset(CHILD_ID::Press1Offset, V_LEVEL);
-MyMessage msgRMS(CHILD_ID::RMS, V_LEVEL);
-MyMessage msgCurCAL(CHILD_ID::Curr_CAL, V_LEVEL);
-MyMessage msgSSRFailAlarm(CHILD_ID::SSRFail_Alarm, V_STATUS);
-MyMessage msgBoardVoltage(CHILD_ID::BoardVoltage, V_LEVEL);
-MyMessage msgBoardCurrent(CHILD_ID::BoardCurrent, V_LEVEL);
+// //MySensors Message Definitions
+// MyMessage msgPIDMODE(CHILD_ID::PIDMODE_1, V_STATUS);
+// MyMessage msgPIDSETPOINT(CHILD_ID::PIDSETPOINT_1, V_TEMP);
+// MyMessage msgKp(CHILD_ID::PIDkP0_1, V_LEVEL);
+// MyMessage msgKi(CHILD_ID::PIDkI0_1, V_LEVEL);
+// MyMessage msgKd(CHILD_ID::PIDkD0_1, V_LEVEL);
+// MyMessage msgEDC(CHILD_ID::EDC, V_PERCENTAGE);
+// MyMessage msgPIDMODE_2(CHILD_ID::PIDMODE_2, V_STATUS);
+// MyMessage msgPIDSETPOINT_2(CHILD_ID::PIDSETPOINT_2, V_TEMP);
+// MyMessage msgKp_2(CHILD_ID::PIDkP0_2, V_LEVEL);
+// MyMessage msgKi_2(CHILD_ID::PIDkI0_2, V_LEVEL);
+// MyMessage msgKd_2(CHILD_ID::PIDkD0_2, V_LEVEL);
+// MyMessage msgEDC_2(CHILD_ID::EDC_2, V_PERCENTAGE);
+// MyMessage msgPIDMODE_3(CHILD_ID::PIDMODE_3, V_STATUS);
+// MyMessage msgPIDSETPOINT_3(CHILD_ID::PIDSETPOINT_3, V_TEMP);
+// MyMessage msgKp_3(CHILD_ID::PIDkP0_3, V_LEVEL);
+// MyMessage msgKi_3(CHILD_ID::PIDkI0_3, V_LEVEL);
+// MyMessage msgKd_3(CHILD_ID::PIDkD0_3, V_LEVEL);
+// MyMessage msgEDC_3(CHILD_ID::EDC_3, V_PERCENTAGE);
+// MyMessage msgINFO(CHILD_ID::Info, V_TEXT);
+// MyMessage msgTemp0(CHILD_ID::T0, V_TEMP);
+// MyMessage msgTemp1(CHILD_ID::T1, V_TEMP);
+// MyMessage msgTemp2(CHILD_ID::T2, V_TEMP);
+// MyMessage msgHumidity(CHILD_ID::HUM, V_HUM);
+// MyMessage msgScale(CHILD_ID::Scale, V_WEIGHT);
+// MyMessage msgSteinhart(CHILD_ID::T3, V_TEMP);
+// //MyMessage msgDBG(CHILD_ID::DBG, V_TEXT);
+// MyMessage msgSSR(CHILD_ID::SSR, V_STATUS);
+// MyMessage msgSSR2(CHILD_ID::LOAD_MEMORY, V_STATUS);
+// MyMessage msgLCDScale(3, V_WEIGHT);
+// MyMessage msgLCDPressure(17, V_PRESSURE);
+// MyMessage msgPressure1(CHILD_ID::P1, V_PRESSURE);
+// // MyMessage msgPressCal1(CHILD_ID::P1Cal, V_LEVEL);
+// MyMessage msgPressure2(CHILD_ID::P2, V_PRESSURE);
+// // MyMessage msgPressCal2(CHILD_ID::P2Cal, V_LEVEL);
+// MyMessage msgPressure3(CHILD_ID::P3, V_PRESSURE);
+// // MyMessage msgPressCal3(CHILD_ID::P3Cal, V_LEVEL);
+// MyMessage msgPressure4(CHILD_ID::P4, V_PRESSURE);
+// // MyMessage msgPressCal4(CHILD_ID::P4Cal, V_LEVEL);
+// MyMessage msgScaleRate(CHILD_ID::ScaleRate, V_WEIGHT);
+// MyMessage msgScaleTare(CHILD_ID::ScaleTare, V_STATUS);
+// MyMessage msgScaleUntMag(CHILD_ID::ScaleUntMag, V_STATUS);
+// MyMessage msgScaleRtAccu(CHILD_ID::ScaleRtAccu, V_STATUS);
+// MyMessage msgScaleOffset(CHILD_ID::ScaleOffset, V_LEVEL);
+// MyMessage msgPress1Offset(CHILD_ID::Press1Offset, V_LEVEL);
+// MyMessage msgRMS(CHILD_ID::RMS, V_LEVEL);
+// MyMessage msgCurCAL(CHILD_ID::Curr_CAL, V_LEVEL);
+// MyMessage msgSSRFailAlarm(CHILD_ID::SSRFail_Alarm, V_STATUS);
+// MyMessage msgBoardVoltage(CHILD_ID::BoardVoltage, V_LEVEL);
+// MyMessage msgBoardCurrent(CHILD_ID::BoardCurrent, V_LEVEL);
+// MyMessage msgTHMS1(CHILD_ID::THMS1, V_TEMP);
+// MyMessage msgTHMS2(CHILD_ID::THMS2, V_TEMP);
 
 //Scale
 HX711 LoadCell;
@@ -312,7 +316,7 @@ int gap3 = 0;
 
 // Function Declarations
 void DutyCycleLoop();
-void sendSensors();
+void serialPrintSensorData();
 float Steinhart();
 void AllStop();
 void StoreEEPROM();
@@ -376,6 +380,62 @@ enum EEPROMAddresses {
   PRESSURE4_CAL = 122          // float, 4 bytes
 };
 
+// Define a struct to hold sensor data and the corresponding MyMessage object
+struct Sensor {
+  CHILD_ID childId;
+  MyMessage message;
+  const char* type;
+  float sensorData; // Add this line to include the sensorData member
+};
+
+// Initialize an array of sensors
+std::vector<Sensor> sensors = {
+  {CHILD_ID::PIDMODE_1, MyMessage(CHILD_ID::PIDMODE_1, V_STATUS), "PID Mode 1", 0.0},
+  {CHILD_ID::PIDSETPOINT_1, MyMessage(CHILD_ID::PIDSETPOINT_1, V_TEMP), "PID Setpoint 1", 0.0},
+  {CHILD_ID::PIDkP0_1, MyMessage(CHILD_ID::PIDkP0_1, V_LEVEL), "PID Kp 1", 0.0},
+  {CHILD_ID::PIDkI0_1, MyMessage(CHILD_ID::PIDkI0_1, V_LEVEL), "PID Ki 1", 0.0},
+  {CHILD_ID::PIDkD0_1, MyMessage(CHILD_ID::PIDkD0_1, V_LEVEL), "PID Kd 1", 0.0},
+  {CHILD_ID::EDC, MyMessage(CHILD_ID::EDC, V_PERCENTAGE), "EDC", 0.0},
+  {CHILD_ID::PIDMODE_2, MyMessage(CHILD_ID::PIDMODE_2, V_STATUS), "PID Mode 2", 0.0},
+  {CHILD_ID::PIDSETPOINT_2, MyMessage(CHILD_ID::PIDSETPOINT_2, V_TEMP), "PID Setpoint 2", 0.0},
+  {CHILD_ID::PIDkP0_2, MyMessage(CHILD_ID::PIDkP0_2, V_LEVEL), "PID Kp 2", 0.0},
+  {CHILD_ID::PIDkI0_2, MyMessage(CHILD_ID::PIDkI0_2, V_LEVEL), "PID Ki 2", 0.0},
+  {CHILD_ID::PIDkD0_2, MyMessage(CHILD_ID::PIDkD0_2, V_LEVEL), "PID Kd 2", 0.0},
+  {CHILD_ID::EDC_2, MyMessage(CHILD_ID::EDC_2, V_PERCENTAGE), "EDC 2", 0.0},
+  {CHILD_ID::PIDMODE_3, MyMessage(CHILD_ID::PIDMODE_3, V_STATUS), "PID Mode 3", 0.0},
+  {CHILD_ID::PIDSETPOINT_3, MyMessage(CHILD_ID::PIDSETPOINT_3, V_TEMP), "PID Setpoint 3", 0.0},
+  {CHILD_ID::PIDkP0_3, MyMessage(CHILD_ID::PIDkP0_3, V_LEVEL), "PID Kp 3", 0.0},
+  {CHILD_ID::PIDkI0_3, MyMessage(CHILD_ID::PIDkI0_3, V_LEVEL), "PID Ki 3", 0.0},
+  {CHILD_ID::PIDkD0_3, MyMessage(CHILD_ID::PIDkD0_3, V_LEVEL), "PID Kd 3", 0.0},
+  {CHILD_ID::EDC_3, MyMessage(CHILD_ID::EDC_3, V_PERCENTAGE), "EDC 3", 0.0},
+  {CHILD_ID::Info, MyMessage(CHILD_ID::Info, V_TEXT), "Info", 0.0},
+  {CHILD_ID::T0, MyMessage(CHILD_ID::T0, V_TEMP), "Temp 0", 0.0},
+  {CHILD_ID::T1, MyMessage(CHILD_ID::T1, V_TEMP), "Temp 1", 0.0},
+  {CHILD_ID::T2, MyMessage(CHILD_ID::T2, V_TEMP), "Temp 2", 0.0},
+  {CHILD_ID::HUM, MyMessage(CHILD_ID::HUM, V_HUM), "Humidity", 0.0},
+  {CHILD_ID::Scale, MyMessage(CHILD_ID::Scale, V_WEIGHT), "Scale", 0.0},
+  {CHILD_ID::T3, MyMessage(CHILD_ID::T3, V_TEMP), "Steinhart", 0.0},
+  {CHILD_ID::SSR, MyMessage(CHILD_ID::SSR, V_STATUS), "SSR", 0.0},
+  {CHILD_ID::LOAD_MEMORY, MyMessage(CHILD_ID::LOAD_MEMORY, V_STATUS), "SSR2", 0.0},
+  {CHILD_ID::P1, MyMessage(CHILD_ID::P1, V_PRESSURE), "Pressure 1", 0.0},
+  {CHILD_ID::P2, MyMessage(CHILD_ID::P2, V_PRESSURE), "Pressure 2", 0.0},
+  {CHILD_ID::P3, MyMessage(CHILD_ID::P3, V_PRESSURE), "Pressure 3", 0.0},
+  {CHILD_ID::P4, MyMessage(CHILD_ID::P4, V_PRESSURE), "Pressure 4", 0.0},
+  {CHILD_ID::ScaleRate, MyMessage(CHILD_ID::ScaleRate, V_WEIGHT), "Scale Rate", 0.0},
+  {CHILD_ID::ScaleTare, MyMessage(CHILD_ID::ScaleTare, V_STATUS), "Scale Tare", 0.0},
+  {CHILD_ID::ScaleUntMag, MyMessage(CHILD_ID::ScaleUntMag, V_STATUS), "Sc Mag", 0.0},
+  {CHILD_ID::ScaleRtAccu, MyMessage(CHILD_ID::ScaleRtAccu, V_STATUS), "Sc Rt Acc", 0.0},
+  {CHILD_ID::ScaleOffset, MyMessage(CHILD_ID::ScaleOffset, V_LEVEL), "Scale Offset", 0.0},
+  {CHILD_ID::Press1Offset, MyMessage(CHILD_ID::Press1Offset, V_LEVEL), "Pressure 1 Offset", 0.0},
+  {CHILD_ID::RMS, MyMessage(CHILD_ID::RMS, V_LEVEL), "RMS", 0.0},
+  {CHILD_ID::Curr_CAL, MyMessage(CHILD_ID::Curr_CAL, V_LEVEL), "Current Calibration", 0.0},
+  {CHILD_ID::SSRFail_Alarm, MyMessage(CHILD_ID::SSRFail_Alarm, V_STATUS), "SSR Fail Alarm", 0.0},
+  {CHILD_ID::BoardVoltage, MyMessage(CHILD_ID::BoardVoltage, V_LEVEL), "Board Voltage", 0.0},
+  {CHILD_ID::BoardCurrent, MyMessage(CHILD_ID::BoardCurrent, V_LEVEL), "Board Current", 0.0},
+  {CHILD_ID::THMS1, MyMessage(CHILD_ID::THMS1, V_TEMP), "THMS1", 0.0},
+  {CHILD_ID::THMS2, MyMessage(CHILD_ID::THMS2, V_TEMP), "THMS2", 0.0}
+};
+
 void presentation()
 {
   unsigned long start = millis();
@@ -385,74 +445,9 @@ void presentation()
   Serial.begin(115200);
 
   if (configValues.sDebug) {Serial.println("Presenting Sensors");}
-  present(CHILD_ID::PIDMODE_1, S_BINARY, "PID1 Lower");
-  present(CHILD_ID::PIDSETPOINT_1, S_TEMP, "PID1 Setpoint");
-  present(CHILD_ID::PIDkP0_1, S_LIGHT_LEVEL, "constKp");
-  present(CHILD_ID::PIDkI0_1, S_LIGHT_LEVEL, "constKi");
-  present(CHILD_ID::PIDkD0_1, S_LIGHT_LEVEL, "constKd");
-  present(CHILD_ID::PIDkP1_1, S_LIGHT_LEVEL, "aggKp");
-  present(CHILD_ID::PIDkI1_1, S_LIGHT_LEVEL, "aggKi");
-  present(CHILD_ID::PIDkD1_1, S_LIGHT_LEVEL, "aggKd");
-  present(CHILD_ID::AdaptiveMode_1, S_BINARY, "Adaptive");
-  present(CHILD_ID::AdaptiveSP_1, S_TEMP, "Adaptive SP");
-  present(CHILD_ID::EDC, S_DIMMER, "L dC");
-  present(CHILD_ID::PIDMODE_2, S_BINARY, "PID2 Upper");
-  present(CHILD_ID::PIDSETPOINT_2, S_TEMP, "PID2 Setpoint");
-  present(CHILD_ID::PIDkP0_2, S_LIGHT_LEVEL, "constKp_2");
-  present(CHILD_ID::PIDkI0_2, S_LIGHT_LEVEL, "constKi_2");
-  present(CHILD_ID::PIDkD0_2, S_LIGHT_LEVEL, "constKd_2");
-  present(CHILD_ID::PIDkP1_2, S_LIGHT_LEVEL, "aggKp_2");
-  present(CHILD_ID::PIDkI1_2, S_LIGHT_LEVEL, "aggKi_2");
-  present(CHILD_ID::PIDkD1_2, S_LIGHT_LEVEL, "aggKd_2");
-  present(CHILD_ID::AdaptiveMode_2, S_BINARY, "Adaptive_2");
-  present(CHILD_ID::AdaptiveSP_2, S_TEMP, "Adaptive SP_2");
-  present(CHILD_ID::EDC_2, S_DIMMER, "U dC");
-  present(CHILD_ID::PIDMODE_3, S_BINARY, "PID3 Platter");
-  present(CHILD_ID::PIDSETPOINT_3, S_TEMP, "PID3 Setpoint");
-  present(CHILD_ID::PIDkP0_3, S_LIGHT_LEVEL, "constKp_3");
-  present(CHILD_ID::PIDkI0_3, S_LIGHT_LEVEL, "constKi_3");
-  present(CHILD_ID::PIDkD0_3, S_LIGHT_LEVEL, "constKd_3");
-  present(CHILD_ID::EDC_3, S_DIMMER, "P dC");
-  present(CHILD_ID::Info, S_INFO, "Debug Info");
-  present(CHILD_ID::T0, S_TEMP, "T1");
-  present(CHILD_ID::T1, S_TEMP, "T2");
-  present(CHILD_ID::T2, S_TEMP, "T3");
-  present(CHILD_ID::T3, S_TEMP, "St");
-  present(CHILD_ID::T4, S_TEMP, "T");
-  present(CHILD_ID::Duty, S_DIMMER, "Duty Cycle");
-  present(CHILD_ID::Scale, S_WEIGHT, "Ref Scale");
-  present(CHILD_ID::Duty2, S_DIMMER, "Duty Cycle2");
-  present(CHILD_ID::Duty3, S_DIMMER, "Duty Cycle3");
-  present(CHILD_ID::SSR, S_BINARY, "SSR Armed");
-  present(CHILD_ID::LOAD_MEMORY, S_BINARY, "Load Memory");
-  present(CHILD_ID::ScaleCal, S_LIGHT_LEVEL, "Scale Cal");
-  present(CHILD_ID::P1, S_BARO, "P1");
-  present(CHILD_ID::P2, S_BARO, "P2");
-  present(CHILD_ID::P3, S_BARO, "P3");
-  present(CHILD_ID::P4, S_BARO, "P4");
-  present(CHILD_ID::P1Cal, S_LIGHT_LEVEL, "Pc1");
-  present(CHILD_ID::P2Cal, S_LIGHT_LEVEL, "Pc2");
-  present(CHILD_ID::P3Cal, S_LIGHT_LEVEL, "Pc3");
-  present(CHILD_ID::P4Cal, S_LIGHT_LEVEL, "Pc4");
-  present(CHILD_ID::ScaleRate, S_WEIGHT, "Scale Delta/T");
-  present(CHILD_ID::ScaleTare, S_BINARY, "Tare Scale");;
-  present(CHILD_ID::ScaleOffset, S_LIGHT_LEVEL, "Scale Zero Offset");
-  present(CHILD_ID::ScaleAvg, S_BINARY, "Scale Samples");
-  present(CHILD_ID::Press1Offset, S_LIGHT_LEVEL, "P1 Zero Offset");
-  present(CHILD_ID::Press2Offset, S_LIGHT_LEVEL, "P2 Zero Offset");
-  present(CHILD_ID::Press3Offset, S_LIGHT_LEVEL, "P3 Zero Offset");
-  present(CHILD_ID::Press4Offset, S_LIGHT_LEVEL, "P4 Zero Offset");
-  present(CHILD_ID::RMS, S_LIGHT_LEVEL, "RMS Power");
-  present(CHILD_ID::Curr_CAL, S_LIGHT_LEVEL, "Cur CAL");
-  present(CHILD_ID::SSRFail_Threshhold, S_LIGHT_LEVEL, "SSRFail Threshhold");
-  present(CHILD_ID::SSRFail_Alarm, S_BINARY, "SSR FAIL ALARM");
-  present(CHILD_ID::curr_OFFSET, S_LIGHT_LEVEL, "Current Offset");
-  present(CHILD_ID::s_debug, S_BINARY, "Serial3 Debug");
-  present(CHILD_ID::BoardVoltage, S_LIGHT_LEVEL, "Board Voltage");
-  present(CHILD_ID::PID1_Threshold, S_TEMP, "PID1A");
-  present(CHILD_ID::PID2_Threshold, S_TEMP, "PID2A");
-  present(CHILD_ID::PID3_Threshold, S_TEMP, "PID3A");
-  present(CHILD_ID::BoardCurrent, S_LIGHT_LEVEL, "Board Current");
+  for (auto& sensor : sensors) {
+    present(sensor.childId, static_cast<mysensors_sensor_t>(sensor.message.getType()), sensor.type);
+  }
 
   if (configValues.sDebug) { Serial.print("Presentation Timer = "); Serial.println((millis() - start)/1000.0,2);}
 }
@@ -484,6 +479,13 @@ void setup() {
   displayLine("Booting...");
   if (configValues.sDebug) { Serial.print("Setup Timer = "); Serial.println((millis() - start)/1000.0,2);}
   SensorLoop_timer = millis();
+
+  // Initialize sensors
+  for (auto& sensor : sensors) {
+    // Perform any necessary initialization for each sensor
+    Serial.print("Initializing sensor: ");
+    Serial.println(sensor.type);
+  }
 }
 
 void loop() {
@@ -513,11 +515,16 @@ void loop() {
     if (configValues.sDebug) { calValues.pressure4Offset = calValues.pressure1Offset; calValues.pressure4Cal = calValues.pressure1Cal;} //remove this line when sensor is installed
     pressure4Var = readPressure(Pressure4PIN, calValues.pressure4Offset, calValues.pressure4Cal);
 
-    sendSensors();
+    serialPrintSensorData();
     if (configValues.sDebug) { Serial.print("Looptime = "); Serial.println((millis() - loopTime)/1000.0,2);}
     SensorLoop_timer = millis();
   }
 
+  // Read and send sensor data
+  for (auto& sensor : sensors) {
+    // Read sensor data and send message
+    send(sensor.message.set(sensor.sensorData,1), true);
+  }
 }
 
 void getVccCurrent()
@@ -534,78 +541,17 @@ void getVccCurrent()
   return;
 }
 
-void sendSensors()
+void serialPrintSensorData()
 {
-  unsigned long start = millis();
-  // Send Sensors
-  send(msgTemp0.set(ds18b20Values[0].F, 1), configValues.toACK);
-  wait(SENDDELAY);
-  send(msgTemp1.set(ds18b20Values[1].F, 1), configValues.toACK);
-  wait(SENDDELAY);
-  send(msgSteinhart.set(steinhartValues.steinhart, 1), configValues.toACK);
-  wait(SENDDELAY);
-  send(msgTemp3.set(ds18b20Values[2].F, 1), configValues.toACK);
-  wait(SENDDELAY);
-  send(msgScale.set(valueScale, 1), configValues.toACK);
-  wait(SENDDELAY);
-  send(msgRMS.set(emonVars.rms, 1), configValues.toACK);
-  wait(SENDDELAY);
-  send(msgSSR.set(ssrArmed), configValues.toACK);
-  wait(SENDDELAY);
-  send(msgEDC.set(pid1.output, 2), configValues.toACK);
-  wait(SENDDELAY);
-  send(msgEDC_2.set(pid2.output, 2), configValues.toACK);
-  wait(SENDDELAY);
-  send(msgEDC_3.set(pid3.output, 2), configValues.toACK);
-  wait(SENDDELAY);
-  send(msgBoardVoltage.set((float)AREF_V, 2), configValues.toACK);
-  wait(SENDDELAY);
-  send(msgBoardCurrent.set((float)VccCurrent, 2), configValues.toACK);
-  wait(SENDDELAY);
-  send(msgPressure1.set(pressure1Var, 2), configValues.toACK);
-  wait(SENDDELAY);
-  send(msgPressure2.set(pressure2Var, 2), configValues.toACK);
-  wait(SENDDELAY);
-  send(msgPressure3.set(pressure3Var, 2), configValues.toACK);
-  wait(SENDDELAY);
-  send(msgPressure4.set(pressure4Var, 2), configValues.toACK);
-  wait(SENDDELAY);
-  send(msgScaleRate.set(kgpsScale, 2), configValues.toACK);
-  wait(SENDDELAY);
-
   if (configValues.sDebug) {
     Serial.print("Time: ");
     Serial.println((float)millis()/1000.0/60.0/60.0,2);
-    Serial.print("T0: ");
-    Serial.println(ds18b20Values[0].F);
-    Serial.print("T1: ");
-    Serial.println(ds18b20Values[1].F);
-    Serial.print("T2: ");
-    Serial.println(ds18b20Values[2].F);
-    Serial.print("St: ");
-    Serial.println(steinhartValues.steinhart);
-    Serial.print("THMS1: ");
-    Serial.println(getThermistor(Thermistor1PIN));
-    Serial.print("THMS2: ");
-    Serial.println(getThermistor(Thermistor2PIN));
-    Serial.print("Scale: ");
-    Serial.println(valueScale);
-    Serial.print("P1: ");
-    Serial.println(pressure1Var);
-    Serial.print("P2: ");
-    Serial.println(pressure2Var);
-    Serial.print("P3 ");
-    Serial.println(pressure3Var);
-    Serial.print("P4: ");
-    Serial.println(pressure4Var);
-    Serial.print("Mains Current : ");
-    Serial.println(emonVars.rms);
-    Serial.print("MEGA Voltage: ");
-    Serial.println(AREF_V);
-    Serial.print("5v Current: ");
-    Serial.println(VccCurrent);
+    for (const auto& sensor : sensors) {
+      Serial.print(sensor.type);
+      Serial.print(": ");
+      Serial.println(sensor.sensorData);
+    }
   }
-  if (configValues.sDebug) { Serial.print("SendSensors Timer = "); Serial.println((millis() - start)/1000.0,2);}
   return;
 }
 
@@ -676,7 +622,7 @@ void getScale()
   value_oldScale = valueScale;
   if (LoadCell.is_ready())
   {
-    valueScale = LoadCell.get_units(calValues.aScale/2) * calValues.mScale;
+    valueScale = LoadCell.get_units(10) * calValues.mScale;
   }
   else
   {
@@ -814,15 +760,15 @@ void AllStop() {
   myPID1.SetMode(MANUAL);
   myPID2.SetMode(MANUAL);
   myPID3.SetMode(MANUAL);
-  send(msgPIDMODE.set(false), configValues.toACK);
-  wait(SENDDELAY);
-  send(msgPIDMODE_2.set(false), configValues.toACK);
-  wait(SENDDELAY);
-  send(msgPIDMODE_3.set(false), configValues.toACK);
-  wait(SENDDELAY);
-  send(msgSSRFailAlarm.set(true), configValues.toACK);
-  wait(SENDDELAY);
-  send(msgSSR.set(false), configValues.toACK);
+  // send(msgPIDMODE.set(false), configValues.toACK);
+  // wait(SENDDELAY);
+  // send(msgPIDMODE_2.set(false), configValues.toACK);
+  // wait(SENDDELAY);
+  // send(msgPIDMODE_3.set(false), configValues.toACK);
+  // wait(SENDDELAY);
+  // send(msgSSRFailAlarm.set(true), configValues.toACK);
+  // wait(SENDDELAY);
+  // send(msgSSR.set(false), configValues.toACK);
 }
 
 void StoreEEPROM() {
@@ -912,7 +858,7 @@ void getEEPROM() {
   EEPROM.get(EEPROMAddresses::PID3_ALARM_THRESHOLD, pid3.alarmThreshold);
   EEPROM.get(EEPROMAddresses::PRESSURE2_OFFSET, calValues.pressure2Offset);
   EEPROM.get(EEPROMAddresses::PRESSURE2_CAL, calValues.pressure2Cal);
-  //printConfig();
+  printConfig();
 }
 
 void FactoryResetEEPROM() {
@@ -923,7 +869,7 @@ void FactoryResetEEPROM() {
   calValues.ssrFailThreshold = 2;
   calValues.currOffset = 5.28;
   calValues.zeroOffsetScale = 403361;
-  calValues.scaleCal = 53200;
+  calValues.scaleCal = 53.200;
   calValues.aScale = 255;
   calValues.mScale = 1000; // multiplier
   calValues.rScale = 1000; // rate multiplier
@@ -1106,10 +1052,10 @@ void receive(const MyMessage & message)  {
         if (configValues.sDebug) Serial.println(" done.");
         EEPROM.put(EEPROMAddresses::ZERO_OFFSET_SCALE, calValues.zeroOffsetScale);
         LoadCell.set_offset(calValues.zeroOffsetScale);
-        send(msgScaleTare.set(false), configValues.toACK);
-        wait(SENDDELAY);
-        send(msgScaleOffset.set(calValues.zeroOffsetScale, 1));
-        wait(SENDDELAY);
+        // send(msgScaleTare.set(false), configValues.toACK);
+        // wait(SENDDELAY);
+        // send(msgScaleOffset.set(calValues.zeroOffsetScale, 1));
+        // wait(SENDDELAY);
         if (configValues.sDebug) { Serial.print("Scale Offset = "); Serial.println(calValues.zeroOffsetScale); }
         sendInfo("Scale Tare");
       }
@@ -1309,7 +1255,7 @@ void receive(const MyMessage & message)  {
 }
 
 void sendInfo(String payload) {
-  send(msgINFO.set(payload.c_str()), configValues.toACK);
+  // send(msgINFO.set(payload.c_str()), configValues.toACK);
   wait(SENDDELAY);
 }
 
