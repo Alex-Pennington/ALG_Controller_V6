@@ -193,6 +193,7 @@ float getThermistor(int);
 float readPressure(int pin, int offset, float cal);
 void displayLine(const char* line);
 int freeMemory();
+void serialReceiveConfigData();
 
 enum EEPROMAddresses {
   ZERO_OFFSET_SCALE = 0,       // float, 4 bytes
@@ -272,7 +273,7 @@ void setup() {
 
 void loop() {
   DutyCycleLoop();
-  
+  serialReceiveConfigData();
 
   if ( (millis() - SensorLoop_timer) > (unsigned long)configValues.SENSORLOOPTIME)  {
     Serial.println("-");
@@ -544,8 +545,7 @@ void AllStop() {
   myPID1.SetMode(MANUAL);
   myPID2.SetMode(MANUAL);
   myPID3.SetMode(MANUAL);
-  Serial.println("!!! TEMP ALARM !!!");
-}
+  }
 
 void StoreEEPROM() {
   EEPROM.put(EEPROMAddresses::PRESSURE3_CAL, calValues.pressure3Cal);
@@ -962,4 +962,193 @@ int freeMemory() {
     free_memory = ((int)&free_memory) - ((int)__brkval);
   }
   return free_memory;
+}
+
+/**
+ * @brief Receives configuration data from the serial port and updates calibration values.
+ * 
+ * This function reads a line of data from the serial port, parses it into a key-value pair,
+ * and updates the corresponding calibration value in memory and EEPROM. The expected format
+ * for the received data is a string with a key and a value separated by a space, followed by
+ * a newline character. For example:
+ * 
+ * "pressure1Cal 1.23\n"
+ * "pressure1Offset 10\n"
+ * "pressure2Cal 2.34\n"
+ * "pressure2Offset 20\n"
+ * "pressure3Cal 3.45\n"
+ * "pressure3Offset 30\n"
+ * "pressure4Cal 4.56\n"
+ * "pressure4Offset 40\n"
+ * "emonCal 5.67\n"
+ * "ssrFailThreshold 6\n"
+ * "currOffset 7.89\n"
+ * "zeroOffsetScale 8.90\n"
+ * "scaleCal 9.01\n"
+ * "VccCurrentOffset 50\n"
+ * "VccCurrentMultiplier 1.23\n"
+ * "sDebug 1\n"
+ * 
+ * The function supports the following keys:
+ * - "pressure1Cal": Updates calValues.pressure1Cal (float)
+ * - "pressure1Offset": Updates calValues.pressure1Offset (int)
+ * - "pressure2Cal": Updates calValues.pressure2Cal (float)
+ * - "pressure2Offset": Updates calValues.pressure2Offset (int)
+ * - "pressure3Cal": Updates calValues.pressure3Cal (float)
+ * - "pressure3Offset": Updates calValues.pressure3Offset (int)
+ * - "pressure4Cal": Updates calValues.pressure4Cal (float)
+ * - "pressure4Offset": Updates calValues.pressure4Offset (int)
+ * - "emonCal": Updates calValues.emonCal (float)
+ * - "ssrFailThreshold": Updates calValues.ssrFailThreshold (byte)
+ * - "currOffset": Updates calValues.currOffset (float)
+ * - "zeroOffsetScale": Updates calValues.zeroOffsetScale (float)
+ * - "scaleCal": Updates calValues.scaleCal (float)
+ * - "VccCurrentOffset": Updates calValues.VccCurrentOffset (int)
+ * - "VccCurrentMultiplier": Updates calValues.VccCurrentMultiplier (float)
+ * - "sDebug": Updates configValues.sDebug (bool)
+ * 
+ * Additional keys can be added as needed.
+ */
+void serialReceiveData() {
+  if (Serial.available() > 0) {
+    String receivedData = Serial.readStringUntil('\n');
+    char key[32];
+    float value;
+    sscanf(receivedData.c_str(), "%31s %f", key, &value);
+
+    if (strcmp(key, "pressure1Cal") == 0) {
+      calValues.pressure1Cal = value;
+      EEPROM.put(EEPROMAddresses::PRESSURE1_CAL, calValues.pressure1Cal);
+    } else if (strcmp(key, "pressure1Offset") == 0) {
+      calValues.pressure1Offset = (int)value;
+      EEPROM.put(EEPROMAddresses::PRESSURE1_OFFSET, calValues.pressure1Offset);
+    } else if (strcmp(key, "pressure2Cal") == 0) {
+      calValues.pressure2Cal = value;
+      EEPROM.put(EEPROMAddresses::PRESSURE2_CAL, calValues.pressure2Cal);
+    } else if (strcmp(key, "pressure2Offset") == 0) {
+      calValues.pressure2Offset = (int)value;
+      EEPROM.put(EEPROMAddresses::PRESSURE2_OFFSET, calValues.pressure2Offset);
+    } else if (strcmp(key, "pressure3Cal") == 0) {
+      calValues.pressure3Cal = value;
+      EEPROM.put(EEPROMAddresses::PRESSURE3_CAL, calValues.pressure3Cal);
+    } else if (strcmp(key, "pressure3Offset") == 0) {
+      calValues.pressure3Offset = (int)value;
+      EEPROM.put(EEPROMAddresses::PRESSURE3_OFFSET, calValues.pressure3Offset);
+    } else if (strcmp(key, "pressure4Cal") == 0) {
+      calValues.pressure4Cal = value;
+      EEPROM.put(EEPROMAddresses::PRESSURE4_CAL, calValues.pressure4Cal);
+    } else if (strcmp(key, "pressure4Offset") == 0) {
+      calValues.pressure4Offset = (int)value;
+      EEPROM.put(EEPROMAddresses::PRESSURE4_OFFSET, calValues.pressure4Offset);
+    } else if (strcmp(key, "emonCal") == 0) {
+      calValues.emonCal = value;
+      EEPROM.put(EEPROMAddresses::EMON_CAL, calValues.emonCal);
+    } else if (strcmp(key, "ssrFailThreshold") == 0) {
+      calValues.ssrFailThreshold = (byte)value;
+      EEPROM.put(EEPROMAddresses::SSR_FAIL_THRESHOLD, calValues.ssrFailThreshold);
+    } else if (strcmp(key, "currOffset") == 0) {
+      calValues.currOffset = value;
+      EEPROM.put(EEPROMAddresses::CURR_OFFSET, calValues.currOffset);
+    } else if (strcmp(key, "zeroOffsetScale") == 0) {
+      calValues.zeroOffsetScale = value;
+      EEPROM.put(EEPROMAddresses::ZERO_OFFSET_SCALE, calValues.zeroOffsetScale);
+    } else if (strcmp(key, "scaleCal") == 0) {
+      calValues.scaleCal = value;
+      EEPROM.put(EEPROMAddresses::SCALE_CAL, calValues.scaleCal);
+    } else if (strcmp(key, "VccCurrentOffset") == 0) {
+      calValues.VccCurrentOffset = (int)value;
+      EEPROM.put(EEPROMAddresses::VCC_CURRENT_OFFSET, calValues.VccCurrentOffset);
+    } else if (strcmp(key, "VccCurrentMultiplier") == 0) {
+      calValues.VccCurrentMultiplier = value;
+      EEPROM.put(EEPROMAddresses::VCC_CURRENT_MULTIPLIER, calValues.VccCurrentMultiplier);
+    } else if (strcmp(key, "sDebug") == 0) {
+      configValues.sDebug = (bool)value;
+      EEPROM.put(EEPROMAddresses::S_DEBUG, configValues.sDebug);
+    } else if (strcmp(key, "pid1Setpoint") == 0) {
+      pid1.setpoint = value;
+      EEPROM.put(EEPROMAddresses::PID1_SETPOINT, pid1.setpoint);
+    } else if (strcmp(key, "pid1Kp") == 0) {
+      pid1.kp = value;
+      EEPROM.put(EEPROMAddresses::PID1_KP, pid1.kp);
+    } else if (strcmp(key, "pid1Ki") == 0) {
+      pid1.ki = value;
+      EEPROM.put(EEPROMAddresses::PID1_KI, pid1.ki);
+    } else if (strcmp(key, "pid1Kd") == 0) {
+      pid1.kd = value;
+      EEPROM.put(EEPROMAddresses::PID1_KD, pid1.kd);
+    } else if (strcmp(key, "pid1AggKp") == 0) {
+      pid1.aggKp = value;
+      EEPROM.put(EEPROMAddresses::PID1_AGG_KP, pid1.aggKp);
+    } else if (strcmp(key, "pid1AggKi") == 0) {
+      pid1.aggKi = value;
+      EEPROM.put(EEPROMAddresses::PID1_AGG_KI, pid1.aggKi);
+    } else if (strcmp(key, "pid1AggKd") == 0) {
+      pid1.aggKd = value;
+      EEPROM.put(EEPROMAddresses::PID1_AGG_KD, pid1.aggKd);
+    } else if (strcmp(key, "pid1AggSP") == 0) {
+      pid1.aggSP = (byte)value;
+      EEPROM.put(EEPROMAddresses::PID1_AGG_SP, pid1.aggSP);
+    } else if (strcmp(key, "pid1AdaptiveMode") == 0) {
+      pid1.adaptiveMode = (bool)value;
+      EEPROM.put(EEPROMAddresses::PID1_ADAPTIVE_MODE, pid1.adaptiveMode);
+    } else if (strcmp(key, "pid1AlarmThreshold") == 0) {
+      pid1.alarmThreshold = (int)value;
+      EEPROM.put(EEPROMAddresses::PID1_ALARM_THRESHOLD, pid1.alarmThreshold);
+    } else if (strcmp(key, "pid2Setpoint") == 0) {
+      pid2.setpoint = value;
+      EEPROM.put(EEPROMAddresses::PID2_SETPOINT, pid2.setpoint);
+    } else if (strcmp(key, "pid2Kp") == 0) {
+      pid2.kp = value;
+      EEPROM.put(EEPROMAddresses::PID2_KP, pid2.kp);
+    } else if (strcmp(key, "pid2Ki") == 0) {
+      pid2.ki = value;
+      EEPROM.put(EEPROMAddresses::PID2_KI, pid2.ki);
+    } else if (strcmp(key, "pid2Kd") == 0) {
+      pid2.kd = value;
+      EEPROM.put(EEPROMAddresses::PID2_KD, pid2.kd);
+    } else if (strcmp(key, "pid2AggKp") == 0) {
+      pid2.aggKp = value;
+      EEPROM.put(EEPROMAddresses::PID2_AGG_KP, pid2.aggKp);
+    } else if (strcmp(key, "pid2AggKi") == 0) {
+      pid2.aggKi = value;
+      EEPROM.put(EEPROMAddresses::PID2_AGG_KI, pid2.aggKi);
+    } else if (strcmp(key, "pid2AggKd") == 0) {
+      pid2.aggKd = value;
+      EEPROM.put(EEPROMAddresses::PID2_AGG_KD, pid2.aggKd);
+    } else if (strcmp(key, "pid2AggSP") == 0) {
+      pid2.aggSP = (byte)value;
+      EEPROM.put(EEPROMAddresses::PID2_AGG_SP, pid2.aggSP);
+    } else if (strcmp(key, "pid2AdaptiveMode") == 0) {
+      pid2.adaptiveMode = (bool)value;
+      EEPROM.put(EEPROMAddresses::PID2_ADAPTIVE_MODE, pid2.adaptiveMode);
+    } else if (strcmp(key, "pid2AlarmThreshold") == 0) {
+      pid2.alarmThreshold = (int)value;
+      EEPROM.put(EEPROMAddresses::PID2_ALARM_THRESHOLD, pid2.alarmThreshold);
+    } else if (strcmp(key, "pid3Setpoint") == 0) {
+      pid3.setpoint = value;
+      EEPROM.put(EEPROMAddresses::PID3_SETPOINT, pid3.setpoint);
+    } else if (strcmp(key, "pid3Kp") == 0) {
+      pid3.kp = value;
+      EEPROM.put(EEPROMAddresses::PID3_KP, pid3.kp);
+    } else if (strcmp(key, "pid3Ki") == 0) {
+      pid3.ki = value;
+      EEPROM.put(EEPROMAddresses::PID3_KI, pid3.ki);
+    } else if (strcmp(key, "pid3Kd") == 0) {
+      pid3.kd = value;
+      EEPROM.put(EEPROMAddresses::PID3_KD, pid3.kd);
+    } else if (strcmp(key, "pid3AlarmThreshold") == 0) {
+      pid3.alarmThreshold = (int)value;
+      EEPROM.put(EEPROMAddresses::PID3_ALARM_THRESHOLD, pid3.alarmThreshold);
+    } else if (strcmp(key, "pid1Mode") == 0) {
+      pid1.mode = (bool)value;
+      EEPROM.put(EEPROMAddresses::PID1_MODE, pid1.mode);
+    } else if (strcmp(key, "pid2Mode") == 0) {
+      pid2.mode = (bool)value;
+      EEPROM.put(EEPROMAddresses::PID2_MODE, pid2.mode);
+    } else if (strcmp(key, "pid3Mode") == 0) {
+      pid3.mode = (bool)value;
+      EEPROM.put(EEPROMAddresses::PID3_MODE, pid3.mode);
+    }
+    // Add more keys as needed
+  }
 }
