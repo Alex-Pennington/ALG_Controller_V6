@@ -1,4 +1,4 @@
-#define speakerPin 39
+#define speakerPin 30
 #include "pitches.h"
 #include <Arduino.h>
 

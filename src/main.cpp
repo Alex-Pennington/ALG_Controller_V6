@@ -4,6 +4,7 @@
 #include <EEPROM.h>
 #include "controller.h"
 #include <OneWire.h>
+#include <ezButton.h>
 
 #include <SPI.h>
 #include <Wire.h>
@@ -103,7 +104,13 @@ enum CHILD_ID {
 
   dTscale = 70,
   T5 = 71,
-  runTime = 72
+  runTime = 72,
+  switch1 = 73,
+  switch2 = 74,
+  switch3 = 75,
+  switch4 = 76,
+  switch5 = 77
+
 };
 
 // MySensors Message Definitions
@@ -161,6 +168,12 @@ MyMessage msgSSRFailAlarm(CHILD_ID::SSRFail_Alarm, V_STATUS);
 MyMessage msgVccVoltage(CHILD_ID::VccVoltage, V_VOLTAGE);
 MyMessage msgVccCurrent(CHILD_ID::VccCurrent, V_CURRENT);
 MyMessage msgRunTime(CHILD_ID::runTime, V_VAR1);
+
+MyMessage msgSwitch1(CHILD_ID::switch1, V_VAR1);
+MyMessage msgSwitch2(CHILD_ID::switch2, V_VAR1);
+MyMessage msgSwitch3(CHILD_ID::switch3, V_VAR1);
+MyMessage msgSwitch4(CHILD_ID::switch4, V_VAR1);
+MyMessage msgSwitch5(CHILD_ID::switch5, V_VAR1);
 
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -263,6 +276,12 @@ struct SteinhartValues {
 };
 SteinhartValues steinhartValues;
 
+struct buttons {
+  bool up = false;
+  bool down = false;
+};
+buttons button[5];
+
 //Working Variables
 unsigned long SensorLoop_timer = 0;
 unsigned long pid_compute_loop_time = 0;
@@ -284,36 +303,61 @@ extern unsigned int __heap_start;
 extern void *__brkval;
 
 //Pin Definitions
-#define HX711_dout 9 //
-#define HX711_sck 10 //
-#define ElementPowerPin3 25
+#define HX711_dout 9 
+#define HX711_sck 10 
+#define ElementPowerPin3 27
 #define SSRArmed_PIN 29
-#define speakerPin 39 //
-#define ElementPowerPin 41
-#define ElementPowerPin2 43
-#define DS18B20_PIN 44 //
+// #define speakerPin 30 //defined in controller.h
+#define ElementPowerPin 25
+#define ElementPowerPin2 26
+#define DS18B20_PIN 44 
 #define SteinhartEnable 22
-#define SteinhartPin A3 //
-#define Pressure1PIN A15 //
-#define Pressure2PIN A15 //
-#define Pressure3PIN A15 //
-#define Pressure4PIN A15 //
+#define SteinhartPin A3 
+#define Pressure1PIN A15 
+#define Pressure2PIN A15 
+#define Pressure3PIN A15 
+#define Pressure4PIN A15 
 #define emon_Input_PIN A9
-#define VccCurrentSensor A0 //
-#define Thermistor1PIN A1 //
-#define Thermistor2PIN A2 //
-#define Serial3_RX 15 //
-#define Serial3_TX 14 //
+#define VccCurrentSensor A0 
+#define Thermistor1PIN A1 
+#define Thermistor2PIN A2 
+#define Serial3_RX 15 
+#define Serial3_TX 14 
+
+#define Switch1_UP_Pin 43
+#define Switch1_DOWN_Pin 42
+#define Switch2_UP_Pin 41
+#define Switch2_DOWN_Pin 40
+#define Switch3_UP_Pin 39
+#define Switch3_DOWN_Pin 38
+#define Switch4_UP_Pin 37
+#define Switch4_DOWN_Pin 36
+#define Switch5_UP_Pin 35
+#define Switch5_DOWN_Pin 34
 
 
 
 /*Connector Pinouts
-Pressure  1 5V, 2 GND, 3 SIG
-Thermistor 1 SIG, 2 SIG
-Steinhart 1 SIG, 2 SIG
-HX711 1 E-, 2 A+, 3 A-, 4 E+
-Serial 1 5V, 2 RX, 3 TX, 4 GND
+Pressure(3)  1 5V, 2 GND, 3 SIG
+Thermistor(2) 1 SIG, 2 SIG
+Steinhart(2) 1 SIG, 2 SIG
+HX711(4) 1 E-, 2 A+, 3 A-, 4 E+
+Serial(4) 1 5V, 2 RX, 3 TX, 4 GND
+R1(8) GND , <NC> , ElementPowerPin , <NC> , +5v , ElementPowerPin2 , SSRArmed_PIN , (Center) emon_Input_PIN
+R2(8) GND , +5v , <NC>, ElementPowerPin3, <NC>, <NC>, <NC>, (Center) SteinhartPin
 */
+
+//Switches
+ezButton switch1UP(Switch1_UP_Pin);
+ezButton switch1DOWN(Switch1_DOWN_Pin);
+ezButton switch2UP(Switch2_UP_Pin);
+ezButton switch2DOWN(Switch2_DOWN_Pin);
+ezButton switch3UP(Switch3_UP_Pin);
+ezButton switch3DOWN(Switch3_DOWN_Pin);
+ezButton switch4UP(Switch4_UP_Pin);
+ezButton switch4DOWN(Switch4_DOWN_Pin);
+ezButton switch5UP(Switch5_UP_Pin);
+ezButton switch5DOWN(Switch5_DOWN_Pin);
 
 //Scale
 HX711 LoadCell;
@@ -347,7 +391,7 @@ float getThermistor(int);
 float readPressure(int pin, int offset, float cal);
 void displayLine(const char* line);
 int freeMemory();
-void serialReceiveData();
+void emon();
 
 enum EEPROMAddresses {
   ZERO_OFFSET_SCALE = 0,       // float, 4 bytes
@@ -495,6 +539,17 @@ void setup() {
   myPID3.SetSampleTime(configValues.pidLoopTime);
   myPID3.SetOutputLimits(0, 100);
 
+  switch1UP.setDebounceTime(50); // set debounce time to 50 milliseconds
+  switch1DOWN.setDebounceTime(50);
+  switch2UP.setDebounceTime(50); 
+  switch2DOWN.setDebounceTime(50);
+  switch3UP.setDebounceTime(50); 
+  switch3DOWN.setDebounceTime(50);
+  switch4UP.setDebounceTime(50); 
+  switch4DOWN.setDebounceTime(50);
+  switch5UP.setDebounceTime(50); 
+  switch5DOWN.setDebounceTime(50); 
+
   displayLine("Booting...");
   sendInfo("Operational");
   delay(1000);
@@ -503,7 +558,22 @@ void setup() {
 void loop() {
   DutyCycleLoop();
   _process();
-  
+  switch1UP.loop();
+  switch1DOWN.loop();
+  switch2UP.loop();
+  switch2DOWN.loop();
+  switch3UP.loop();
+  switch3DOWN.loop();
+  switch4UP.loop();
+  switch4DOWN.loop();
+  switch5UP.loop();
+  switch5DOWN.loop();
+
+  if ( (millis() - switchesLoop_timer) > 1000) {
+    getSwitches();
+    switchesLoop_timer = millis();
+  }
+
   if ( (millis() - SensorLoop_timer) > (unsigned long)configValues.SENSORLOOPTIME)  {
     Serial.println("-");
     AREF_V = getBandgap();
@@ -651,9 +721,30 @@ void loop() {
 // } else {
 // pid2.Compute();
 // }
-
 }
 
+void getSwitches()
+{
+  if (switch1UP.isPressed())  { msgSwitch1.set(1); }
+  else if (switch1DOWN.isPressed()) { msgSwitch1.set(0); }
+  else { msgSwitch1.set(2); }
+
+  if (switch2UP.isPressed()) { msgSwitch2.set(1); }
+  else if (switch2DOWN.isPressed()) { msgSwitch2.set(0); }
+  else { msgSwitch2.set(2); }
+
+  if (switch3UP.isPressed()) { msgSwitch3.set(1); }
+  else if (switch3DOWN.isPressed()) { msgSwitch3.set(0); }
+  else { msgSwitch3.set(2); }
+
+  if (switch4UP.isPressed()) { msgSwitch4.set(1); }
+  else if (switch4DOWN.isPressed()) { msgSwitch4.set(0); }
+  else { msgSwitch4.set(2); }
+
+  if (switch5UP.isPressed()) { msgSwitch5.set(1); }
+  else if (switch5DOWN.isPressed()) { msgSwitch5.set(0); }
+  else { msgSwitch5.set(2); }
+}
 
 void getVccCurrent()
 {
