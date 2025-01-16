@@ -10,8 +10,6 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
-#define MY_DEBUG
-
 // Enable and select radio type attached
 #define MY_NODE_ID 201
 #define MY_RADIO_RF24
@@ -104,7 +102,8 @@ enum CHILD_ID {
   LOAD_MEMORY = 69,
 
   dTscale = 70,
-  T5 = 71
+  T5 = 71,
+  runTime = 72
 };
 
 // MySensors Message Definitions
@@ -156,11 +155,12 @@ MyMessage msgPressure2(CHILD_ID::P2, V_PRESSURE);
 MyMessage msgPressure3(CHILD_ID::P3, V_PRESSURE);
 MyMessage msgPressure4(CHILD_ID::P4, V_PRESSURE);
 
-MyMessage msgMainsCurrent(CHILD_ID::MainsCurrent, V_LEVEL);
+MyMessage msgMainsCurrent(CHILD_ID::MainsCurrent, V_CURRENT);
 MyMessage msgMainsCurrentMultiplier(CHILD_ID::MainsCurrentMultiplier, V_LEVEL);
 MyMessage msgSSRFailAlarm(CHILD_ID::SSRFail_Alarm, V_STATUS);
-MyMessage msgVccVoltage(CHILD_ID::VccVoltage, V_LEVEL);
-MyMessage msgVccCurrent(CHILD_ID::VccCurrent, V_LEVEL);
+MyMessage msgVccVoltage(CHILD_ID::VccVoltage, V_VOLTAGE);
+MyMessage msgVccCurrent(CHILD_ID::VccCurrent, V_CURRENT);
+MyMessage msgRunTime(CHILD_ID::runTime, V_VAR1);
 
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
@@ -190,8 +190,8 @@ DS18B20Values ds18b20Values[5];
 struct ConfigurationValues {
   int SENSORLOOPTIME = 23000;
   bool sDebug = true;
-  int scale_stabilisingtime = 10000;
   bool toACK = false;
+  int pidLoopTime = 10000;
 };
 ConfigurationValues configValues;
 
@@ -265,6 +265,7 @@ SteinhartValues steinhartValues;
 
 //Working Variables
 unsigned long SensorLoop_timer = 0;
+unsigned long pid_compute_loop_time = 0;
 float dC = 0.0;
 float dC2 = 0.0;
 float dC3 = 0.0;
@@ -455,7 +456,7 @@ void presentation() {
   present(CHILD_ID::SSRFail_Alarm, S_BINARY, "SSR Fail Alarm");
   present(CHILD_ID::Info, S_INFO, "Info");
   present(CHILD_ID::LOAD_MEMORY, S_BINARY, "Load Memory");
-
+  present(CHILD_ID::runTime, S_CUSTOM, "Run Time");
 }
 
 void setup() {
@@ -482,7 +483,16 @@ void setup() {
   //OLED
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {Serial.println(F("SSD1306 allocation failed"));}  
+
+  myPID1.SetSampleTime(configValues.pidLoopTime);
+  myPID1.SetOutputLimits(0, 100);
+  myPID2.SetSampleTime(configValues.pidLoopTime);
+  myPID2.SetOutputLimits(0, 100);
+  myPID3.SetSampleTime(configValues.pidLoopTime);
+  myPID3.SetOutputLimits(0, 100);
+
   displayLine("Booting...");
+  sendInfo("Operational");
   delay(1000);
 }
 
@@ -495,6 +505,10 @@ void loop() {
 
     getVccCurrent();
     msgVccCurrent.set(VccCurrentVar, 2); send(msgVccCurrent);
+    msgVccVoltage.set(AREF_V, 2); send(msgVccVoltage);
+    
+    emon();
+    msgMainsCurrent.set(emonVars.rms, 2); send(msgMainsCurrent);
     
     DS18B20();
     msgTemp0.set(ds18b20Values[0].F, 2); send(msgTemp0);
@@ -506,9 +520,6 @@ void loop() {
     float steinhartVar = Steinhart();
     msgTemp5.set(steinhartVar, 2); send(msgTemp5);
 
-    emon();
-    msgMainsCurrent.set(emonVars.rms, 2); send(msgMainsCurrent);
-    
     getScale();
     msgScale.set(valueScale, 2); send(msgScale);
     msgScaleRate.set(gramsPerSecondScale, 2); send(msgScaleRate);
@@ -518,15 +529,115 @@ void loop() {
     displayLine(buffer);
 
     pressure1Var = readPressure(Pressure1PIN, calValues.pressure1Offset, calValues.pressure1Cal);
+    msgPressure1.set(pressure1Var, 2); send(msgPressure1);
     pressure2Var = readPressure(Pressure2PIN, calValues.pressure2Offset, calValues.pressure2Cal);
+    msgPressure2.set(pressure2Var, 2); send(msgPressure2);
     pressure3Var = readPressure(Pressure3PIN, calValues.pressure3Offset, calValues.pressure3Cal);
+    msgPressure3.set(pressure3Var, 2); send(msgPressure3);
     pressure4Var = readPressure(Pressure4PIN, calValues.pressure4Offset, calValues.pressure4Cal);
+    msgPressure4.set(pressure4Var, 2); send(msgPressure4);
     
+    msgTHMS1.set(getThermistor(Thermistor1PIN), 2); send(msgTHMS1);
+    msgTHMS2.set(getThermistor(Thermistor2PIN), 2); send(msgTHMS2);
+    
+    msgRunTime.set((float)(millis()/1000.0/60.0/60.0),2); send(msgRunTime);
+            
     TempAlarm();
     serialPrintSensorData();
     SensorLoop_timer = millis();
+
+// get PID inputs, set agg constants, send LCD vars
+    
   }
+if ((millis() - pid_compute_loop_time) > configValues.pidLoopTime)  {
+  pid1.input = (double)getThermistor(Thermistor1PIN);
+  pid2.input = (double)55.0;
+  //pid2.input = (double)getThermistor(Thermistor2PIN);
+  pid3.input = (double)Steinhart();
+  int gap = abs(pid1.setpoint - pid1.input); //distance away from setpoint
+  if ((gap < pid1.aggSP && pid1.adaptiveMode == true) || pid1.adaptiveMode == false)
+  { //we're close to setpoint, use conservative tuning parameters
+    myPID1.SetTunings(pid1.kp, pid1.ki, pid1.kp);
+  }
+  else if (gap > pid1.aggSP && pid1.adaptiveMode == true)
+  {
+    //we're far from setpoint, use aggressive tuning parameters
+    myPID1.SetTunings(pid1.aggKp, pid1.aggKi, pid1.aggKd);
+  }
+  int gap_2 = abs(pid2.setpoint - pid2.input); //distance away from setpoint
+  if ((gap_2 < pid2.aggSP && pid2.adaptiveMode == true) || pid2.adaptiveMode == false)
+  { //we're close to setpoint, use conservative tuning parameters
+    myPID2.SetTunings(pid2.kp, pid2.ki, pid2.kp);
+  }
+  else if (gap_2 > pid2.aggSP && pid2.adaptiveMode == true)
+  {
+    //we're far from setpoint, use aggressive tuning parameters
+    myPID2.SetTunings(pid2.aggKp, pid2.aggKi, pid2.aggKd);
+  }
+  myPID1.Compute();
+  myPID2.Compute();
+  myPID3.Compute();
+  dC = pid1.output;
+  dC2 = pid2.output;
+  dC3 = pid3.output;
+  pid_compute_loop_time = millis();
 }
+
+// if (tuning == true) { //pid_1 comp
+//   byte val = (aTune.Runtime());
+//   if (val != 0) {
+//     tuning = false;
+//   }
+//   if (!tuning) { //we're done, set the tuning parameters
+//     kp = aTune.GetKp();
+//     send(msgKp.set(kp, 3), ToACK);
+//     wait(SENDDELAY);
+//     ki = aTune.GetKi();
+//     send(msgKi.set(ki, 3), ToACK);
+//     wait(SENDDELAY);
+//     kd = aTune.GetKd();
+//     send(msgKd.set(kd, 3), ToACK);
+//     wait(SENDDELAY);
+//     myPID.SetTunings(kp, ki, kd);
+//     AutoTuneHelper(false);
+//     send(msgINFO.set("Autotune Done"), ToACK);
+//     wait(SENDDELAY);
+//     send(msgAutotuneMode.set(false), ToACK);
+//     wait(SENDDELAY);
+//   }
+// } else {
+// myPID1.Compute();      
+// }
+// if (tuning_2 == true)    { // pid_2 comp
+//   byte val = (aTune_2.Runtime());
+//   if (val != 0)
+//   {
+//     tuning_2 = false;
+//   }
+//   if (!tuning_2)
+//   { //we're done, set the tuning parameters
+//     kp_2 = aTune_2.GetKp();
+//     send(msgKp_2.set(kp_2, 3), ToACK);
+//     wait(SENDDELAY);
+//     ki_2 = aTune_2.GetKi();
+//     send(msgKi_2.set(ki_2, 3), ToACK);
+//     wait(SENDDELAY);
+//     kd_2 = aTune_2.GetKd();
+//     send(msgKd_2.set(kd_2, 3), ToACK);
+//     wait(SENDDELAY);
+//     myPID_2.SetTunings(kp_2, ki_2, kd_2);
+//     AutoTuneHelper_2(false);
+//     send(msgINFO.set("Autotune Done _2"), ToACK);
+//     wait(SENDDELAY);
+//     send(msgAutotuneMode_2.set(false), ToACK);
+//     wait(SENDDELAY);
+//   }
+// } else {
+// pid2.Compute();
+// }
+
+}
+
 
 void getVccCurrent()
 {
@@ -562,10 +673,6 @@ void serialPrintSensorData() {
     for (int i = 0; i < static_cast<int>(sizeof(ds18b20Values) / sizeof(ds18b20Values[0])); i++) {
       Serial.print("DS18B20 Sensor ");
       Serial.print(i);
-      Serial.print(" Temperature (C): ");
-      Serial.println(ds18b20Values[i].C);
-      Serial.print("DS18B20 Sensor ");
-      Serial.print(i);
       Serial.print(" Temperature (F): ");
       Serial.println(ds18b20Values[i].F);
     }
@@ -573,6 +680,31 @@ void serialPrintSensorData() {
     Serial.println(emonVars.rms);
     Serial.print("Steinhart Temperature (F): ");
     Serial.println(steinhartValues.steinhart);
+    Serial.print("dC: ");
+    Serial.println(dC);
+    Serial.print("dC_2: ");
+    Serial.println(dC2);
+    Serial.print("dC_3: ");
+    Serial.println(dC3);
+    Serial.print("PID1 Mode: ");
+    Serial.println(pid1.mode);
+    Serial.print("PID2 Mode: ");
+    Serial.println(pid2.mode);
+    Serial.print("PID3 Mode: ");
+    Serial.println(pid3.mode);
+    Serial.print("PID1 Input: ");
+    Serial.println(pid1.input);
+    Serial.print("PID2 Input: ");
+    Serial.println(pid2.input);
+    Serial.print("PID3 Input: ");
+    Serial.println(pid3.input);
+    Serial.print("PID1 Output: ");
+    Serial.println(pid1.output);
+    Serial.print("PID2 Output: ");
+    Serial.println(pid2.output);
+    Serial.print("PID3 Output: ");
+    Serial.println(pid3.output);
+    
   }
   return;
 }
@@ -763,6 +895,7 @@ void AllStop() {
   myPID1.SetMode(MANUAL);
   myPID2.SetMode(MANUAL);
   myPID3.SetMode(MANUAL);
+  sendInfo("All Stop");
   }
 void StoreEEPROM() {
   EEPROM.put(EEPROMAddresses::PRESSURE3_CAL, calValues.pressure3Cal);
@@ -929,7 +1062,6 @@ void FactoryResetEEPROM() {
   ssrArmed = false;
   configValues.SENSORLOOPTIME = 23000;
   configValues.sDebug = true;
-  configValues.scale_stabilisingtime = 10000;
   configValues.toACK = false;
 
   StoreEEPROM();
@@ -1043,8 +1175,6 @@ void printConfig() {
   Serial.println(pid3.alarmThreshold);
   Serial.print("SENSORLOOPTIME: ");
   Serial.println(configValues.SENSORLOOPTIME);
-  Serial.print("scale_stabilisingtime: ");
-  Serial.println(configValues.scale_stabilisingtime);
   Serial.print("toACK: ");
   Serial.println(configValues.toACK);
 }
@@ -1075,8 +1205,8 @@ long getBandgap(void) {
   return result; // Vcc in millivolts
 }
 void sendInfo(String payload) {
-  Serial.print("INFO : ");
-  Serial.println(payload);
+  msgINFO.set(payload.c_str());
+  send(msgINFO);
 }
 void DS18B20() {
   byte addr[8];
@@ -1254,8 +1384,8 @@ void receive(const MyMessage & message)  {
       break;
         case CHILD_ID::PIDMODE_1:
       pid1.mode = message.getBool();
-      myPID1.SetMode(pid1.mode ? AUTOMATIC : MANUAL);
-      EEPROM.put(EEPROMAddresses::PID1_MODE, pid1.mode);
+      myPID1.SetMode(message.getBool());
+      EEPROM.put(EEPROMAddresses::PID1_MODE, message.getBool());
       break;
     case CHILD_ID::PIDSETPOINT_1:
       pid1.setpoint = message.getFloat();
@@ -1295,8 +1425,8 @@ void receive(const MyMessage & message)  {
       break;
     case CHILD_ID::PIDMODE_2:
       pid2.mode = message.getBool();
-      myPID2.SetMode(pid2.mode ? AUTOMATIC : MANUAL);
-      EEPROM.put(EEPROMAddresses::PID2_MODE, pid2.mode);
+      myPID2.SetMode(message.getBool());
+      EEPROM.put(EEPROMAddresses::PID2_MODE, message.getBool());
       break;
     case CHILD_ID::PIDSETPOINT_2:
       pid2.setpoint = message.getFloat();
@@ -1336,8 +1466,10 @@ void receive(const MyMessage & message)  {
       break;
     case CHILD_ID::PIDMODE_3:
       pid3.mode = message.getBool();
-      myPID3.SetMode(pid3.mode ? AUTOMATIC : MANUAL);
-      EEPROM.put(EEPROMAddresses::PID3_MODE, pid3.mode);
+      myPID3.SetMode(message.getBool());
+      EEPROM.put(EEPROMAddresses::PID3_MODE, message.getBool());
+      Serial.print("PID3 Mode: ");
+      Serial.println(pid3.mode);
       break;
     case CHILD_ID::PIDSETPOINT_3:
       pid3.setpoint = message.getFloat();
