@@ -285,6 +285,7 @@ buttons button[5];
 //Working Variables
 unsigned long SensorLoop_timer = 0;
 unsigned long pid_compute_loop_time = 0;
+unsigned long switchesLoop_timer = 0;
 float dC = 0.0;
 float dC2 = 0.0;
 float dC3 = 0.0;
@@ -348,16 +349,16 @@ R2(8) GND , +5v , <NC>, ElementPowerPin3, <NC>, <NC>, <NC>, (Center) SteinhartPi
 */
 
 //Switches
-ezButton switch1UP(Switch1_UP_Pin);
-ezButton switch1DOWN(Switch1_DOWN_Pin);
-ezButton switch2UP(Switch2_UP_Pin);
-ezButton switch2DOWN(Switch2_DOWN_Pin);
-ezButton switch3UP(Switch3_UP_Pin);
-ezButton switch3DOWN(Switch3_DOWN_Pin);
-ezButton switch4UP(Switch4_UP_Pin);
-ezButton switch4DOWN(Switch4_DOWN_Pin);
-ezButton switch5UP(Switch5_UP_Pin);
-ezButton switch5DOWN(Switch5_DOWN_Pin);
+ezButton switch1UP(Switch1_UP_Pin, INTERNAL_PULLUP);
+ezButton switch1DOWN(Switch1_DOWN_Pin, INTERNAL_PULLUP);
+ezButton switch2UP(Switch2_UP_Pin, INTERNAL_PULLUP);
+ezButton switch2DOWN(Switch2_DOWN_Pin, INTERNAL_PULLUP);
+ezButton switch3UP(Switch3_UP_Pin, INTERNAL_PULLUP);
+ezButton switch3DOWN(Switch3_DOWN_Pin, INTERNAL_PULLUP);
+ezButton switch4UP(Switch4_UP_Pin, INTERNAL_PULLUP);
+ezButton switch4DOWN(Switch4_DOWN_Pin, INTERNAL_PULLUP);
+ezButton switch5UP(Switch5_UP_Pin, INTERNAL_PULLUP);
+ezButton switch5DOWN(Switch5_DOWN_Pin, INTERNAL_PULLUP);
 
 //Scale
 HX711 LoadCell;
@@ -505,6 +506,13 @@ void presentation() {
   present(CHILD_ID::Info, S_INFO, "Info");
   present(CHILD_ID::LOAD_MEMORY, S_BINARY, "Load Memory");
   present(CHILD_ID::runTime, S_CUSTOM, "Run Time");
+
+  present(CHILD_ID::switch1, S_CUSTOM, "Switch 1");
+  present(CHILD_ID::switch2, S_CUSTOM, "Switch 2");
+  present(CHILD_ID::switch3, S_CUSTOM, "Switch 3");
+  present(CHILD_ID::switch4, S_CUSTOM, "Switch 4");
+  present(CHILD_ID::switch5, S_CUSTOM, "Switch 5");
+
 }
 
 void setup() {
@@ -527,6 +535,18 @@ void setup() {
   pinMode(Pressure2PIN, INPUT);
   pinMode(emon_Input_PIN, INPUT);
   pinMode(VccCurrentSensor, INPUT);
+  // pinMode(Switch1_UP_Pin, INPUT_PULLUP);
+  // pinMode(Switch1_DOWN_Pin, INPUT_PULLUP);
+  // pinMode(Switch2_UP_Pin, INPUT_PULLUP);
+  // pinMode(Switch2_DOWN_Pin, INPUT_PULLUP);
+  // pinMode(Switch3_UP_Pin, INPUT_PULLUP);
+  // pinMode(Switch3_DOWN_Pin, INPUT_PULLUP);
+  // pinMode(Switch4_UP_Pin, INPUT_PULLUP);
+  // pinMode(Switch4_DOWN_Pin, INPUT_PULLUP);
+  // pinMode(Switch5_UP_Pin, INPUT_PULLUP);
+  // pinMode(Switch5_DOWN_Pin, INPUT_PULLUP);
+
+
 
   //OLED
   // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
@@ -558,18 +578,9 @@ void setup() {
 void loop() {
   DutyCycleLoop();
   _process();
-  switch1UP.loop();
-  switch1DOWN.loop();
-  switch2UP.loop();
-  switch2DOWN.loop();
-  switch3UP.loop();
-  switch3DOWN.loop();
-  switch4UP.loop();
-  switch4DOWN.loop();
-  switch5UP.loop();
-  switch5DOWN.loop();
+  switchesLoop();
 
-  if ( (millis() - switchesLoop_timer) > 1000) {
+  if ( (millis() - switchesLoop_timer) > (unsigned long)configValues.SENSORLOOPTIME) {
     getSwitches();
     switchesLoop_timer = millis();
   }
@@ -635,7 +646,8 @@ void loop() {
 // get PID inputs, set agg constants, send LCD vars
     
   }
-  if ((millis() - pid_compute_loop_time) > configValues.pidLoopTime)  {
+  
+  if ((millis() - pid_compute_loop_time) > (unsigned long)configValues.pidLoopTime)  {
   pid1.input = (double)getThermistor(Thermistor1PIN);
   pid2.input = (double)55.0;
   //pid2.input = (double)getThermistor(Thermistor2PIN);
@@ -723,29 +735,91 @@ void loop() {
 // }
 }
 
+void switchesLoop() {
+  switch1UP.loop();
+  switch1DOWN.loop();
+  switch2UP.loop();
+  switch2DOWN.loop();
+  switch3UP.loop();
+  switch3DOWN.loop();
+  switch4UP.loop();
+  switch4DOWN.loop();
+  switch5UP.loop();
+  switch5DOWN.loop();
+}
 void getSwitches()
 {
-  if (switch1UP.isPressed())  { msgSwitch1.set(1); }
-  else if (switch1DOWN.isPressed()) { msgSwitch1.set(0); }
-  else { msgSwitch1.set(2); }
+  int btnState_switch1UP = switch1UP.getState();
+  int btnState_switch1DOWN = switch1DOWN.getState();
+  int btnState_switch2UP = switch2UP.getState();
+  int btnState_switch2DOWN = switch2DOWN.getState();
+  int btnState_switch3UP = switch3UP.getState();
+  int btnState_switch3DOWN = switch3DOWN.getState();
+  int btnState_switch4UP = switch4UP.getState();
+  int btnState_switch4DOWN = switch4DOWN.getState();
+  int btnState_switch5UP = switch5UP.getState();
+  int btnState_switch5DOWN = switch5DOWN.getState();
 
-  if (switch2UP.isPressed()) { msgSwitch2.set(1); }
-  else if (switch2DOWN.isPressed()) { msgSwitch2.set(0); }
-  else { msgSwitch2.set(2); }
-
-  if (switch3UP.isPressed()) { msgSwitch3.set(1); }
-  else if (switch3DOWN.isPressed()) { msgSwitch3.set(0); }
-  else { msgSwitch3.set(2); }
-
-  if (switch4UP.isPressed()) { msgSwitch4.set(1); }
-  else if (switch4DOWN.isPressed()) { msgSwitch4.set(0); }
-  else { msgSwitch4.set(2); }
-
-  if (switch5UP.isPressed()) { msgSwitch5.set(1); }
-  else if (switch5DOWN.isPressed()) { msgSwitch5.set(0); }
-  else { msgSwitch5.set(2); }
+  if (btnState_switch1UP == 1 && btnState_switch1DOWN == 0) {
+    send(msgSwitch1.set(1), configValues.toACK);
+  } else if (btnState_switch1UP == 0 && btnState_switch1DOWN == 1){
+    send(msgSwitch1.set(0), configValues.toACK);
+  } else if (btnState_switch1UP == 1 && btnState_switch1DOWN == 1) {
+    send(msgSwitch1.set(2), configValues.toACK);
+  }
+  if (btnState_switch2UP == 1 && btnState_switch2DOWN == 0) {
+    send(msgSwitch2.set(1), configValues.toACK);
+  } else if (btnState_switch2UP == 0 && btnState_switch2DOWN == 1){
+    send(msgSwitch2.set(0), configValues.toACK);
+  } else if (btnState_switch2UP == 1 && btnState_switch2DOWN == 1) {
+    send(msgSwitch2.set(2), configValues.toACK);
+  }
+  if (btnState_switch3UP == 1 && btnState_switch3DOWN == 0) {
+    send(msgSwitch3.set(1), configValues.toACK);
+  } else if (btnState_switch3UP == 0 && btnState_switch3DOWN == 1){
+    send(msgSwitch3.set(0), configValues.toACK);
+  } else if (btnState_switch3UP == 1 && btnState_switch3DOWN == 1) {
+    send(msgSwitch3.set(2), configValues.toACK);
+  }
+  if (btnState_switch4UP == 1 && btnState_switch4DOWN == 0) {
+    send(msgSwitch4.set(1), configValues.toACK);
+  } else if (btnState_switch4UP == 0 && btnState_switch4DOWN == 1){
+    send(msgSwitch4.set(0), configValues.toACK);
+  } else if (btnState_switch4UP == 1 && btnState_switch4DOWN == 1) {
+    send(msgSwitch4.set(2), configValues.toACK);
+  }
+  if (btnState_switch5UP == 1 && btnState_switch5DOWN == 0) {
+    send(msgSwitch5.set(1), configValues.toACK);
+  } else if (btnState_switch5UP == 0 && btnState_switch5DOWN == 1){
+    send(msgSwitch5.set(0), configValues.toACK);
+  } else if (btnState_switch5UP == 1 && btnState_switch5DOWN == 1) {
+    send(msgSwitch5.set(2), configValues.toACK);
+  }
+  
+  if(configValues.sDebug) {
+    Serial.println("Switches");
+    Serial.print("Switch 1 UP: ");
+    Serial.println(btnState_switch1UP);
+    Serial.print("Switch 1 DOWN: ");
+    Serial.println(btnState_switch1DOWN);
+    Serial.print("Switch 2 UP: ");
+    Serial.println(btnState_switch2UP);
+    Serial.print("Switch 2 DOWN: ");
+    Serial.println(btnState_switch2DOWN);
+    Serial.print("Switch 3 UP: ");
+    Serial.println(btnState_switch3UP);
+    Serial.print("Switch 3 DOWN: ");
+    Serial.println(btnState_switch3DOWN);
+    Serial.print("Switch 4 UP: ");
+    Serial.println(btnState_switch4UP);
+    Serial.print("Switch 4 DOWN: ");
+    Serial.println(btnState_switch4DOWN);
+    Serial.print("Switch 5 UP: ");
+    Serial.println(btnState_switch5UP);
+    Serial.print("Switch 5 DOWN: ");
+    Serial.println(btnState_switch5DOWN);
+  }
 }
-
 void getVccCurrent()
 {
   for (int i = 0; i < 10; i++)
