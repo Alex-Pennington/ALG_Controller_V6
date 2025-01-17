@@ -250,7 +250,7 @@ struct CalibrationValues {
 CalibrationValues calValues;
 
 struct SteinhartConfig {
-    const long seriesResistor = 100000;
+    const long seriesResistor = 98600;
     const long nominalResistance = 100000;
     const int nominalTemperature = 25;
     const int bCoefficient = 3950;
@@ -306,23 +306,25 @@ float pressure4Var = 0;
 float VccCurrentVar = 0;
 extern unsigned int __heap_start;
 extern void *__brkval;
+float THMS1var = 0.0;
+float THMS2var = 0.0;
 
 //Pin Definitions
 #define HX711_dout 9 
 #define HX711_sck 10 
-#define ElementPowerPin3 27
 #define SSRArmed_PIN 29
 // #define speakerPin 30 //defined in controller.h
 #define ElementPowerPin 25
 #define ElementPowerPin2 26
+#define ElementPowerPin3 27
 #define DS18B20_PIN 44 
 #define SteinhartEnable 22
 #define SteinhartPin A3 
 #define Pressure1PIN A15 
-#define Pressure2PIN A15 
-#define Pressure3PIN A15 
-#define Pressure4PIN A15 
-#define emon_Input_PIN A9
+#define Pressure2PIN A14 
+#define Pressure3PIN A13 
+#define Pressure4PIN A12 
+#define emon_Input_PIN A8
 #define VccCurrentSensor A0 
 #define Thermistor1PIN A1 
 #define Thermistor2PIN A2 
@@ -397,6 +399,11 @@ float readPressure(int pin, int offset, float cal);
 void displayLine(const char* line);
 int freeMemory();
 void emon();
+void switchesLoop();
+void getSwitches();
+void TempAlarm();
+void getScale();
+void getVccCurrent();
 
 enum EEPROMAddresses {
   ZERO_OFFSET_SCALE = 0,       // float, 4 bytes
@@ -639,8 +646,10 @@ void loop() {
     msgPressure4.set(pressure4Var, 2); send(msgPressure4);
     _process();
     
-    msgTHMS1.set(getThermistor(Thermistor1PIN), 2); send(msgTHMS1);
-    msgTHMS2.set(getThermistor(Thermistor2PIN), 2); send(msgTHMS2);
+    THMS1var = getThermistor(Thermistor1PIN);
+    THMS2var = getThermistor(Thermistor2PIN);
+    msgTHMS1.set(THMS1var, 2); send(msgTHMS1);
+    msgTHMS2.set(THMS2var, 2); send(msgTHMS2);
     _process();
     
     msgRunTime.set((float)(millis()/1000.0/60.0/60.0),2); send(msgRunTime);
@@ -657,10 +666,9 @@ void loop() {
   }
   
   if ((millis() - pid_compute_loop_time) > (unsigned long)configValues.pidLoopTime)  {
-  pid1.input = (double)getThermistor(Thermistor1PIN);
-  pid2.input = (double)55.0;
-  //pid2.input = (double)getThermistor(Thermistor2PIN);
-  pid3.input = (double)Steinhart();
+  pid1.input = THMS1var;
+  pid2.input = THMS2var;
+  pid3.input = steinhartValues.steinhart;
   int gap = abs(pid1.setpoint - pid1.input); //distance away from setpoint
   if ((gap < pid1.aggSP && pid1.adaptiveMode == true) || pid1.adaptiveMode == false)
   { //we're close to setpoint, use conservative tuning parameters
@@ -870,6 +878,10 @@ void serialPrintSensorData() {
     Serial.println(emonVars.rms);
     Serial.print("Steinhart Temperature (F): ");
     Serial.println(steinhartValues.steinhart);
+    Serial.print("THMS1 : ");
+    Serial.println(THMS1var);
+    Serial.print("THMS2 : ");
+    Serial.println(THMS2var);
     Serial.print("dC: ");
     Serial.println(dC);
     Serial.print("dC_2: ");
@@ -888,12 +900,12 @@ void serialPrintSensorData() {
     Serial.println(pid2.input);
     Serial.print("PID3 Input: ");
     Serial.println(pid3.input);
-    Serial.print("PID1 Output: ");
-    Serial.println(pid1.output);
-    Serial.print("PID2 Output: ");
-    Serial.println(pid2.output);
-    Serial.print("PID3 Output: ");
-    Serial.println(pid3.output);
+    // Serial.print("PID1 Output: ");
+    // Serial.println(pid1.output);
+    // Serial.print("PID2 Output: ");
+    // Serial.println(pid2.output);
+    // Serial.print("PID3 Output: ");
+    // Serial.println(pid3.output);
     
   }
   return;
