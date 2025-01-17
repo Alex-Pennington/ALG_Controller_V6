@@ -109,7 +109,11 @@ enum CHILD_ID {
   switch2 = 74,
   switch3 = 75,
   switch4 = 76,
-  switch5 = 77
+  switch5 = 77,
+  P1Offset = 78,
+  P2Offset = 79,
+  P3Offset = 80,
+  P4Offset = 81
 
 };
 
@@ -512,6 +516,11 @@ void presentation() {
   present(CHILD_ID::switch3, S_CUSTOM, "Switch 3");
   present(CHILD_ID::switch4, S_CUSTOM, "Switch 4");
   present(CHILD_ID::switch5, S_CUSTOM, "Switch 5");
+
+  present(CHILD_ID::P1Offset, S_LIGHT_LEVEL, "P1 Offset");
+  present(CHILD_ID::P2Offset, S_LIGHT_LEVEL, "P2 Offset");
+  present(CHILD_ID::P3Offset, S_LIGHT_LEVEL, "P3 Offset");
+  present(CHILD_ID::P4Offset, S_LIGHT_LEVEL, "P4 Offset");
 
 }
 
@@ -1703,6 +1712,22 @@ void receive(const MyMessage & message)  {
     case CHILD_ID::PIDThreshold_3:
       pid3.alarmThreshold = message.getInt();
       EEPROM.put(EEPROMAddresses::PID3_ALARM_THRESHOLD, pid3.alarmThreshold);
+      break;
+    case CHILD_ID::P1Offset:
+      calValues.pressure1Offset = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PRESSURE1_OFFSET, calValues.pressure1Offset);
+      break;
+    case CHILD_ID::P2Offset:
+      calValues.pressure2Offset = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PRESSURE2_OFFSET, calValues.pressure2Offset);
+      break;
+    case CHILD_ID::P3Offset:
+      calValues.pressure3Offset = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PRESSURE3_OFFSET, calValues.pressure3Offset);
+      break;
+    case CHILD_ID::P4Offset:
+      calValues.pressure4Offset = message.getFloat();
+      EEPROM.put(EEPROMAddresses::PRESSURE4_OFFSET, calValues.pressure4Offset);
       break;
   }
 }
