@@ -341,6 +341,9 @@ extern void *__brkval;
 float THMS1var = 0.0;
 float THMS2var = 0.0;
 
+// Array to hold all temperature sensor values
+float temperatureValues[8] = {0.0}; // 5 DS18B20 sensors, 3 thermistors
+
 //Pin Definitions
 #define HX711_dout 9 
 #define HX711_sck 10 
@@ -628,9 +631,9 @@ void loop() {
   _process();
   switchesLoop();
 
-  pid1.input = THMS1var;
-  pid2.input = THMS2var;
-  pid3.input = steinhartValues.steinhart;
+  pid1.input = temperatureValues[6]; //Thermistor 1
+  pid2.input = temperatureValues[7]; //Thermistor 2
+  pid3.input = temperatureValues[5]; //Steinhart
 
   if ( (millis() - switchesLoop_timer) > (unsigned long)configValues.SENSORLOOPTIME) {
     getSwitches();
@@ -650,15 +653,15 @@ void loop() {
     _process();
 
     DS18B20();
-    msgTemp0.set(ds18b20Values[0].F, 2); send(msgTemp0);
-    msgTemp1.set(ds18b20Values[1].F, 2); send(msgTemp1);
-    msgTemp2.set(ds18b20Values[2].F, 2); send(msgTemp2);
-    msgTemp3.set(ds18b20Values[3].F, 2); send(msgTemp3);
-    msgTemp4.set(ds18b20Values[4].F, 2); send(msgTemp4);
+    for (int i = 0; i < 5; i++) {
+      temperatureValues[i] = ds18b20Values[i].F;
+      send(MyMessage(CHILD_ID::T0 + i, V_TEMP).set(temperatureValues[i], 2));
+    }
     _process();
     
     float steinhartVar = Steinhart();
-    msgTemp5.set(steinhartVar, 2); send(msgTemp5);
+    temperatureValues[5] = steinhartVar;
+    msgTemp5.set(temperatureValues[5], 2); send(msgTemp5);
     _process();
 
     getScale();
@@ -681,10 +684,10 @@ void loop() {
     msgPressure4.set(pressure4Var, 2); send(msgPressure4);
     _process();
     
-    THMS1var = getThermistor(Thermistor1PIN);
-    THMS2var = getThermistor(Thermistor2PIN);
-    msgTHMS1.set(THMS1var, 2); send(msgTHMS1);
-    msgTHMS2.set(THMS2var, 2); send(msgTHMS2);
+    temperatureValues[6] = getThermistor(Thermistor1PIN);
+    temperatureValues[7] = getThermistor(Thermistor2PIN);
+    msgTHMS1.set(temperatureValues[6], 2); send(msgTHMS1);
+    msgTHMS2.set(temperatureValues[7], 2); send(msgTHMS2);
     _process();
     
     msgRunTime.set((float)(millis()/1000.0/60.0/60.0),2); send(msgRunTime);
