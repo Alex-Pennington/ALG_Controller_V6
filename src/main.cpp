@@ -551,22 +551,12 @@ void setup() {
   pinMode(Pressure2PIN, INPUT);
   pinMode(emon_Input_PIN, INPUT);
   pinMode(VccCurrentSensor, INPUT);
-  // pinMode(Switch1_UP_Pin, INPUT_PULLUP);
-  // pinMode(Switch1_DOWN_Pin, INPUT_PULLUP);
-  // pinMode(Switch2_UP_Pin, INPUT_PULLUP);
-  // pinMode(Switch2_DOWN_Pin, INPUT_PULLUP);
-  // pinMode(Switch3_UP_Pin, INPUT_PULLUP);
-  // pinMode(Switch3_DOWN_Pin, INPUT_PULLUP);
-  // pinMode(Switch4_UP_Pin, INPUT_PULLUP);
-  // pinMode(Switch4_DOWN_Pin, INPUT_PULLUP);
-  // pinMode(Switch5_UP_Pin, INPUT_PULLUP);
-  // pinMode(Switch5_DOWN_Pin, INPUT_PULLUP);
-
-
 
   //OLED
-  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {Serial.println(F("SSD1306 allocation failed"));}  
+  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    while (true); // Halt execution if display initialization fails
+  }
 
   myPID1.SetSampleTime(configValues.pidLoopTime);
   myPID1.SetOutputLimits(0, 100);
@@ -660,96 +650,32 @@ void loop() {
     serialPrintSensorData();
     _process();
     SensorLoop_timer = millis();
-
-// get PID inputs, set agg constants, send LCD vars
-    
   }
   
   if ((millis() - pid_compute_loop_time) > (unsigned long)configValues.pidLoopTime)  {
-  pid1.input = THMS1var;
-  pid2.input = THMS2var;
-  pid3.input = steinhartValues.steinhart;
-  int gap = abs(pid1.setpoint - pid1.input); //distance away from setpoint
-  if ((gap < pid1.aggSP && pid1.adaptiveMode == true) || pid1.adaptiveMode == false)
-  { //we're close to setpoint, use conservative tuning parameters
-    myPID1.SetTunings(pid1.kp, pid1.ki, pid1.kp);
+    pid1.input = THMS1var;
+    pid2.input = THMS2var;
+    pid3.input = steinhartValues.steinhart;
+    int gap = abs(pid1.setpoint - pid1.input); //distance away from setpoint
+    if ((gap < pid1.aggSP && pid1.adaptiveMode == true) || pid1.adaptiveMode == false) {
+      myPID1.SetTunings(pid1.kp, pid1.ki, pid1.kp);
+    } else if (gap > pid1.aggSP && pid1.adaptiveMode == true) {
+      myPID1.SetTunings(pid1.aggKp, pid1.aggKi, pid1.aggKd);
+    }
+    int gap_2 = abs(pid2.setpoint - pid2.input); //distance away from setpoint
+    if ((gap_2 < pid2.aggSP && pid2.adaptiveMode == true) || pid2.adaptiveMode == false) {
+      myPID2.SetTunings(pid2.kp, pid2.ki, pid2.kp);
+    } else if (gap_2 > pid2.aggSP && pid2.adaptiveMode == true) {
+      myPID2.SetTunings(pid2.aggKp, pid2.aggKi, pid2.aggKd);
+    }
+    myPID1.Compute();
+    myPID2.Compute();
+    myPID3.Compute();
+    dC = pid1.output;
+    dC2 = pid2.output;
+    dC3 = pid3.output;
+    pid_compute_loop_time = millis();
   }
-  else if (gap > pid1.aggSP && pid1.adaptiveMode == true)
-  {
-    //we're far from setpoint, use aggressive tuning parameters
-    myPID1.SetTunings(pid1.aggKp, pid1.aggKi, pid1.aggKd);
-  }
-  int gap_2 = abs(pid2.setpoint - pid2.input); //distance away from setpoint
-  if ((gap_2 < pid2.aggSP && pid2.adaptiveMode == true) || pid2.adaptiveMode == false)
-  { //we're close to setpoint, use conservative tuning parameters
-    myPID2.SetTunings(pid2.kp, pid2.ki, pid2.kp);
-  }
-  else if (gap_2 > pid2.aggSP && pid2.adaptiveMode == true)
-  {
-    //we're far from setpoint, use aggressive tuning parameters
-    myPID2.SetTunings(pid2.aggKp, pid2.aggKi, pid2.aggKd);
-  }
-  myPID1.Compute();
-  myPID2.Compute();
-  myPID3.Compute();
-  dC = pid1.output;
-  dC2 = pid2.output;
-  dC3 = pid3.output;
-  pid_compute_loop_time = millis();
-}
-
-  // if (tuning == true) { //pid_1 comp
-//   byte val = (aTune.Runtime());
-//   if (val != 0) {
-//     tuning = false;
-//   }
-//   if (!tuning) { //we're done, set the tuning parameters
-//     kp = aTune.GetKp();
-//     send(msgKp.set(kp, 3), ToACK);
-//     wait(SENDDELAY);
-//     ki = aTune.GetKi();
-//     send(msgKi.set(ki, 3), ToACK);
-//     wait(SENDDELAY);
-//     kd = aTune.GetKd();
-//     send(msgKd.set(kd, 3), ToACK);
-//     wait(SENDDELAY);
-//     myPID.SetTunings(kp, ki, kd);
-//     AutoTuneHelper(false);
-//     send(msgINFO.set("Autotune Done"), ToACK);
-//     wait(SENDDELAY);
-//     send(msgAutotuneMode.set(false), ToACK);
-//     wait(SENDDELAY);
-//   }
-// } else {
-// myPID1.Compute();      
-// }
-// if (tuning_2 == true)    { // pid_2 comp
-//   byte val = (aTune_2.Runtime());
-//   if (val != 0)
-//   {
-//     tuning_2 = false;
-//   }
-//   if (!tuning_2)
-//   { //we're done, set the tuning parameters
-//     kp_2 = aTune_2.GetKp();
-//     send(msgKp_2.set(kp_2, 3), ToACK);
-//     wait(SENDDELAY);
-//     ki_2 = aTune_2.GetKi();
-//     send(msgKi_2.set(ki_2, 3), ToACK);
-//     wait(SENDDELAY);
-//     kd_2 = aTune_2.GetKd();
-//     send(msgKd_2.set(kd_2, 3), ToACK);
-//     wait(SENDDELAY);
-//     myPID_2.SetTunings(kp_2, ki_2, kd_2);
-//     AutoTuneHelper_2(false);
-//     send(msgINFO.set("Autotune Done _2"), ToACK);
-//     wait(SENDDELAY);
-//     send(msgAutotuneMode_2.set(false), ToACK);
-//     wait(SENDDELAY);
-//   }
-// } else {
-// pid2.Compute();
-// }
 }
 
 void switchesLoop() {
@@ -981,10 +907,6 @@ void getScale() {
   {
     valueScale = 0;
   }
-
-  // Compensate for Seebeck effect using temperature sensor one
-  // float tempCompensation = ds18b20Values[0].C * 0.0002; // Adjust the factor as needed
-  // valueScale += tempCompensation;
 
   gramsPerSecondScale = ((valueScale - value_oldScale) / ((millis() - oldtimeScale)));
   oldtimeScale = millis();
@@ -1432,27 +1354,17 @@ void DS18B20() {
     byte type_s;
     byte data[9];
     
-    // Serial.print("ROM =");
-    // for( i = 0; i < 8; i++) {
-    //   Serial.write(' ');
-    //   Serial.print(addr[i], HEX);
-    // }
-    
     switch (addr[0]) {
       case 0x10:
-        // Serial.println("  Chip = DS18S20");  // or old DS1820
         type_s = 1;
         break;
       case 0x28:
-        // Serial.println("  Chip = DS18B20");
         type_s = 0;
         break;
       case 0x22:
-        // Serial.println("  Chip = DS1822");
         type_s = 0;
         break;
       default:
-        // Serial.println("Device is not a DS18x20 family device.");
         return;
     } 
 
@@ -1464,38 +1376,22 @@ void DS18B20() {
     ds.select(addr);    
     ds.write(0xBE);
     for ( i = 0; i < 9; i++) { data[i] = ds.read(); }
-    // Convert the data to actual temperature
-    // because the result is a 16 bit signed integer, it should
-    // be stored to an "int16_t" type, which is always 16 bits
-    // even when compiled on a 32 bit processor.
     int16_t raw = (data[1] << 8) | data[0];
     if (type_s) {
       raw = raw << 3; // 9 bit resolution default
       if (data[7] == 0x10) {
-        // "count remain" gives full 12 bit resolution
         raw = (raw & 0xFFF0) + 12 - data[6];
       }
     } else {
       byte cfg = (data[4] & 0x60);
-      // at lower res, the low bits are undefined, so let's zero them
       if (cfg == 0x00) raw = raw & ~7;  // 9 bit resolution, 93.75 ms
       else if (cfg == 0x20) raw = raw & ~3; // 10 bit res, 187.5 ms
       else if (cfg == 0x40) raw = raw & ~1; // 11 bit res, 375 ms
-      //// default is 12 bit resolution, 750 ms conversion time
     }
     ds18b20Values[count].F = ds18b20Values[count].C * CELSIUS_TO_FAHRENHEIT_FACTOR + CELSIUS_TO_FAHRENHEIT_OFFSET;
     ds18b20Values[count].F = ds18b20Values[count].C * 1.8 + 32.0;
-    // Serial.print("Count = ");
-    // Serial.print(count);
-    // Serial.print("  Temperature = ");
-    // Serial.print(ds18b20Values[count].C);
-    // Serial.print(" Celsius, ");
-    // Serial.print(ds18b20Values[count].F);
-    // Serial.println(" Fahrenheit");
     count = count + 1;
-}
-  // Serial.println("No more addresses.");
-  // Serial.println();
+  }
   ds.reset_search();
   return;
 }
