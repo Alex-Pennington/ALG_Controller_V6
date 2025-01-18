@@ -597,6 +597,10 @@ void loop() {
   _process();
   switchesLoop();
 
+  pid1.input = THMS1var;
+  pid2.input = THMS2var;
+  pid3.input = steinhartValues.steinhart;
+
   if ( (millis() - switchesLoop_timer) > (unsigned long)configValues.SENSORLOOPTIME) {
     getSwitches();
     switchesLoop_timer = millis();
@@ -667,9 +671,6 @@ void loop() {
   }
   
   if ((millis() - pid_compute_loop_time) > (unsigned long)configValues.pidLoopTime)  {
-  pid1.input = THMS1var;
-  pid2.input = THMS2var;
-  pid3.input = steinhartValues.steinhart;
   int gap = abs(pid1.setpoint - pid1.input); //distance away from setpoint
   if ((gap < pid1.aggSP && pid1.adaptiveMode == true) || pid1.adaptiveMode == false)
   { //we're close to setpoint, use conservative tuning parameters
@@ -1478,7 +1479,7 @@ void DS18B20() {
       else if (cfg == 0x40) raw = raw & ~1; // 11 bit res, 375 ms
       //// default is 12 bit resolution, 750 ms conversion time
     }
-    ds18b20Values[count].F = ds18b20Values[count].C * CELSIUS_TO_FAHRENHEIT_FACTOR + CELSIUS_TO_FAHRENHEIT_OFFSET;
+    ds18b20Values[count].C = (float)raw / 16.0;
     ds18b20Values[count].F = ds18b20Values[count].C * 1.8 + 32.0;
     // Serial.print("Count = ");
     // Serial.print(count);
