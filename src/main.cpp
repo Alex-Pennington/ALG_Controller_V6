@@ -1011,24 +1011,22 @@ float readPressure(int pin, int offset, float cal) {
   return offsetCorrected1 * (1.0 / cal);
 }
 float Steinhart() {
-  steinhartValues.adcValue = 0;
-    delay(10); //this increased resolution significantly
-  {
+  double adcValue = 0;
+  for(int i = 0; i < 10 ; i++ ) {
     delay(10); //this increased resolution signifigantly
-    steinhartValues.adcValue += analogRead(SteinhartPin);
+    adcValue += analogRead(SteinhartPin);
   }
-  steinhartValues.adcValue /= 10;
-
-  steinhartValues.resistance = ((thermistorConfig.seriesResistor + thermistorConfig.nominalResistance) * (1 / (1023 / steinhartValues.adcValue - 1)));
-  steinhartValues.steinhart =  steinhartValues.resistance / thermistorConfig.nominalResistance; // (R/Ro)
-  steinhartValues.steinhart = log(steinhartValues.steinhart); // ln(R/Ro)
-  steinhartValues.steinhart /= thermistorConfig.bCoefficient; // 1/B * ln(R/Ro)
-  steinhartValues.steinhart += 1.0 / (thermistorConfig.nominalTemperature + 273.15); // + (1/To)
-  steinhartValues.steinhart = 1.0 / steinhartValues.steinhart; // Invert
-  steinhartValues.steinhart -= 273.15; // convert to C
-  steinhartValues.steinhart = (((steinhartValues.steinhart * 9 ) / 5 ) + 32);
-  return steinhartValues.steinhart;
-  return steinhartValues.steinhart;
+  steinhartValues.adcValue = (float)adcValue/10.0;
+  float Resistance = ((thermistorConfig.seriesResistor + thermistorConfig.nominalResistance) * (1 / (1023 / steinhartValues.adcValue)));
+  float steinhart = Resistance / (float)thermistorConfig.nominalResistance; // (R/Ro)
+  steinhart = log(steinhart); // ln(R/Ro)
+  steinhart /= (float)thermistorConfig.bCoefficient; // 1/B * ln(R/Ro)
+  steinhart += 1.0 / ((float)thermistorConfig.nominalTemperature + 273.15); // + (1/To)
+  steinhart = 1.0 / steinhart; // Invert
+  steinhart -= 273.15; // convert to C
+  steinhart = (((steinhart * 9 ) / 5 ) + 32);
+  steinhartValues.steinhart = steinhart;
+  return steinhart;
 }
 float getThermistor(const int pinVar) {
   int ADCvalue = 0;
