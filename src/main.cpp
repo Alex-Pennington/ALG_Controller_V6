@@ -194,6 +194,8 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 #define VERSION "0.6.0.1"
 #define SENDDELAY 50
+#define CELSIUS_TO_FAHRENHEIT_FACTOR 1.8
+#define CELSIUS_TO_FAHRENHEIT_OFFSET 32.0
 
 //Structs
 
@@ -318,8 +320,6 @@ float THMS2var = 0.0;
 #define ElementPowerPin2 26
 #define ElementPowerPin3 27
 #define DS18B20_PIN 44 
-#define SteinhartEnable 22
-#define SteinhartPin A3 
 #define Pressure1PIN A15 
 #define Pressure2PIN A14 
 #define Pressure3PIN A13 
@@ -328,6 +328,7 @@ float THMS2var = 0.0;
 #define VccCurrentSensor A0 
 #define Thermistor1PIN A1 
 #define Thermistor2PIN A2 
+#define SteinhartPin A3 
 #define Serial3_RX 15 
 #define Serial3_TX 14 
 
@@ -1002,23 +1003,27 @@ float readPressure(int pin, int offset, float cal) {
   return offsetCorrected1 * (1.0 / cal);
 }
 float Steinhart() {
-  digitalWrite(SteinhartEnable, HIGH);
-  for (int n = 0; n < 10; n++)
+  steinhartValues.adcValue = 0;
+    delay(10); //this increased resolution significantly
   {
     delay(10); //this increased resolution signifigantly
     steinhartValues.adcValue += analogRead(SteinhartPin);
   }
-  digitalWrite(SteinhartEnable, LOW);
   steinhartValues.adcValue /= 10;
 
   steinhartValues.resistance = ((thermistorConfig.seriesResistor + thermistorConfig.nominalResistance) * (1 / (1023 / steinhartValues.adcValue - 1)));
   steinhartValues.steinhart =  steinhartValues.resistance / thermistorConfig.nominalResistance; // (R/Ro)
   steinhartValues.steinhart = log(steinhartValues.steinhart); // ln(R/Ro)
   steinhartValues.steinhart /= thermistorConfig.bCoefficient; // 1/B * ln(R/Ro)
-  steinhartValues.steinhart += 1.0 / (thermistorConfig.nominalTemperature + 273.15); // + (1/To)
+  const float KELVIN_TO_CELSIUS = 273.15;
+    steinhartValues.steinhart += 1.0 / (thermistorConfig.nominalTemperature + KELVIN_TO_CELSIUS); // + (1/To)
   steinhartValues.steinhart = 1.0 / steinhartValues.steinhart; // Invert
-  steinhartValues.steinhart -= 273.15; // convert to C
-  steinhartValues.steinhart = (((steinhartValues.steinhart * 9 ) / 5 ) + 32);
+
+  // Convert Kelvin to Celsius
+  steinhartValues.steinhart -= 273.15;
+
+  steinhartValues.steinhart = (steinhartValues.steinhart * CELSIUS_TO_FAHRENHEIT_FACTOR) + CELSIUS_TO_FAHRENHEIT_OFFSET;
+  steinhartValues.steinhart = (steinhartValues.steinhart * 9.0 / 5.0) + 32.0;
   return steinhartValues.steinhart;
 }
 float getThermistor(const int pinVar) {
@@ -1037,7 +1042,7 @@ float getThermistor(const int pinVar) {
         const float C = 0.2413822162e-7;
 
         float logR = log(thermistorResistance);
-        float Kelvin = 1.0 / (A + B * logR + C * logR * logR * logR);
+        float tempF = (Kelvin - 273.15) * CELSIUS_TO_FAHRENHEIT_FACTOR + CELSIUS_TO_FAHRENHEIT_OFFSET;
         float tempF = (Kelvin - 273.15) * (9.0/5.0) + 32.0;
         /* Debug Values
         Serial.print("ADCvalue ");
@@ -1199,14 +1204,14 @@ void getEEPROM() {
 }
 void FactoryResetEEPROM() {
   // Reset Calibration Values
-  calValues.pressure1Cal = 20.77;
-  calValues.pressure1Offset = 425;
-  calValues.pressure2Cal = 20.77;
-  calValues.pressure2Offset = 425;
-  calValues.pressure3Cal = 20.77;
-  calValues.pressure3Offset = 425;
-  calValues.pressure4Cal = 20.77;
-  calValues.pressure4Offset = 425;
+  calValues.pressure1Cal = 1;
+  calValues.pressure1Offset = 0;
+  calValues.pressure2Cal = 1;
+  calValues.pressure2Offset = 0;
+  calValues.pressure3Cal = 1;
+  calValues.pressure3Offset = 0;
+  calValues.pressure4Cal = 1;
+  calValues.pressure4Offset = 0;
   calValues.emonCal = 0.128;
   calValues.ssrFailThreshold = 2;
   calValues.currOffset = 5.28;
@@ -1214,7 +1219,7 @@ void FactoryResetEEPROM() {
   calValues.scaleCal = 53.200;
   calValues.aScale = 255;
   calValues.mScale = 1;
-  calValues.rScale = 1000;
+  calValues.rScale = 1;
   calValues.VccCurrentOffset = 566;
   calValues.VccCurrentMultiplier = 0.004887;
 
@@ -1471,7 +1476,7 @@ void DS18B20() {
       else if (cfg == 0x40) raw = raw & ~1; // 11 bit res, 375 ms
       //// default is 12 bit resolution, 750 ms conversion time
     }
-    ds18b20Values[count].C = (float)raw / 16.0;
+    ds18b20Values[count].F = ds18b20Values[count].C * CELSIUS_TO_FAHRENHEIT_FACTOR + CELSIUS_TO_FAHRENHEIT_OFFSET;
     ds18b20Values[count].F = ds18b20Values[count].C * 1.8 + 32.0;
     // Serial.print("Count = ");
     // Serial.print(count);
