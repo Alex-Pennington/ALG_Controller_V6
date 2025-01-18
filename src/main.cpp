@@ -113,7 +113,17 @@ enum CHILD_ID {
   P1Offset = 78,
   P2Offset = 79,
   P3Offset = 80,
-  P4Offset = 81
+  P4Offset = 81,
+  relay1 = 82,
+  relay2 = 83,
+  relay3 = 84,
+  relay4 = 85,
+  relay5 = 86,
+  relay6 = 87,
+  relay7 = 88,
+  relay8 = 89,
+  RefrigerantSwitch = 90,
+  FlowSwitch = 91
 
 };
 
@@ -178,7 +188,24 @@ MyMessage msgSwitch2(CHILD_ID::switch2, V_VAR1);
 MyMessage msgSwitch3(CHILD_ID::switch3, V_VAR1);
 MyMessage msgSwitch4(CHILD_ID::switch4, V_VAR1);
 MyMessage msgSwitch5(CHILD_ID::switch5, V_VAR1);
+MyMessage msgRefrigerantSwitch(CHILD_ID::RefrigerantSwitch, V_STATUS);
+MyMessage msgFlowSwitch(CHILD_ID::FlowSwitch, V_STATUS);
 
+#define NUM_RELAYS 8
+
+bool relayStates[NUM_RELAYS] = {false};
+
+// MySensors Message Definitions for Relays
+MyMessage msgRelay[NUM_RELAYS] = {
+  MyMessage(CHILD_ID::relay1, V_STATUS),
+  MyMessage(CHILD_ID::relay2, V_STATUS),
+  MyMessage(CHILD_ID::relay3, V_STATUS),
+  MyMessage(CHILD_ID::relay4, V_STATUS),
+  MyMessage(CHILD_ID::relay5, V_STATUS),
+  MyMessage(CHILD_ID::relay6, V_STATUS),
+  MyMessage(CHILD_ID::relay7, V_STATUS),
+  MyMessage(CHILD_ID::relay8, V_STATUS)
+};
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
@@ -286,7 +313,10 @@ struct buttons {
   bool up = false;
   bool down = false;
 };
-buttons button[5];
+buttons button[7];
+//buttons 1-5 are for the switches
+//button 6 is the coolant flow switch
+//button 7 is the refrigerant tank capacity switch
 
 //Working Variables
 unsigned long SensorLoop_timer = 0;
@@ -342,6 +372,8 @@ float THMS2var = 0.0;
 #define Switch4_DOWN_Pin 36
 #define Switch5_UP_Pin 35
 #define Switch5_DOWN_Pin 34
+#define FlowSwitchPin 33
+#define RefrigerantSwitchPin 32
 
 
 
@@ -356,16 +388,23 @@ R2(8) GND , +5v , <NC>, ElementPowerPin3, <NC>, <NC>, <NC>, (Center) SteinhartPi
 */
 
 //Switches
-ezButton switch1UP(Switch1_UP_Pin, INTERNAL_PULLUP);
-ezButton switch1DOWN(Switch1_DOWN_Pin, INTERNAL_PULLUP);
-ezButton switch2UP(Switch2_UP_Pin, INTERNAL_PULLUP);
-ezButton switch2DOWN(Switch2_DOWN_Pin, INTERNAL_PULLUP);
-ezButton switch3UP(Switch3_UP_Pin, INTERNAL_PULLUP);
-ezButton switch3DOWN(Switch3_DOWN_Pin, INTERNAL_PULLUP);
-ezButton switch4UP(Switch4_UP_Pin, INTERNAL_PULLUP);
-ezButton switch4DOWN(Switch4_DOWN_Pin, INTERNAL_PULLUP);
-ezButton switch5UP(Switch5_UP_Pin, INTERNAL_PULLUP);
-ezButton switch5DOWN(Switch5_DOWN_Pin, INTERNAL_PULLUP);
+#define NUM_SWITCHES 12
+
+ezButton switches[NUM_SWITCHES] = {
+  ezButton(Switch1_UP_Pin, INTERNAL_PULLUP),
+  ezButton(Switch1_DOWN_Pin, INTERNAL_PULLUP),
+  ezButton(Switch2_UP_Pin, INTERNAL_PULLUP),
+  ezButton(Switch2_DOWN_Pin, INTERNAL_PULLUP),
+  ezButton(Switch3_UP_Pin, INTERNAL_PULLUP),
+  ezButton(Switch3_DOWN_Pin, INTERNAL_PULLUP),
+  ezButton(Switch4_UP_Pin, INTERNAL_PULLUP),
+  ezButton(Switch4_DOWN_Pin, INTERNAL_PULLUP),
+  ezButton(Switch5_UP_Pin, INTERNAL_PULLUP),
+  ezButton(Switch5_DOWN_Pin, INTERNAL_PULLUP),
+  ezButton(FlowSwitchPin, INTERNAL_PULLUP),
+  ezButton(RefrigerantSwitchPin, INTERNAL_PULLUP)
+};
+
 
 //Scale
 HX711 LoadCell;
@@ -385,7 +424,6 @@ int gap3 = 0;
 
 // Function Declarations
 void DutyCycleLoop();
-void serialPrintSensorData();
 float Steinhart();
 void AllStop();
 void StoreEEPROM();
@@ -405,6 +443,8 @@ void getSwitches();
 void TempAlarm();
 void getScale();
 void getVccCurrent();
+void queryRelayStates();
+void sendRelayStates();
 
 enum EEPROMAddresses {
   ZERO_OFFSET_SCALE = 0,       // float, 4 bytes
@@ -458,77 +498,84 @@ void presentation() {
   //Send the sensor node sketch version information to the gateway
   sendSketchInfo("Controller", VERSION);
 
-  present(CHILD_ID::T0, S_TEMP, "DS18B20 1");
-  present(CHILD_ID::T1, S_TEMP, "DS18B20 2");
-  present(CHILD_ID::T2, S_TEMP, "DS18B20 3");
-  present(CHILD_ID::T3, S_TEMP, "DS18B20 4");
-  present(CHILD_ID::T4, S_TEMP, "DS18B20 5");
-  present(CHILD_ID::T5, S_TEMP, "Steinhart");
+  present(CHILD_ID::T0, S_TEMP, "D1");
+  present(CHILD_ID::T1, S_TEMP, "D2");
+  present(CHILD_ID::T2, S_TEMP, "D3");
+  present(CHILD_ID::T3, S_TEMP, "D4");
+  present(CHILD_ID::T4, S_TEMP, "D5");
+  present(CHILD_ID::T5, S_TEMP, "S1");
 
-  present(CHILD_ID::THMS1, S_TEMP, "Thermistor 1");
-  present(CHILD_ID::THMS2, S_TEMP, "Thermistor 2");
+  present(CHILD_ID::THMS1, S_TEMP, "T1");
+  present(CHILD_ID::THMS2, S_TEMP, "T2");
   
-  present(CHILD_ID::Scale, S_WEIGHT, "Scale");
-  present(CHILD_ID::ScaleTare, S_BINARY, "Scale Tare");
-  present(CHILD_ID::ScaleOffset, S_LIGHT_LEVEL, "Scale Offset");
-  present(CHILD_ID::ScaleCal, S_LIGHT_LEVEL, "Scale Calibration");
+  present(CHILD_ID::Scale, S_WEIGHT, "Scl");
+  present(CHILD_ID::ScaleTare, S_BINARY, "Scl T");
+  present(CHILD_ID::ScaleOffset, S_LIGHT_LEVEL, "Scl O");
+  present(CHILD_ID::ScaleCal, S_LIGHT_LEVEL, "Scl C");
 
-  present(CHILD_ID::P1, S_BARO, "Pressure 1");
-  present(CHILD_ID::P1Cal, S_LIGHT_LEVEL, "Pressure 1 Calibration");
-  present(CHILD_ID::P2, S_BARO, "Pressure 2");
-  present(CHILD_ID::P2Cal, S_LIGHT_LEVEL, "Pressure 2 Calibration");
-  present(CHILD_ID::P3, S_BARO, "Pressure 3");
-  present(CHILD_ID::P3Cal, S_LIGHT_LEVEL, "Pressure 3 Calibration");
-  present(CHILD_ID::P4, S_BARO, "Pressure 4");
-  present(CHILD_ID::P4Cal, S_LIGHT_LEVEL, "Pressure 4 Calibration");
+  present(CHILD_ID::P1, S_BARO, "P1");
+  present(CHILD_ID::P1Cal, S_LIGHT_LEVEL, "P1C");
+  present(CHILD_ID::P2, S_BARO, "P2");
+  present(CHILD_ID::P2Cal, S_LIGHT_LEVEL, "P2C");
+  present(CHILD_ID::P3, S_BARO, "P3");
+  present(CHILD_ID::P3Cal, S_LIGHT_LEVEL, "P3C");
+  present(CHILD_ID::P4, S_BARO, "P4");
+  present(CHILD_ID::P4Cal, S_LIGHT_LEVEL, "P4C");
 
-  present(CHILD_ID::MainsCurrent, S_MULTIMETER, "Mains Current");
-  present(CHILD_ID::MainsCurrentMultiplier, S_LIGHT_LEVEL, "Mains Current Multiplier");
-  present(CHILD_ID::MainsCurrentOffset, S_LIGHT_LEVEL, "Mains Current Offset");
+  present(CHILD_ID::MainsCurrent, S_MULTIMETER, "Mc");
+  present(CHILD_ID::MainsCurrentMultiplier, S_LIGHT_LEVEL, "McM");
+  present(CHILD_ID::MainsCurrentOffset, S_LIGHT_LEVEL, "McO");
   
-  present(CHILD_ID::SSRFail_Threshhold, S_LIGHT_LEVEL, "SSR Fail Threshold");
+  present(CHILD_ID::SSRFail_Threshhold, S_LIGHT_LEVEL, "SFT");
     
-  present(CHILD_ID::VccCurrent, S_MULTIMETER, "Vcc Current");
-  present(CHILD_ID::VccVoltage, S_LIGHT_LEVEL, "Vcc Voltage");
+  present(CHILD_ID::VccCurrent, S_MULTIMETER, "VccC");
+  present(CHILD_ID::VccVoltage, S_LIGHT_LEVEL, "VccV");
 
-  present(CHILD_ID::dC_1, S_DIMMER, "dC 1");
-  present(CHILD_ID::PIDMODE_1, S_BINARY, "PID Mode 1");
-  present(CHILD_ID::PIDSETPOINT_1, S_TEMP, "PID Setpoint 1");
-  present(CHILD_ID::PIDkP0_1, S_LIGHT_LEVEL, "PID kP 1");
-  present(CHILD_ID::PIDkI0_1, S_LIGHT_LEVEL, "PID kI 1");
-  present(CHILD_ID::PIDkD0_1, S_LIGHT_LEVEL, "PID kD 1");
+  present(CHILD_ID::dC_1, S_DIMMER, "dC1");
+  present(CHILD_ID::PIDMODE_1, S_BINARY, "PM1");
+  present(CHILD_ID::PIDSETPOINT_1, S_TEMP, "PS1");
+  present(CHILD_ID::PIDkP0_1, S_LIGHT_LEVEL, "kP1");
+  present(CHILD_ID::PIDkI0_1, S_LIGHT_LEVEL, "kI1");
+  present(CHILD_ID::PIDkD0_1, S_LIGHT_LEVEL, "kD1");
 
-  present(CHILD_ID::dC_2, S_DIMMER, "dC 2");
-  present(CHILD_ID::PIDMODE_2, S_BINARY, "PID Mode 2");
-  present(CHILD_ID::PIDSETPOINT_2, S_TEMP, "PID Setpoint 2");
-  present(CHILD_ID::PIDkP0_2, S_LIGHT_LEVEL, "PID kP 2");
-  present(CHILD_ID::PIDkI0_2, S_LIGHT_LEVEL, "PID kI 2");
-  present(CHILD_ID::PIDkD0_2, S_LIGHT_LEVEL, "PID kD 2");
+  present(CHILD_ID::dC_2, S_DIMMER, "dC2");
+  present(CHILD_ID::PIDMODE_2, S_BINARY, "PM2");
+  present(CHILD_ID::PIDSETPOINT_2, S_TEMP, "PS2");
+  present(CHILD_ID::PIDkP0_2, S_LIGHT_LEVEL, "kP2");
+  present(CHILD_ID::PIDkI0_2, S_LIGHT_LEVEL, "kI2");
+  present(CHILD_ID::PIDkD0_2, S_LIGHT_LEVEL, "kD2");
 
-  present(CHILD_ID::dC_3, S_DIMMER, "dC 3");
-  present(CHILD_ID::PIDMODE_3, S_BINARY, "PID Mode 3");
-  present(CHILD_ID::PIDSETPOINT_3, S_TEMP, "PID Setpoint 3");
-  present(CHILD_ID::PIDkP0_3, S_LIGHT_LEVEL, "PID kP 3");
-  present(CHILD_ID::PIDkI0_3, S_LIGHT_LEVEL, "PID kI 3");
-  present(CHILD_ID::PIDkD0_3, S_LIGHT_LEVEL, "PID kD 3");
+  present(CHILD_ID::dC_3, S_DIMMER, "dC3");
+  present(CHILD_ID::PIDMODE_3, S_BINARY, "PM3");
+  present(CHILD_ID::PIDSETPOINT_3, S_TEMP, "PS3");
+  present(CHILD_ID::PIDkP0_3, S_LIGHT_LEVEL, "kP3");
+  present(CHILD_ID::PIDkI0_3, S_LIGHT_LEVEL, "kI3");
+  present(CHILD_ID::PIDkD0_3, S_LIGHT_LEVEL, "kD3");
 
-  present(CHILD_ID::dTscale, S_LIGHT_LEVEL, "Scale Rate");
-  present(CHILD_ID::SSR_Armed, S_BINARY, "SSR Armed");
-  present(CHILD_ID::SSRFail_Alarm, S_BINARY, "SSR Fail Alarm");
+  present(CHILD_ID::dTscale, S_LIGHT_LEVEL, "Scl R");
+  present(CHILD_ID::SSR_Armed, S_BINARY, "Armed");
+  present(CHILD_ID::SSRFail_Alarm, S_BINARY, "Fail");
   present(CHILD_ID::Info, S_INFO, "Info");
-  present(CHILD_ID::LOAD_MEMORY, S_BINARY, "Load Memory");
-  present(CHILD_ID::runTime, S_CUSTOM, "Run Time");
+  present(CHILD_ID::LOAD_MEMORY, S_BINARY, "fRst");
+  present(CHILD_ID::runTime, S_CUSTOM, "rT");
 
-  present(CHILD_ID::switch1, S_CUSTOM, "Switch 1");
-  present(CHILD_ID::switch2, S_CUSTOM, "Switch 2");
-  present(CHILD_ID::switch3, S_CUSTOM, "Switch 3");
-  present(CHILD_ID::switch4, S_CUSTOM, "Switch 4");
-  present(CHILD_ID::switch5, S_CUSTOM, "Switch 5");
+  // Present Switch Sensors
+  for (int i = 0; i < 5; i++) {
+    present(CHILD_ID::switch1 + i, S_CUSTOM, "Sw");
+  }
 
-  present(CHILD_ID::P1Offset, S_LIGHT_LEVEL, "P1 Offset");
-  present(CHILD_ID::P2Offset, S_LIGHT_LEVEL, "P2 Offset");
-  present(CHILD_ID::P3Offset, S_LIGHT_LEVEL, "P3 Offset");
-  present(CHILD_ID::P4Offset, S_LIGHT_LEVEL, "P4 Offset");
+  present(CHILD_ID::FlowSwitch, S_BINARY, "FSw");
+  present(CHILD_ID::RefrigerantSwitch, S_BINARY, "RefSw");
+
+  present(CHILD_ID::P1Offset, S_LIGHT_LEVEL, "P1o");
+  present(CHILD_ID::P2Offset, S_LIGHT_LEVEL, "P2o");
+  present(CHILD_ID::P3Offset, S_LIGHT_LEVEL, "P3o");
+  present(CHILD_ID::P4Offset, S_LIGHT_LEVEL, "P4o");
+
+  // Present Relay Sensors
+  for (int i = 0; i < NUM_RELAYS; i++) {
+    present(CHILD_ID::relay1 + i, S_BINARY, "Rly");
+  }
 
 }
 
@@ -554,7 +601,7 @@ void setup() {
 
   //OLED
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-    Serial.println(F("SSD1306 allocation failed"));
+    sendInfo("1");
     while (true); // Halt execution if display initialization fails
   }
 
@@ -565,21 +612,15 @@ void setup() {
   myPID3.SetSampleTime(configValues.pidLoopTime);
   myPID3.SetOutputLimits(0, 100);
 
-  switch1UP.setDebounceTime(50); // set debounce time to 50 milliseconds
-  switch1DOWN.setDebounceTime(50);
-  switch2UP.setDebounceTime(50); 
-  switch2DOWN.setDebounceTime(50);
-  switch3UP.setDebounceTime(50); 
-  switch3DOWN.setDebounceTime(50);
-  switch4UP.setDebounceTime(50); 
-  switch4DOWN.setDebounceTime(50);
-  switch5UP.setDebounceTime(50); 
-  switch5DOWN.setDebounceTime(50); 
+  for (int i = 0; i < NUM_SWITCHES; i++) {
+    switches[i].setDebounceTime(50);
+  }
 
   displayLine("Booting...");
   sendInfo("Operational");
   play_one_up();
   delay(1000);
+  Serial3.begin(9600); // Initialize Serial3 communication
 }
 
 void loop() {
@@ -597,7 +638,6 @@ void loop() {
   }
 
   if ( (millis() - SensorLoop_timer) > (unsigned long)configValues.SENSORLOOPTIME)  {
-    Serial.println("-");
     AREF_V = getBandgap();
 
     getVccCurrent();
@@ -652,8 +692,8 @@ void loop() {
             
     TempAlarm();
     _process();
-    serialPrintSensorData();
-    _process();
+    queryRelayStates();
+    sendRelayStates();
     SensorLoop_timer = millis();
   }
   
@@ -684,90 +724,33 @@ void loop() {
 }
 
 void switchesLoop() {
-  switch1UP.loop();
-  switch1DOWN.loop();
-  switch2UP.loop();
-  switch2DOWN.loop();
-  switch3UP.loop();
-  switch3DOWN.loop();
-  switch4UP.loop();
-  switch4DOWN.loop();
-  switch5UP.loop();
-  switch5DOWN.loop();
+  for (int i = 0; i < NUM_SWITCHES; i++) {
+    switches[i].loop();
+  }
 }
-void getSwitches()
-{
-  int btnState_switch1UP = switch1UP.getState();
-  int btnState_switch1DOWN = switch1DOWN.getState();
-  int btnState_switch2UP = switch2UP.getState();
-  int btnState_switch2DOWN = switch2DOWN.getState();
-  int btnState_switch3UP = switch3UP.getState();
-  int btnState_switch3DOWN = switch3DOWN.getState();
-  int btnState_switch4UP = switch4UP.getState();
-  int btnState_switch4DOWN = switch4DOWN.getState();
-  int btnState_switch5UP = switch5UP.getState();
-  int btnState_switch5DOWN = switch5DOWN.getState();
 
-  if (btnState_switch1UP == 1 && btnState_switch1DOWN == 0) {
-    send(msgSwitch1.set(1), configValues.toACK);
-  } else if (btnState_switch1UP == 0 && btnState_switch1DOWN == 1){
-    send(msgSwitch1.set(0), configValues.toACK);
-  } else if (btnState_switch1UP == 1 && btnState_switch1DOWN == 1) {
-    send(msgSwitch1.set(2), configValues.toACK);
+void getSwitches() {
+  for (int i = 0; i < 5; i++) {
+    int btnState_UP = switches[i * 2].getState();
+    int btnState_DOWN = switches[i * 2 + 1].getState();
+    if (btnState_UP == 1 && btnState_DOWN == 0) {
+      send(MyMessage(CHILD_ID::switch1 + i, V_VAR1).set(1), configValues.toACK);
+    } else if (btnState_UP == 0 && btnState_DOWN == 1) {
+      send(MyMessage(CHILD_ID::switch1 + i, V_VAR1).set(0), configValues.toACK);
+    } else if (btnState_UP == 1 && btnState_DOWN == 1) {
+      send(MyMessage(CHILD_ID::switch1 + i, V_VAR1).set(2), configValues.toACK);
+    }
   }
-  if (btnState_switch2UP == 1 && btnState_switch2DOWN == 0) {
-    send(msgSwitch2.set(1), configValues.toACK);
-  } else if (btnState_switch2UP == 0 && btnState_switch2DOWN == 1){
-    send(msgSwitch2.set(0), configValues.toACK);
-  } else if (btnState_switch2UP == 1 && btnState_switch2DOWN == 1) {
-    send(msgSwitch2.set(2), configValues.toACK);
-  }
-  if (btnState_switch3UP == 1 && btnState_switch3DOWN == 0) {
-    send(msgSwitch3.set(1), configValues.toACK);
-  } else if (btnState_switch3UP == 0 && btnState_switch3DOWN == 1){
-    send(msgSwitch3.set(0), configValues.toACK);
-  } else if (btnState_switch3UP == 1 && btnState_switch3DOWN == 1) {
-    send(msgSwitch3.set(2), configValues.toACK);
-  }
-  if (btnState_switch4UP == 1 && btnState_switch4DOWN == 0) {
-    send(msgSwitch4.set(1), configValues.toACK);
-  } else if (btnState_switch4UP == 0 && btnState_switch4DOWN == 1){
-    send(msgSwitch4.set(0), configValues.toACK);
-  } else if (btnState_switch4UP == 1 && btnState_switch4DOWN == 1) {
-    send(msgSwitch4.set(2), configValues.toACK);
-  }
-  if (btnState_switch5UP == 1 && btnState_switch5DOWN == 0) {
-    send(msgSwitch5.set(1), configValues.toACK);
-  } else if (btnState_switch5UP == 0 && btnState_switch5DOWN == 1){
-    send(msgSwitch5.set(0), configValues.toACK);
-  } else if (btnState_switch5UP == 1 && btnState_switch5DOWN == 1) {
-    send(msgSwitch5.set(2), configValues.toACK);
-  }
-  
-  if(configValues.sDebug) {
-    Serial.println("Switches");
-    Serial.print("Switch 1 UP: ");
-    Serial.println(btnState_switch1UP);
-    Serial.print("Switch 1 DOWN: ");
-    Serial.println(btnState_switch1DOWN);
-    Serial.print("Switch 2 UP: ");
-    Serial.println(btnState_switch2UP);
-    Serial.print("Switch 2 DOWN: ");
-    Serial.println(btnState_switch2DOWN);
-    Serial.print("Switch 3 UP: ");
-    Serial.println(btnState_switch3UP);
-    Serial.print("Switch 3 DOWN: ");
-    Serial.println(btnState_switch3DOWN);
-    Serial.print("Switch 4 UP: ");
-    Serial.println(btnState_switch4UP);
-    Serial.print("Switch 4 DOWN: ");
-    Serial.println(btnState_switch4DOWN);
-    Serial.print("Switch 5 UP: ");
-    Serial.println(btnState_switch5UP);
-    Serial.print("Switch 5 DOWN: ");
-    Serial.println(btnState_switch5DOWN);
-  }
+
+  int btnState_switchFlow = switches[10].getState();
+  int btnState_switchRefrigerant = switches[11].getState();
+
+  send(msgFlowSwitch.set(btnState_switchFlow == 1), configValues.toACK);
+  send(msgRefrigerantSwitch.set(btnState_switchRefrigerant == 1), configValues.toACK);
+
+  return;
 }
+
 void getVccCurrent()
 {
   for (int i = 0; i < 10; i++)
@@ -779,68 +762,6 @@ void getVccCurrent()
   VccCurrentVar = (VccCurrentVar - calValues.VccCurrentOffset) * calValues.VccCurrentMultiplier; //
   return;
   }
-void serialPrintSensorData() {
-  if (configValues.sDebug) {
-    Serial.print("Time: ");
-    Serial.println((float)millis()/1000.0/60.0/60.0,2);
-    Serial.print("VccCurrentVar: ");
-    Serial.println(VccCurrentVar);
-    Serial.print("AREF_V: ");
-    Serial.println(AREF_V);
-    Serial.print("Pressure1: ");
-    Serial.println(pressure1Var);
-    Serial.print("Pressure2: ");
-    Serial.println(pressure2Var);
-    Serial.print("Pressure3: ");
-    Serial.println(pressure3Var);
-    Serial.print("Pressure4: ");
-    Serial.println(pressure4Var);
-    Serial.print("Scale: ");
-    Serial.println(valueScale);
-    Serial.print("gramsPerSecondScale: ");
-    Serial.println(gramsPerSecondScale);
-    for (int i = 0; i < static_cast<int>(sizeof(ds18b20Values) / sizeof(ds18b20Values[0])); i++) {
-      Serial.print("DS18B20 Sensor ");
-      Serial.print(i);
-      Serial.print(" Temperature (F): ");
-      Serial.println(ds18b20Values[i].F);
-    }
-    Serial.print("Emon RMS: ");
-    Serial.println(emonVars.rms);
-    Serial.print("Steinhart Temperature (F): ");
-    Serial.println(steinhartValues.steinhart);
-    Serial.print("THMS1 : ");
-    Serial.println(THMS1var);
-    Serial.print("THMS2 : ");
-    Serial.println(THMS2var);
-    Serial.print("dC: ");
-    Serial.println(dC);
-    Serial.print("dC_2: ");
-    Serial.println(dC2);
-    Serial.print("dC_3: ");
-    Serial.println(dC3);
-    Serial.print("PID1 Mode: ");
-    Serial.println(pid1.mode);
-    Serial.print("PID2 Mode: ");
-    Serial.println(pid2.mode);
-    Serial.print("PID3 Mode: ");
-    Serial.println(pid3.mode);
-    Serial.print("PID1 Input: ");
-    Serial.println(pid1.input);
-    Serial.print("PID2 Input: ");
-    Serial.println(pid2.input);
-    Serial.print("PID3 Input: ");
-    Serial.println(pid3.input);
-    // Serial.print("PID1 Output: ");
-    // Serial.println(pid1.output);
-    // Serial.print("PID2 Output: ");
-    // Serial.println(pid2.output);
-    // Serial.print("PID3 Output: ");
-    // Serial.println(pid3.output);
-    
-  }
-  return;
-}
 void TempAlarm()
 {
   // Temp Alarm
@@ -905,7 +826,7 @@ void getScale() {
   }
   else
   {
-    Serial.println("Load cell not ready");
+    sendInfo("E2");
     valueScale = value_oldScale; // or handle the error as needed
   }
   if (valueScale < 0)
@@ -972,27 +893,6 @@ float getThermistor(const int pinVar) {
         float logR = log(thermistorResistance);
         float Kelvin = 1.0 / (A + B * logR + C * logR * logR * logR);
         float tempF = (Kelvin - 273.15) * CELSIUS_TO_FAHRENHEIT_FACTOR + CELSIUS_TO_FAHRENHEIT_OFFSET;
-        /* Debug Values
-        Serial.print("ADCvalue ");
-        Serial.println(ADCvalue);
-        Serial.print("Va3 ");
-        Serial.println(Va3);
-        Serial.print("thermistorResistance ");
-        Serial.println(thermistorResistance);
-        Serial.print("A ");
-        Serial.println((double)A,10);
-        Serial.print("B ");
-        Serial.println((double)B,10);
-        Serial.print("C ");
-        Serial.println((double)C,10);
-        Serial.print("logR ");
-        Serial.println(logR);
-        Serial.print("Kelvin ");
-        Serial.println(((double)Kelvin),10);
-        Serial.print("tempF ");
-        Serial.println((double)tempF,10);
-        Serial.println("------------------------");
-        */
   return tempF;
 }
 void DutyCycleLoop() {
@@ -1203,116 +1103,116 @@ void FactoryResetEEPROM() {
   StoreEEPROM();
 }
 void printConfig() {
-  Serial.print("zeroOffsetScale: ");
-  Serial.println(calValues.zeroOffsetScale);
-  Serial.print("pressure1Offset: ");
-  Serial.println(calValues.pressure1Offset);
-  Serial.print("pressure1Cal: ");
-  Serial.println(calValues.pressure1Cal);
-  Serial.print("pressure2Offset: ");
-  Serial.println(calValues.pressure2Offset);
-  Serial.print("pressure2Cal: ");
-  Serial.println(calValues.pressure2Cal);
-  Serial.print("pressure3Offset: ");
-  Serial.println(calValues.pressure3Offset);
-  Serial.print("pressure3Cal: ");
-  Serial.println(calValues.pressure3Cal);
-  Serial.print("pressure4Offset: ");
-  Serial.println(calValues.pressure4Offset);
-  Serial.print("pressure4Cal: ");
-  Serial.println(calValues.pressure4Cal);
-  Serial.print("scaleCal: ");
-  Serial.println(calValues.scaleCal);
-  Serial.print("aScale: ");
-  Serial.println(calValues.aScale);
-  Serial.print("mScale: ");
-  Serial.println(calValues.mScale);
-  Serial.print("rScale: ");
-  Serial.println(calValues.rScale);
-  Serial.print("VccCurrentOffset: ");
-  Serial.println(calValues.VccCurrentOffset);
-  Serial.print("VccCurrentMultiplier: ");
-  Serial.println(calValues.VccCurrentMultiplier,6);
-  Serial.print("PID1 Setpoint: ");
-  Serial.println(pid1.setpoint);
-  Serial.print("PID1 kp: ");
-  Serial.println(pid1.kp);
-  Serial.print("PID1 ki: ");
-  Serial.println(pid1.ki);
-  Serial.print("PID1 kd: ");
-  Serial.println(pid1.kd);
-  Serial.print("PID1 aggKp: ");
-  Serial.println(pid1.aggKp);
-  Serial.print("PID1 aggKi: ");
-  Serial.println(pid1.aggKi);
-  Serial.print("PID1 aggKd: ");
-  Serial.println(pid1.aggKd);
-  Serial.print("PID2 Setpoint: ");
-  Serial.println(pid2.setpoint);
-  Serial.print("PID2 kp: ");
-  Serial.println(pid2.kp);
-  Serial.print("PID2 ki: ");
-  Serial.println(pid2.ki);
-  Serial.print("PID2 kd: ");
-  Serial.println(pid2.kd);
-  Serial.print("PID2 aggKp: ");
-  Serial.println(pid2.aggKp);
-  Serial.print("PID2 aggKi: ");
-  Serial.println(pid2.aggKi);
-  Serial.print("PID2 aggKd: ");
-  Serial.println(pid2.aggKd);
-  Serial.print("PID1 aggSP: ");
-  Serial.println(pid1.aggSP);
-  Serial.print("PID2 aggSP: ");
-  Serial.println(pid2.aggSP);
-  Serial.print("PID3 Setpoint: ");
-  Serial.println(pid3.setpoint);
-  Serial.print("PID3 kp: ");
-  Serial.println(pid3.kp);
-  Serial.print("PID3 ki: ");
-  Serial.println(pid3.ki);
-  Serial.print("PID3 kd: ");
-  Serial.println(pid3.kd);
-  Serial.print("PID3 aggKp: ");
-  Serial.println(pid3.aggKp);
-  Serial.print("PID3 aggKi: ");
-  Serial.println(pid3.aggKi);
-  Serial.print("PID3 aggKd: ");
-  Serial.println(pid3.aggKd);
-  Serial.print("PID3 aggSP: ");
-  Serial.println(pid3.aggSP);
-  Serial.print("emonCal: ");
-  Serial.println(calValues.emonCal);
-  Serial.print("ssrFailThreshold: ");
-  Serial.println(calValues.ssrFailThreshold);
-  Serial.print("currOffset: ");
-  Serial.println(calValues.currOffset);
-  Serial.print("ssrArmed: ");
-  Serial.println(ssrArmed);
-  Serial.print("PID1 mode: ");
-  Serial.println(pid1.mode);
-  Serial.print("PID2 mode: ");
-  Serial.println(pid2.mode);
-  Serial.print("PID3 mode: ");
-  Serial.println(pid3.mode);
-  Serial.print("PID2 adaptiveMode: ");
-  Serial.println(pid2.adaptiveMode);
-  Serial.print("PID1 adaptiveMode: ");
-  Serial.println(pid1.adaptiveMode);
-  Serial.print("PID3 adaptiveMode: ");
-  Serial.println(pid3.adaptiveMode);
-  Serial.print("sDebug: ");
-  Serial.println(configValues.sDebug);
-  Serial.print("PID1 alarmThreshold: ");
-  Serial.println(pid1.alarmThreshold);
-  Serial.print("PID2 alarmThreshold: ");
-  Serial.println(pid2.alarmThreshold);
-  Serial.print("PID3 alarmThreshold: ");
-  Serial.println(pid3.alarmThreshold);
-  Serial.print("SENSORLOOPTIME: ");
-  Serial.println(configValues.SENSORLOOPTIME);
-  Serial.print("toACK: ");
-  Serial.println(configValues.toACK);
+//   Serial.print("zeroOffsetScale: ");
+//   Serial.println(calValues.zeroOffsetScale);
+//   Serial.print("pressure1Offset: ");
+//   Serial.println(calValues.pressure1Offset);
+//   Serial.print("pressure1Cal: ");
+//   Serial.println(calValues.pressure1Cal);
+//   Serial.print("pressure2Offset: ");
+//   Serial.println(calValues.pressure2Offset);
+//   Serial.print("pressure2Cal: ");
+//   Serial.println(calValues.pressure2Cal);
+//   Serial.print("pressure3Offset: ");
+//   Serial.println(calValues.pressure3Offset);
+//   Serial.print("pressure3Cal: ");
+//   Serial.println(calValues.pressure3Cal);
+//   Serial.print("pressure4Offset: ");
+//   Serial.println(calValues.pressure4Offset);
+//   Serial.print("pressure4Cal: ");
+//   Serial.println(calValues.pressure4Cal);
+//   Serial.print("scaleCal: ");
+//   Serial.println(calValues.scaleCal);
+//   Serial.print("aScale: ");
+//   Serial.println(calValues.aScale);
+//   Serial.print("mScale: ");
+//   Serial.println(calValues.mScale);
+//   Serial.print("rScale: ");
+//   Serial.println(calValues.rScale);
+//   Serial.print("VccCurrentOffset: ");
+//   Serial.println(calValues.VccCurrentOffset);
+//   Serial.print("VccCurrentMultiplier: ");
+//   Serial.println(calValues.VccCurrentMultiplier,6);
+//   Serial.print("PID1 Setpoint: ");
+//   Serial.println(pid1.setpoint);
+//   Serial.print("PID1 kp: ");
+//   Serial.println(pid1.kp);
+//   Serial.print("PID1 ki: ");
+//   Serial.println(pid1.ki);
+//   Serial.print("PID1 kd: ");
+//   Serial.println(pid1.kd);
+//   Serial.print("PID1 aggKp: ");
+//   Serial.println(pid1.aggKp);
+//   Serial.print("PID1 aggKi: ");
+//   Serial.println(pid1.aggKi);
+//   Serial.print("PID1 aggKd: ");
+//   Serial.println(pid1.aggKd);
+//   Serial.print("PID2 Setpoint: ");
+//   Serial.println(pid2.setpoint);
+//   Serial.print("PID2 kp: ");
+//   Serial.println(pid2.kp);
+//   Serial.print("PID2 ki: ");
+//   Serial.println(pid2.ki);
+//   Serial.print("PID2 kd: ");
+//   Serial.println(pid2.kd);
+//   Serial.print("PID2 aggKp: ");
+//   Serial.println(pid2.aggKp);
+//   Serial.print("PID2 aggKi: ");
+//   Serial.println(pid2.aggKi);
+//   Serial.print("PID2 aggKd: ");
+//   Serial.println(pid2.aggKd);
+//   Serial.print("PID1 aggSP: ");
+//   Serial.println(pid1.aggSP);
+//   Serial.print("PID2 aggSP: ");
+//   Serial.println(pid2.aggSP);
+//   Serial.print("PID3 Setpoint: ");
+//   Serial.println(pid3.setpoint);
+//   Serial.print("PID3 kp: ");
+//   Serial.println(pid3.kp);
+//   Serial.print("PID3 ki: ");
+//   Serial.println(pid3.ki);
+//   Serial.print("PID3 kd: ");
+//   Serial.println(pid3.kd);
+//   Serial.print("PID3 aggKp: ");
+//   Serial.println(pid3.aggKp);
+//   Serial.print("PID3 aggKi: ");
+//   Serial.println(pid3.aggKi);
+//   Serial.print("PID3 aggKd: ");
+//   Serial.println(pid3.aggKd);
+//   Serial.print("PID3 aggSP: ");
+//   Serial.println(pid3.aggSP);
+//   Serial.print("emonCal: ");
+//   Serial.println(calValues.emonCal);
+//   Serial.print("ssrFailThreshold: ");
+//   Serial.println(calValues.ssrFailThreshold);
+//   Serial.print("currOffset: ");
+//   Serial.println(calValues.currOffset);
+//   Serial.print("ssrArmed: ");
+//   Serial.println(ssrArmed);
+//   Serial.print("PID1 mode: ");
+//   Serial.println(pid1.mode);
+//   Serial.print("PID2 mode: ");
+//   Serial.println(pid2.mode);
+//   Serial.print("PID3 mode: ");
+//   Serial.println(pid3.mode);
+//   Serial.print("PID2 adaptiveMode: ");
+//   Serial.println(pid2.adaptiveMode);
+//   Serial.print("PID1 adaptiveMode: ");
+//   Serial.println(pid1.adaptiveMode);
+//   Serial.print("PID3 adaptiveMode: ");
+//   Serial.println(pid3.adaptiveMode);
+//   Serial.print("sDebug: ");
+//   Serial.println(configValues.sDebug);
+//   Serial.print("PID1 alarmThreshold: ");
+//   Serial.println(pid1.alarmThreshold);
+//   Serial.print("PID2 alarmThreshold: ");
+//   Serial.println(pid2.alarmThreshold);
+//   Serial.print("PID3 alarmThreshold: ");
+//   Serial.println(pid3.alarmThreshold);
+//   Serial.print("SENSORLOOPTIME: ");
+//   Serial.println(configValues.SENSORLOOPTIME);
+//   Serial.print("toACK: ");
+//   Serial.println(configValues.toACK);
 }
 long getBandgap(void) {
   // Read 1.1V reference against AVcc
@@ -1454,7 +1354,6 @@ void receive(const MyMessage & message)  {
         wait(SENDDELAY);
         send(msgScaleOffset.set(calValues.zeroOffsetScale, 1));
         wait(SENDDELAY);
-        if (configValues.sDebug) { Serial.print("Scale Offset = "); Serial.println(calValues.zeroOffsetScale); }
         sendInfo("Scale Tare");
       }
       break;
@@ -1588,8 +1487,6 @@ void receive(const MyMessage & message)  {
       pid3.mode = message.getBool();
       myPID3.SetMode(message.getBool());
       EEPROM.put(EEPROMAddresses::PID3_MODE, message.getBool());
-      Serial.print("PID3 Mode: ");
-      Serial.println(pid3.mode);
       break;
     case CHILD_ID::PIDSETPOINT_3:
       pid3.setpoint = message.getFloat();
@@ -1659,4 +1556,38 @@ void receive(const MyMessage & message)  {
       EEPROM.put(EEPROMAddresses::PRESSURE4_OFFSET, calValues.pressure4Offset);
       break;
   }
+
+  // Handle Relay States
+  for (int i = 0; i < NUM_RELAYS; i++) {
+    if (message.sensor == CHILD_ID::relay1 + i) {
+      relayStates[i] = message.getBool();
+      sendRelayStates();
+    }
+  }
+}
+
+/**
+ * @brief Queries the state of a byte from another Arduino on Serial3 and stores it in an array of boolean values.
+ */
+void queryRelayStates() {
+  if (Serial3.available()) {
+    byte relayByte = Serial3.read();
+    for (int i = 0; i < NUM_RELAYS; i++) {
+      relayStates[i] = relayByte & (1 << i);
+    }
+  }
+}
+
+/**
+ * @brief Sends the states of the relays to another Arduino on Serial3 and MySensors network.
+ */
+void sendRelayStates() {
+  byte relayByte = 0;
+  for (int i = 0; i < NUM_RELAYS; i++) {
+    if (relayStates[i]) {
+      relayByte |= (1 << i);
+    }
+    send(msgRelay[i].set(relayStates[i]), configValues.toACK);
+  }
+  Serial3.write(relayByte);
 }
