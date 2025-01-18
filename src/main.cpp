@@ -841,14 +841,6 @@ void getScale() {
   oldtimeScale = millis();
   return;
 }
-/**
- * @brief Reads the pressure from a specified pin and applies calibration.
- * 
- * @param pin The analog pin to read the pressure from.
- * @param offset The offset value for calibration.
- * @param cal The calibration factor.
- * @return The calibrated pressure value.
- */
 float readPressure(int pin, int offset, float cal) {
   int RawADCavg = 0;
   int i = 0;
@@ -1297,11 +1289,6 @@ void DS18B20() {
   ds.reset_search();
   return;
 }
-/**
- * @brief Displays a line of text on the OLED display.
- * 
- * @param line The text to display.
- */
 void displayLine(const char* line) {
   display.clearDisplay();
   display.setCursor(0,0);
@@ -1310,11 +1297,6 @@ void displayLine(const char* line) {
   display.print(line); 
   display.display();
 }
-/**
- * @brief Returns the amount of free memory available.
- * 
- * @return The amount of free memory in bytes.
- */
 int freeMemory() {
   int free_memory;
   if ((int)__brkval == 0) {
@@ -1568,10 +1550,6 @@ void receive(const MyMessage & message)  {
     }
   }
 }
-
-/**
- * @brief Queries the state of a byte from another Arduino on Serial3 and stores it in an array of boolean values.
- */
 void queryRelayStates() {
   if (Serial3.available()) {
     byte relayByte = Serial3.read();
@@ -1580,10 +1558,6 @@ void queryRelayStates() {
     }
   }
 }
-
-/**
- * @brief Sends the states of the relays to another Arduino on Serial3 and MySensors network.
- */
 void sendRelayStates() {
   byte relayByte = 0;
   for (int i = 0; i < NUM_RELAYS; i++) {
