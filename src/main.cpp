@@ -578,6 +578,7 @@ void setup() {
 
   displayLine("Booting...");
   sendInfo("Operational");
+  play_one_up();
   delay(1000);
 }
 
@@ -585,6 +586,10 @@ void loop() {
   DutyCycleLoop();
   _process();
   switchesLoop();
+
+  pid1.input = THMS1var;
+  pid2.input = THMS2var;
+  pid3.input = steinhartValues.steinhart;
 
   if ( (millis() - switchesLoop_timer) > (unsigned long)configValues.SENSORLOOPTIME) {
     getSwitches();
@@ -932,28 +937,22 @@ float readPressure(int pin, int offset, float cal) {
   return offsetCorrected1 * (1.0 / cal);
 }
 float Steinhart() {
-  steinhartValues.adcValue = 0;
-    delay(10); //this increased resolution significantly
-  {
+  double adcValue = 0;
+  for(int i = 0; i < 10 ; i++ ) {
     delay(10); //this increased resolution signifigantly
-    steinhartValues.adcValue += analogRead(SteinhartPin);
+    adcValue += analogRead(SteinhartPin);
   }
-  steinhartValues.adcValue /= 10;
-
-  steinhartValues.resistance = ((thermistorConfig.seriesResistor + thermistorConfig.nominalResistance) * (1 / (1023 / steinhartValues.adcValue - 1)));
-  steinhartValues.steinhart =  steinhartValues.resistance / thermistorConfig.nominalResistance; // (R/Ro)
-  steinhartValues.steinhart = log(steinhartValues.steinhart); // ln(R/Ro)
-  steinhartValues.steinhart /= thermistorConfig.bCoefficient; // 1/B * ln(R/Ro)
-  const float KELVIN_TO_CELSIUS = 273.15;
-    steinhartValues.steinhart += 1.0 / (thermistorConfig.nominalTemperature + KELVIN_TO_CELSIUS); // + (1/To)
-  steinhartValues.steinhart = 1.0 / steinhartValues.steinhart; // Invert
-
-  // Convert Kelvin to Celsius
-  steinhartValues.steinhart -= 273.15;
-
-  steinhartValues.steinhart = (steinhartValues.steinhart * CELSIUS_TO_FAHRENHEIT_FACTOR) + CELSIUS_TO_FAHRENHEIT_OFFSET;
-  steinhartValues.steinhart = (steinhartValues.steinhart * 9.0 / 5.0) + 32.0;
-  return steinhartValues.steinhart;
+  steinhartValues.adcValue = (float)adcValue/10.0;
+  float Resistance = ((thermistorConfig.seriesResistor + thermistorConfig.nominalResistance) * (1 / (1023 / steinhartValues.adcValue)));
+  float steinhart = Resistance / (float)thermistorConfig.nominalResistance; // (R/Ro)
+  steinhart = log(steinhart); // ln(R/Ro)
+  steinhart /= (float)thermistorConfig.bCoefficient; // 1/B * ln(R/Ro)
+  steinhart += 1.0 / ((float)thermistorConfig.nominalTemperature + 273.15); // + (1/To)
+  steinhart = 1.0 / steinhart; // Invert
+  steinhart -= 273.15; // convert to C
+  steinhart = (((steinhart * 9 ) / 5 ) + 32);
+  steinhartValues.steinhart = steinhart;
+  return steinhart;
 }
 float getThermistor(const int pinVar) {
   int ADCvalue = 0;
@@ -1388,7 +1387,7 @@ void DS18B20() {
       else if (cfg == 0x20) raw = raw & ~3; // 10 bit res, 187.5 ms
       else if (cfg == 0x40) raw = raw & ~1; // 11 bit res, 375 ms
     }
-    ds18b20Values[count].F = ds18b20Values[count].C * CELSIUS_TO_FAHRENHEIT_FACTOR + CELSIUS_TO_FAHRENHEIT_OFFSET;
+    ds18b20Values[count].C = (float)raw / 16.0;
     ds18b20Values[count].F = ds18b20Values[count].C * 1.8 + 32.0;
     count = count + 1;
   }
