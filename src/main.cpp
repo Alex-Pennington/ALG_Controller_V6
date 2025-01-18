@@ -546,7 +546,6 @@ void setup() {
   pinMode(ElementPowerPin, OUTPUT);
   pinMode(ElementPowerPin2, OUTPUT);
   pinMode(speakerPin, OUTPUT);
-  pinMode(SteinhartEnable, OUTPUT);
   pinMode(SteinhartPin, INPUT);
   pinMode(Pressure1PIN, INPUT);
   pinMode(Pressure2PIN, INPUT);
@@ -991,6 +990,14 @@ void getScale() {
   oldtimeScale = millis();
   return;
 }
+/**
+ * @brief Reads the pressure from a specified pin and applies calibration.
+ * 
+ * @param pin The analog pin to read the pressure from.
+ * @param offset The offset value for calibration.
+ * @param cal The calibration factor.
+ * @return The calibrated pressure value.
+ */
 float readPressure(int pin, int offset, float cal) {
   int RawADCavg = 0;
   int i = 0;
@@ -1042,8 +1049,8 @@ float getThermistor(const int pinVar) {
         const float C = 0.2413822162e-7;
 
         float logR = log(thermistorResistance);
+        float Kelvin = 1.0 / (A + B * logR + C * logR * logR * logR);
         float tempF = (Kelvin - 273.15) * CELSIUS_TO_FAHRENHEIT_FACTOR + CELSIUS_TO_FAHRENHEIT_OFFSET;
-        float tempF = (Kelvin - 273.15) * (9.0/5.0) + 32.0;
         /* Debug Values
         Serial.print("ADCvalue ");
         Serial.println(ADCvalue);
@@ -1492,6 +1499,11 @@ void DS18B20() {
   ds.reset_search();
   return;
 }
+/**
+ * @brief Displays a line of text on the OLED display.
+ * 
+ * @param line The text to display.
+ */
 void displayLine(const char* line) {
   display.clearDisplay();
   display.setCursor(0,0);
@@ -1500,6 +1512,11 @@ void displayLine(const char* line) {
   display.print(line); 
   display.display();
 }
+/**
+ * @brief Returns the amount of free memory available.
+ * 
+ * @return The amount of free memory in bytes.
+ */
 int freeMemory() {
   int free_memory;
   if ((int)__brkval == 0) {
