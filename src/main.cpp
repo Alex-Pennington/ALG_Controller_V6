@@ -588,6 +588,7 @@ void setup() {
 
   displayLine("Booting...");
   sendInfo("Operational");
+  play_one_up();
   delay(1000);
 }
 
@@ -1022,15 +1023,11 @@ float Steinhart() {
   steinhartValues.steinhart =  steinhartValues.resistance / thermistorConfig.nominalResistance; // (R/Ro)
   steinhartValues.steinhart = log(steinhartValues.steinhart); // ln(R/Ro)
   steinhartValues.steinhart /= thermistorConfig.bCoefficient; // 1/B * ln(R/Ro)
-  const float KELVIN_TO_CELSIUS = 273.15;
-    steinhartValues.steinhart += 1.0 / (thermistorConfig.nominalTemperature + KELVIN_TO_CELSIUS); // + (1/To)
+  steinhartValues.steinhart += 1.0 / (thermistorConfig.nominalTemperature + 273.15); // + (1/To)
   steinhartValues.steinhart = 1.0 / steinhartValues.steinhart; // Invert
-
-  // Convert Kelvin to Celsius
-  steinhartValues.steinhart -= 273.15;
-
-  steinhartValues.steinhart = (steinhartValues.steinhart * CELSIUS_TO_FAHRENHEIT_FACTOR) + CELSIUS_TO_FAHRENHEIT_OFFSET;
-  steinhartValues.steinhart = (steinhartValues.steinhart * 9.0 / 5.0) + 32.0;
+  steinhartValues.steinhart -= 273.15; // convert to C
+  steinhartValues.steinhart = (((steinhartValues.steinhart * 9 ) / 5 ) + 32);
+  return steinhartValues.steinhart;
   return steinhartValues.steinhart;
 }
 float getThermistor(const int pinVar) {
