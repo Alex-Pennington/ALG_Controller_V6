@@ -878,22 +878,22 @@ float Steinhart() {
 }
 float getThermistor(const int pinVar) {
   int ADCvalue = 0;
-        const float seriesResistor = 981.0;
-        for (int n = 0; n < 10; n++){
-            delay(10);
-            ADCvalue += analogRead(pinVar);
-        }
-        ADCvalue /= 10;
-        float Va3 = (1.0 - ((float)ADCvalue / 1023.0)) * AREF_V;
-        float thermistorResistance = (seriesResistor * Va3) / (AREF_V - Va3);
-        //https://www.thinksrs.com/downloads/programs/therm%20calc/ntccalibrator/ntccalculator.html
-        const float A = 1.499168475e-3;
-        const float B = 2.766247366e-4;
-        const float C = 0.2413822162e-7;
+  const float seriesResistor = 981.0;
+  for (int n = 0; n < 10; n++){
+      delay(10);
+      ADCvalue += analogRead(pinVar);
+  }
+  ADCvalue /= 10;
+  float Va3 = (1.0 - ((float)ADCvalue / 1023.0)) * (float)(AREF_V/1000);
+  float thermistorResistance = (seriesResistor * Va3) / ((float)(AREF_V/1000) - Va3);
+  //https://www.thinksrs.com/downloads/programs/therm%20calc/ntccalibrator/ntccalculator.html
+  const float A = 1.499168475e-3;
+  const float B = 2.766247366e-4;
+  const float C = 0.2413822162e-7;
 
-        float logR = log(thermistorResistance);
-        float Kelvin = 1.0 / (A + B * logR + C * logR * logR * logR);
-        float tempF = (Kelvin - 273.15) * CELSIUS_TO_FAHRENHEIT_FACTOR + CELSIUS_TO_FAHRENHEIT_OFFSET;
+  float logR = log(thermistorResistance);
+  float Kelvin = 1.0 / (A + B * logR + C * logR * logR * logR);
+  float tempF = (Kelvin - 273.15) * CELSIUS_TO_FAHRENHEIT_FACTOR + CELSIUS_TO_FAHRENHEIT_OFFSET;
   return tempF;
 }
 void DutyCycleLoop() {
