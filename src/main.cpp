@@ -585,6 +585,7 @@ void presentation() {
 
 void setup() {
   Serial.begin(115200);
+  Serial3.begin(9600);
   getEEPROM();
   LoadCell.begin(HX711_dout, HX711_sck);
   LoadCell.set_scale(calValues.scaleCal);
@@ -622,12 +623,9 @@ void setup() {
 
   displayLine("Booting...");
   sendInfo("Operational");
+  sendAllStates();
   play_one_up();
   delay(1000);
-  sendAllStates();
-  Serial3.begin(9600); // Initialize Serial3 communication
-
-  // Send all states once at startup
 }
 
 void loop() {
