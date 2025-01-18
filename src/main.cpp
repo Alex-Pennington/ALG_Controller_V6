@@ -624,10 +624,10 @@ void setup() {
   sendInfo("Operational");
   play_one_up();
   delay(1000);
+  sendAllStates();
   Serial3.begin(9600); // Initialize Serial3 communication
 
   // Send all states once at startup
-  sendAllStates();
 }
 
 void loop() {
