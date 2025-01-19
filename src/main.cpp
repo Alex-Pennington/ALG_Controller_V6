@@ -643,7 +643,7 @@ void setup() {
 
   displayLine("Booting...");
   sendInfo("Operational");
-  sendAllStates();
+  //sendAllStates();
   play_one_up();
   delay(1000);
 }
