@@ -718,12 +718,12 @@ void loop() {
     myPID1.Compute();
     myPID2.Compute();
     myPID3.Compute();
-    dC = pid1.output;
-    dC2 = pid2.output;
-    dC3 = pid3.output;
-    send(MyMessage(CHILD_ID::dC_1, V_PERCENTAGE).set(dC,2), configValues.toACK);
-    send(MyMessage(CHILD_ID::dC_2, V_PERCENTAGE).set(dC2,2), configValues.toACK);
-    send(MyMessage(CHILD_ID::dC_3, V_PERCENTAGE).set(dC3,2), configValues.toACK);
+    dC = pid1.output / 100.0;
+    dC2 = pid2.output / 100.0;
+    dC3 = pid3.output / 100.0;
+    send(MyMessage(CHILD_ID::dC_1, V_PERCENTAGE).set(pid1.output,2), configValues.toACK);
+    send(MyMessage(CHILD_ID::dC_2, V_PERCENTAGE).set(pid2.output,2), configValues.toACK);
+    send(MyMessage(CHILD_ID::dC_3, V_PERCENTAGE).set(pid3.output,2), configValues.toACK);
     pid_compute_loop_time = millis();
   }
 }
@@ -897,9 +897,23 @@ float getThermistor(const int pinVar) {
 void DutyCycleLoop() {
   for (int i = 0; i < 3; i++) {
     // Determine the current PID mode and duty cycle
-    bool pidMode = (i == 0) ? pid1.mode : (i == 1) ? pid2.mode : pid3.mode;
-    float dutyCycleValue = (i == 0) ? dC : (i == 1) ? dC2 : dC3;
-    int elementPin = (i == 0) ? ElementPowerPin : (i == 1) ? ElementPowerPin2 : ElementPowerPin3;
+    bool pidMode;
+    float dutyCycleValue;
+    int elementPin;
+
+    if (i == 0) {
+      pidMode = pid1.mode;
+      dutyCycleValue = dC;
+      elementPin = ElementPowerPin;
+    } else if (i == 1) {
+      pidMode = pid2.mode;
+      dutyCycleValue = dC2;
+      elementPin = ElementPowerPin2;
+    } else {
+      pidMode = pid3.mode;
+      dutyCycleValue = dC3;
+      elementPin = ElementPowerPin3;
+    }
 
     // Check if the duty cycle loop is active and SSR is armed
     if (dutyCycle[i].loopTime > 0 && ssrArmed && pidMode) {
