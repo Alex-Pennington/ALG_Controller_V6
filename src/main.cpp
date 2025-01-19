@@ -655,6 +655,7 @@ void loop() {
   }
 
   if ( (millis() - SensorLoop_timer) > (unsigned long)configValues.SENSORLOOPTIME)  {
+    unsigned long sensorLoopTime = millis();
     AREF_V = getBandgap();
 
     getVccCurrent();
@@ -714,6 +715,7 @@ void loop() {
     queryRelayStates();
     sendRelayStates();
     SensorLoop_timer = millis();
+    Serial.println(millis()-sensorLoopTime);
   }
   
   if ((millis() - pid_compute_loop_time) > (unsigned long)configValues.pidLoopTime)  {
