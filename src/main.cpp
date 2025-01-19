@@ -916,7 +916,7 @@ void DutyCycleLoop() {
     }
 
     // Check if the duty cycle loop is active and SSR is armed
-    if (dutyCycle[i].loopTime > 0 && ssrArmed && pidMode) {
+    if (dutyCycleValue > 0 && ssrArmed && pidMode) {
       unsigned long currentTime = millis();
       unsigned long onDuration = dutyCycle[i].loopTime * 1000 * dutyCycleValue;
       unsigned long offDuration = dutyCycle[i].loopTime * 1000 * (1.0 - dutyCycleValue);
