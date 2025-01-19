@@ -789,6 +789,25 @@ void TempAlarm()
     AllStop();
   }
 }
+/**
+ * @brief Measures the root mean square (RMS) current using an energy monitor.
+ *
+ * This function reads the current from an analog input pin, calculates the RMS value,
+ * and checks if it exceeds a predefined threshold. If the threshold is exceeded, it triggers
+ * a red alert, stops all operations, and sends a failure message. Otherwise, it sets the 
+ * power pins according to the duty cycle values and sends a status message indicating no failure.
+ *
+ * The function performs the following steps:
+ * 1. Sets the power pins to HIGH. (OFF)
+ * 2. Initializes a sum variable to accumulate the squared current values.
+ * 3. Samples the current 1000 times, calculates the squared current, and accumulates the sum.
+ * 4. Calculates the RMS current and adjusts it by subtracting the current offset.
+ * 5. Checks if the RMS current exceeds the SSR fail threshold.
+ *    - If true, triggers a red alert, stops all operations, and sends a failure message.
+ *    - If false, sets the power pins according to the duty cycle values and sends a status message.
+ * 6. Repeats the current sampling and RMS calculation.
+ *
+ */
 void emon()
 {
   // SSRFail-Emon
@@ -806,7 +825,7 @@ void emon()
     delay(10);
   }
   emonVars.rms = sqrt(sum / N) - calValues.currOffset;
-    if ((1 == 2) & (int(emonVars.rms) > int(calValues.ssrFailThreshold)))  {
+    if ((int(emonVars.rms) > int(calValues.ssrFailThreshold)))  {
     red_alert();
     AllStop();
     sendInfo("emon SSR Fail");
@@ -856,6 +875,15 @@ float readPressure(int pin, int offset, float cal) {
   float offsetCorrected1 = avgADC1 - (float)offset;
   return offsetCorrected1 * (1.0 / cal);
 }
+/**
+ * @brief Calculates the temperature from the thermistor using the Steinhart-Hart equation.
+ *
+ * This function reads the analog value from the thermistor pin multiple times to increase resolution,
+ * calculates the resistance of the thermistor, and then applies the Steinhart-Hart equation to convert
+ * the resistance to temperature in Fahrenheit.
+ *
+ * @return float The temperature in Fahrenheit.
+ */
 float Steinhart() {
   double adcValue = 0;
   for(int i = 0; i < 10 ; i++ ) {
@@ -874,6 +902,17 @@ float Steinhart() {
   steinhartValues.steinhart = steinhart;
   return steinhart;
 }
+/**
+ * @brief Reads the analog value from a thermistor and calculates the temperature in Fahrenheit.
+ *
+ * This function reads the analog value from a specified pin connected to a thermistor,
+ * calculates the resistance of the thermistor, and then uses the Steinhart-Hart equation
+ * to convert the resistance to a temperature in Kelvin. Finally, it converts the temperature
+ * from Kelvin to Fahrenheit.
+ *
+ * @param pinVar The analog pin number where the thermistor is connected.
+ * @return The temperature in Fahrenheit.
+ */
 float getThermistor(const int pinVar) {
   int ADCvalue = 0;
   const float seriesResistor = 981.0;
