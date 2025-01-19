@@ -452,29 +452,7 @@ void queryRelayStates();
 void sendRelayStates();
 void sendAllStates();
 void setScaleCalibration(float knownWeight);
-
-/**
- * @brief Calculates the resistance using a voltage divider.
- *
- * This function takes an analog pin and a known divider resistor value as input,
- * reads the analog value from the pin, and calculates the resistance of the unknown resistor
- * using the voltage divider formula.
- *
- * @param pin The analog pin number where the voltage divider is connected.
- * @param dividerResistor The known resistance value of the divider resistor in ohms.
- * @return The calculated resistance of the unknown resistor in ohms.
- */
-float voltageDivider(int pin, float dividerResistor) {
-  int ADCvalue = 0;
-  for (int n = 0; n < 10; n++) {
-    delay(10);
-    ADCvalue += analogRead(pin);
-  }
-  ADCvalue /= 10;
-  float voltage = ((float)ADCvalue / 1023.0) * ((float)AREF_V / 1000.0);
-  float unknownResistance = (dividerResistor * (AREF_V / 1000.0 - voltage)) / voltage;
-  return unknownResistance;
-}
+float voltageDivider(int pin, float dividerResistor);
 
 enum EEPROMAddresses {
   ZERO_OFFSET_SCALE = 0,       // float, 4 bytes
@@ -1837,5 +1815,35 @@ void setScaleCalibration(float knownWeight) {
     sendInfo("Scale calibrated");
   } else {
     sendInfo("Scale not ready");
+  }
+}
+/**
+ * @brief Calculates the resistance using a voltage divider.
+ *
+ * This function takes an analog pin and a known divider resistor value as input,
+ * reads the analog value from the pin, and calculates the resistance of the unknown resistor
+ * using the voltage divider formula.
+ *
+ * @param pin The analog pin number where the voltage divider is connected.
+ * @param dividerResistor The known resistance value of the divider resistor in ohms.
+ * @return The calculated resistance of the unknown resistor in ohms.
+ */
+float voltageDivider(int pin, float dividerResistor) {
+  float ADCvalue = 0;
+  for (int n = 0; n < 10; n++) {
+    delay(10);
+    ADCvalue += analogRead(pin);
+  }
+  ADCvalue /= 10;
+  float Vin = (AREF_V/1000.0);
+  if(ADCvalue){
+    float buffer = ADCvalue * Vin;
+    float Vout = buffer/1024.0;
+    buffer = (Vin/Vout) - 1;
+    float R2 = dividerResistor * buffer;
+    Serial.print("Vout: ");
+    Serial.println(Vout);
+    Serial.print("R2: ");
+    Serial.println(R2);
   }
 }
