@@ -606,9 +606,9 @@ void setup() {
   pinMode(SSRArmed_PIN, OUTPUT);
   digitalWrite(SSRArmed_PIN, SSRARMED_OFF);
   pinMode(ElementPowerPin, OUTPUT);
-  digitalWrite(ElementPowerPin3, ELEMENT_OFF);
+  digitalWrite(ElementPowerPin, ELEMENT_OFF);
   pinMode(ElementPowerPin2, OUTPUT);
-  digitalWrite(ElementPowerPin3, ELEMENT_OFF);
+  digitalWrite(ElementPowerPin2, ELEMENT_OFF);
   pinMode(ElementPowerPin3, OUTPUT);
   digitalWrite(ElementPowerPin3, ELEMENT_OFF);
   pinMode(speakerPin, OUTPUT);
@@ -620,7 +620,7 @@ void setup() {
 
   //OLED
   if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-    sendInfo("1");
+    sendInfo("E_OLED");
     while (true); // Halt execution if display initialization fails
   }
 
@@ -665,17 +665,21 @@ void loop() {
 
   if ( (millis() - SensorLoop_timer) > (unsigned long)configValues.SENSORLOOPTIME)  {
     AREF_V = getBandgap();
+    Serial.println("getBandgap");
 
     getVccCurrent();
+    Serial.println("getVccCurrent");
     msgVccCurrent.set(VccCurrentVar, 2); send(msgVccCurrent);
     msgVccVoltage.set(AREF_V, 2); send(msgVccVoltage);
     _process();
 
     emon();
+    Serial.println("emon");
     msgMainsCurrent.set(emonVars.rms, 2); send(msgMainsCurrent);
     _process();
 
     DS18B20();
+    Serial.println("DS18B20");
     for (int i = 0; i < 5; i++) {
       temperatureValues[i] = ds18b20Values[i].F;
       send(MyMessage(CHILD_ID::T0 + i, V_TEMP).set(temperatureValues[i], 2));
@@ -683,11 +687,13 @@ void loop() {
     _process();
     
     float steinhartVar = Steinhart();
+    Serial.println("Steinhart");
     temperatureValues[5] = steinhartVar;
     msgTemp5.set(temperatureValues[5], 2); send(msgTemp5);
     _process();
 
     getScale();
+    Serial.println("getScale");
     msgScale.set(valueScale, 2); send(msgScale);
     msgScaleRate.set(gramsPerSecondScale, 2); send(msgScaleRate);
     _process();
@@ -695,6 +701,7 @@ void loop() {
     char buffer[16];
     dtostrf(valueScale, 6, 2, buffer);
     displayLine(buffer);
+    Serial.println("displayLine");
     _process();
 
     pressure1Var = readPressure(Pressure1PIN, calValues.pressure1Offset, calValues.pressure1Cal);
@@ -705,10 +712,12 @@ void loop() {
     msgPressure3.set(pressure3Var, 2); send(msgPressure3);
     pressure4Var = readPressure(Pressure4PIN, calValues.pressure4Offset, calValues.pressure4Cal);
     msgPressure4.set(pressure4Var, 2); send(msgPressure4);
+    Serial.println("readPressure");
     _process();
     
     temperatureValues[6] = getThermistor(Thermistor1PIN);
     temperatureValues[7] = getThermistor(Thermistor2PIN);
+    Serial.println("getThermistor");
     msgTHMS1.set(temperatureValues[6], 2); send(msgTHMS1);
     msgTHMS2.set(temperatureValues[7], 2); send(msgTHMS2);
     _process();
@@ -717,9 +726,12 @@ void loop() {
     _process();
             
     TempAlarm();
+    Serial.println("TempAlarm");
     _process();
     queryRelayStates();
+    Serial.println("queryRelayStates");
     sendRelayStates();
+    Serial.println("sendRelayStates");
     SensorLoop_timer = millis();
   }
   
@@ -1119,10 +1131,10 @@ void getEEPROM() {
   EEPROM.get(EEPROMAddresses::EMON_CAL, calValues.emonCal);
   EEPROM.get(EEPROMAddresses::SSR_FAIL_THRESHOLD, calValues.ssrFailThreshold);
   EEPROM.get(EEPROMAddresses::CURR_OFFSET, calValues.currOffset);
-  EEPROM.get(EEPROMAddresses::SSR_ARMED, ssrArmed);
-  EEPROM.get(EEPROMAddresses::PID1_MODE, pid1.mode);
-  EEPROM.get(EEPROMAddresses::PID2_MODE, pid2.mode);
-  EEPROM.get(EEPROMAddresses::PID3_MODE, pid3.mode);
+  //EEPROM.get(EEPROMAddresses::SSR_ARMED, ssrArmed);
+  //EEPROM.get(EEPROMAddresses::PID1_MODE, pid1.mode);
+  //EEPROM.get(EEPROMAddresses::PID2_MODE, pid2.mode);
+  //EEPROM.get(EEPROMAddresses::PID3_MODE, pid3.mode);
   EEPROM.get(EEPROMAddresses::PID2_ADAPTIVE_MODE, pid2.adaptiveMode);
   EEPROM.get(EEPROMAddresses::PID1_ADAPTIVE_MODE, pid1.adaptiveMode);
   EEPROM.get(EEPROMAddresses::S_DEBUG, configValues.sDebug);
@@ -1646,9 +1658,8 @@ void receive(const MyMessage & message)  {
       break;
     case CHILD_ID::LOAD_MEMORY:
       if (message.getBool()) {
-        StoreEEPROM();
-      } else {
-        getEEPROM();
+        FactoryResetEEPROM();
+        sendInfo("FR");
       }
       break;
     case CHILD_ID::s_debug:
