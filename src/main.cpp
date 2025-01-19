@@ -969,7 +969,7 @@ float getThermistor(const int pinVar) {
  * and turns the elements on or off based on the calculated on and off durations.
  */
 void DutyCycleLoop() {\
-if ((millis() - dutyCycle_timer) > (dutyCycle[0].loopTime * 1000)) {
+if ((millis() - dutyCycle_timer) > (unsigned long)(dutyCycle[0].loopTime * 1000)) {
     digitalWrite(ElementPowerPin, !ELEMENT_ON);
     digitalWrite(ElementPowerPin2, !ELEMENT_ON);
     digitalWrite(ElementPowerPin3, !ELEMENT_ON);
