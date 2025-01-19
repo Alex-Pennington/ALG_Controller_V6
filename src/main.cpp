@@ -591,7 +591,6 @@ void presentation() {
 #define SSRARMED_OFF LOW
 #define SSRARMED_ON LOW
 #define ELEMENT_ON LOW
-#define ELEMENT_OFF HIGH
 
 void setup() {
   Serial.begin(115200);
@@ -606,11 +605,11 @@ void setup() {
   pinMode(SSRArmed_PIN, OUTPUT);
   digitalWrite(SSRArmed_PIN, SSRARMED_OFF);
   pinMode(ElementPowerPin, OUTPUT);
-  digitalWrite(ElementPowerPin, ELEMENT_OFF);
+  digitalWrite(ElementPowerPin, !ELEMENT_ON);
   pinMode(ElementPowerPin2, OUTPUT);
-  digitalWrite(ElementPowerPin2, ELEMENT_OFF);
+  digitalWrite(ElementPowerPin2, !ELEMENT_ON);
   pinMode(ElementPowerPin3, OUTPUT);
-  digitalWrite(ElementPowerPin3, ELEMENT_OFF);
+  digitalWrite(ElementPowerPin3, !ELEMENT_ON);
   pinMode(speakerPin, OUTPUT);
   pinMode(SteinhartPin, INPUT);
   pinMode(Pressure1PIN, INPUT);
@@ -665,22 +664,22 @@ void loop() {
 
   if ( (millis() - SensorLoop_timer) > (unsigned long)configValues.SENSORLOOPTIME)  {
     AREF_V = getBandgap();
-    Serial.println("getBandgap");
+    // Serial.println("getBandgap");
 
     getVccCurrent();
-    Serial.println("getVccCurrent");
+    // Serial.println("getVccCurrent");
     msgVccCurrent.set(VccCurrentVar, 2); send(msgVccCurrent);
     msgVccVoltage.set(AREF_V, 2); send(msgVccVoltage);
     _process();
 
     Serial.println("emon start");
     emon();
-    Serial.println("emon end");
+    // Serial.println("emon");
     msgMainsCurrent.set(emonVars.rms, 2); send(msgMainsCurrent);
     _process();
 
     DS18B20();
-    Serial.println("DS18B20");
+    // Serial.println("DS18B20");
     for (int i = 0; i < 5; i++) {
       temperatureValues[i] = ds18b20Values[i].F;
       send(MyMessage(CHILD_ID::T0 + i, V_TEMP).set(temperatureValues[i], 2));
@@ -688,13 +687,13 @@ void loop() {
     _process();
     
     float steinhartVar = Steinhart();
-    Serial.println("Steinhart");
+    // Serial.println("Steinhart");
     temperatureValues[5] = steinhartVar;
     msgTemp5.set(temperatureValues[5], 2); send(msgTemp5);
     _process();
 
     getScale();
-    Serial.println("getScale");
+    // Serial.println("getScale");
     msgScale.set(valueScale, 2); send(msgScale);
     msgScaleRate.set(gramsPerSecondScale, 2); send(msgScaleRate);
     _process();
@@ -702,7 +701,7 @@ void loop() {
     char buffer[16];
     dtostrf(valueScale, 6, 2, buffer);
     displayLine(buffer);
-    Serial.println("displayLine");
+    // Serial.println("displayLine");
     _process();
 
     pressure1Var = readPressure(Pressure1PIN, calValues.pressure1Offset, calValues.pressure1Cal);
@@ -713,12 +712,12 @@ void loop() {
     msgPressure3.set(pressure3Var, 2); send(msgPressure3);
     pressure4Var = readPressure(Pressure4PIN, calValues.pressure4Offset, calValues.pressure4Cal);
     msgPressure4.set(pressure4Var, 2); send(msgPressure4);
-    Serial.println("readPressure");
+    // Serial.println("readPressure");
     _process();
     
     temperatureValues[6] = getThermistor(Thermistor1PIN);
     temperatureValues[7] = getThermistor(Thermistor2PIN);
-    Serial.println("getThermistor");
+    // Serial.println("getThermistor");
     msgTHMS1.set(temperatureValues[6], 2); send(msgTHMS1);
     msgTHMS2.set(temperatureValues[7], 2); send(msgTHMS2);
     _process();
@@ -727,12 +726,12 @@ void loop() {
     _process();
             
     TempAlarm();
-    Serial.println("TempAlarm");
+    // Serial.println("TempAlarm");
     _process();
     queryRelayStates();
-    Serial.println("queryRelayStates");
+    // Serial.println("queryRelayStates");
     sendRelayStates();
-    Serial.println("sendRelayStates");
+    // Serial.println("sendRelayStates");
     SensorLoop_timer = millis();
   }
   
@@ -844,9 +843,9 @@ void TempAlarm()
  */
 void emon()
 {
-  digitalWrite(ElementPowerPin, ELEMENT_OFF);
-  digitalWrite(ElementPowerPin2, ELEMENT_OFF);
-  digitalWrite(ElementPowerPin3, ELEMENT_OFF);
+  digitalWrite(ElementPowerPin, !ELEMENT_ON);
+  digitalWrite(ElementPowerPin2, !ELEMENT_ON);
+  digitalWrite(ElementPowerPin3, !ELEMENT_ON);
   float sum = 0;
 
   emonVars.sampleTime = millis();
@@ -864,9 +863,9 @@ void emon()
     sendInfo("emon SSR Fail");
     send(MyMessage(CHILD_ID::SSRFail_Alarm, V_STATUS).set(1), configValues.toACK);
   }  else  {
-    digitalWrite(ElementPowerPin, dutyCycle[0].element);
-    digitalWrite(ElementPowerPin2, dutyCycle[1].element);
-    digitalWrite(ElementPowerPin3, dutyCycle[2].element);
+    digitalWrite(ElementPowerPin, (!ELEMENT_ON && !dutyCycle[0].element));
+    digitalWrite(ElementPowerPin2, (!ELEMENT_ON && !dutyCycle[1].element));
+    digitalWrite(ElementPowerPin3, (!ELEMENT_ON && !dutyCycle[2].element));
     send(MyMessage(CHILD_ID::SSRFail_Alarm, V_STATUS).set(0), configValues.toACK);
   }
   for (int i = 0; i < N; i++)  {
@@ -1019,18 +1018,17 @@ void DutyCycleLoop() {
         dutyCycle[i].offTime = currentTime;
         dutyCycle[i].onTime = 0;
         digitalWrite(elementPin, ELEMENT_ON);
-          Serial.println("ELEMENT_ON");
         dutyCycle[i].element = true;
       }
       // If the element is on, check if it's time to turn it off
       else if (dutyCycle[i].element && (currentTime - dutyCycle[i].offTime) > offDuration) {
         dutyCycle[i].onTime = currentTime;
         dutyCycle[i].offTime = 0;
-        digitalWrite(elementPin, ELEMENT_OFF);
+        digitalWrite(elementPin, !ELEMENT_ON);
         dutyCycle[i].element = false;
       }
     } else { // If the duty cycle loop is not active or SSR is not armed, turn off the element
-      digitalWrite(elementPin, ELEMENT_OFF);
+      digitalWrite(elementPin, !ELEMENT_ON);
       dutyCycle[i].onTime = 0;
       dutyCycle[i].element = false;
     }
