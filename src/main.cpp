@@ -894,6 +894,29 @@ float getThermistor(const int pinVar) {
   float tempF = (Kelvin - 273.15) * CELSIUS_TO_FAHRENHEIT_FACTOR + CELSIUS_TO_FAHRENHEIT_OFFSET;
   return tempF;
 }
+/**
+ * @brief Manages the duty cycle for three PID-controlled elements.
+ *
+ * This function controls the duty cycle of three elements based on their respective PID outputs.
+ * It ensures that each element is turned on and off according to its calculated duty cycle,
+ * while also considering the SSR (Solid State Relay) armed state and PID mode.
+ *
+ * Variables:
+ * - pid1, pid2, pid3: Structures containing PID configurations and states for three different elements.
+ * - dC, dC2, dC3: Duty cycle values for the three elements, calculated as a percentage (0.0 to 1.0).
+ * - ssrArmed: Boolean indicating whether the SSR is armed (true) or not (false).
+ * - dutyCycle: Array of structures containing duty cycle loop configurations and states for the three elements.
+ * - ElementPowerPin, ElementPowerPin2, ElementPowerPin3: Pin numbers for controlling the power to the three elements.
+ *
+ * DutyCycle structure:
+ * - element: Boolean indicating whether the element is currently on (true) or off (false).
+ * - loopTime: Total loop time for the duty cycle in seconds.
+ * - onTime: Timestamp of when the element was last turned on.
+ * - offTime: Timestamp of when the element was last turned off.
+ *
+ * The function iterates over the three elements, checks their respective PID modes and duty cycle values,
+ * and turns the elements on or off based on the calculated on and off durations.
+ */
 void DutyCycleLoop() {
   for (int i = 0; i < 3; i++) {
     // Determine the current PID mode and duty cycle
