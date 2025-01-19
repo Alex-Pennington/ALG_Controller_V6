@@ -591,7 +591,6 @@ void presentation() {
 #define SSRARMED_OFF LOW
 #define SSRARMED_ON LOW
 #define ELEMENT_ON LOW
-#define ELEMENT_OFF HIGH
 
 void setup() {
   Serial.begin(115200);
@@ -606,11 +605,11 @@ void setup() {
   pinMode(SSRArmed_PIN, OUTPUT);
   digitalWrite(SSRArmed_PIN, SSRARMED_OFF);
   pinMode(ElementPowerPin, OUTPUT);
-  digitalWrite(ElementPowerPin, ELEMENT_OFF);
+  digitalWrite(ElementPowerPin, !ELEMENT_ON);
   pinMode(ElementPowerPin2, OUTPUT);
-  digitalWrite(ElementPowerPin2, ELEMENT_OFF);
+  digitalWrite(ElementPowerPin2, !ELEMENT_ON);
   pinMode(ElementPowerPin3, OUTPUT);
-  digitalWrite(ElementPowerPin3, ELEMENT_OFF);
+  digitalWrite(ElementPowerPin3, !ELEMENT_ON);
   pinMode(speakerPin, OUTPUT);
   pinMode(SteinhartPin, INPUT);
   pinMode(Pressure1PIN, INPUT);
@@ -843,9 +842,9 @@ void TempAlarm()
  */
 void emon()
 {
-  digitalWrite(ElementPowerPin, ELEMENT_OFF);
-  digitalWrite(ElementPowerPin2, ELEMENT_OFF);
-  digitalWrite(ElementPowerPin3, ELEMENT_OFF);
+  digitalWrite(ElementPowerPin, !ELEMENT_ON);
+  digitalWrite(ElementPowerPin2, !ELEMENT_ON);
+  digitalWrite(ElementPowerPin3, !ELEMENT_ON);
   float sum = 0;
 
   emonVars.sampleTime = millis();
@@ -863,9 +862,9 @@ void emon()
     sendInfo("emon SSR Fail");
     send(MyMessage(CHILD_ID::SSRFail_Alarm, V_STATUS).set(1), configValues.toACK);
   }  else  {
-    digitalWrite(ElementPowerPin, dutyCycle[0].element);
-    digitalWrite(ElementPowerPin2, dutyCycle[1].element);
-    digitalWrite(ElementPowerPin3, dutyCycle[2].element);
+    digitalWrite(ElementPowerPin, (!ELEMENT_ON && !dutyCycle[0].element));
+    digitalWrite(ElementPowerPin2, (!ELEMENT_ON && !dutyCycle[1].element));
+    digitalWrite(ElementPowerPin3, (!ELEMENT_ON && !dutyCycle[2].element));
     send(MyMessage(CHILD_ID::SSRFail_Alarm, V_STATUS).set(0), configValues.toACK);
   }
   for (int i = 0; i < N; i++)  {
@@ -1018,18 +1017,17 @@ void DutyCycleLoop() {
         dutyCycle[i].offTime = currentTime;
         dutyCycle[i].onTime = 0;
         digitalWrite(elementPin, ELEMENT_ON);
-          Serial.println("ELEMENT_ON");
         dutyCycle[i].element = true;
       }
       // If the element is on, check if it's time to turn it off
       else if (dutyCycle[i].element && (currentTime - dutyCycle[i].offTime) > offDuration) {
         dutyCycle[i].onTime = currentTime;
         dutyCycle[i].offTime = 0;
-        digitalWrite(elementPin, ELEMENT_OFF);
+        digitalWrite(elementPin, !ELEMENT_ON);
         dutyCycle[i].element = false;
       }
     } else { // If the duty cycle loop is not active or SSR is not armed, turn off the element
-      digitalWrite(elementPin, ELEMENT_OFF);
+      digitalWrite(elementPin, !ELEMENT_ON);
       dutyCycle[i].onTime = 0;
       dutyCycle[i].element = false;
     }
