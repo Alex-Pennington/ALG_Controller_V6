@@ -882,8 +882,8 @@ float getThermistor(const int pinVar) {
       ADCvalue += analogRead(pinVar);
   }
   ADCvalue /= 10;
-  float Va3 = (1.0 - ((float)ADCvalue / 1023.0)) * ((float)AREF_V / 1000.0);
-  float thermistorResistance = (seriesResistor * Va3) / (((float)AREF_V / 1000.0) - Va3);
+  float Voltage = ((float)ADCvalue / 1023.0) * ((float)AREF_V / 1000.0);
+  float thermistorResistance = (seriesResistor * (AREF_V / 1000.0 - Voltage)) / Voltage;
   //https://www.thinksrs.com/downloads/programs/therm%20calc/ntccalibrator/ntccalculator.html
   const float A = 1.499168475e-3;
   const float B = 2.766247366e-4;
@@ -1148,6 +1148,7 @@ void FactoryResetEEPROM() {
   StoreEEPROM();
 }
 void printConfig() {
+
 //   Serial.print("zeroOffsetScale: ");
 //   Serial.println(calValues.zeroOffsetScale);
 //   Serial.print("pressure1Offset: ");
@@ -1258,8 +1259,8 @@ void printConfig() {
 //   Serial.println(configValues.SENSORLOOPTIME);
 //   Serial.print("toACK: ");
 //   Serial.println(configValues.toACK);
-}
 
+}
 /**
  * @brief Reads the internal 1.1V reference against AVcc to calculate the supply voltage (Vcc).
  *
