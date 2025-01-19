@@ -925,20 +925,20 @@ void DutyCycleLoop() {
       if (!dutyCycle[i].element && (currentTime - dutyCycle[i].onTime) > onDuration) {
         dutyCycle[i].offTime = currentTime;
         dutyCycle[i].onTime = 0;
-        digitalWrite(elementPin, HIGH);
-        dutyCycle[i].element = HIGH;
+        digitalWrite(elementPin, LOW);
+        dutyCycle[i].element = true;
       }
       // If the element is on, check if it's time to turn it off
       else if (dutyCycle[i].element && (currentTime - dutyCycle[i].offTime) > offDuration) {
         dutyCycle[i].onTime = currentTime;
         dutyCycle[i].offTime = 0;
-        digitalWrite(elementPin, LOW);
-        dutyCycle[i].element = LOW;
+        digitalWrite(elementPin, HIGH);
+        dutyCycle[i].element = false;
       }
     } else { // If the duty cycle loop is not active or SSR is not armed, turn off the element
       digitalWrite(elementPin, HIGH);
       dutyCycle[i].onTime = 0;
-      dutyCycle[i].element = HIGH;
+      dutyCycle[i].element = false;
     }
   }
 }
