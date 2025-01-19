@@ -361,8 +361,8 @@ float temperatureValues[8] = {0.0}; // 5 DS18B20 sensors, 3 thermistors
 #define Pressure4PIN A12 
 #define emon_Input_PIN A8
 #define VccCurrentSensor A0 
-#define Thermistor1PIN A1 
-#define Thermistor2PIN A2 
+#define Thermistor1PIN A2 
+#define Thermistor2PIN A1 
 #define SteinhartPin A3 
 #define Serial3_RX 15 
 #define Serial3_TX 14 
