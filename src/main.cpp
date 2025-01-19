@@ -123,7 +123,8 @@ enum CHILD_ID {
   relay7 = 88,
   relay8 = 89,
   RefrigerantSwitch = 90,
-  FlowSwitch = 91
+  FlowSwitch = 91,
+  ScaleCalibrateKnownValue = 92
 
 };
 
@@ -190,6 +191,7 @@ MyMessage msgSwitch4(CHILD_ID::switch4, V_VAR1);
 MyMessage msgSwitch5(CHILD_ID::switch5, V_VAR1);
 MyMessage msgRefrigerantSwitch(CHILD_ID::RefrigerantSwitch, V_STATUS);
 MyMessage msgFlowSwitch(CHILD_ID::FlowSwitch, V_STATUS);
+MyMessage msgScaleCalibrateKnownValue(CHILD_ID::ScaleCalibrateKnownValue, V_LEVEL);
 
 #define NUM_RELAYS 8
 
@@ -449,6 +451,7 @@ void getVccCurrent();
 void queryRelayStates();
 void sendRelayStates();
 void sendAllStates();
+void setScaleCalibration(float knownWeight);
 
 enum EEPROMAddresses {
   ZERO_OFFSET_SCALE = 0,       // float, 4 bytes
@@ -580,6 +583,8 @@ void presentation() {
   for (int i = 0; i < NUM_RELAYS; i++) {
     present(CHILD_ID::relay1 + i, S_BINARY, "Rly");
   }
+
+  present(CHILD_ID::ScaleCalibrateKnownValue, S_LIGHT_LEVEL, "SCalKV");
 
 }
 
@@ -810,7 +815,6 @@ void TempAlarm()
  */
 void emon()
 {
-  // SSRFail-Emon
   digitalWrite(ElementPowerPin, HIGH);
   digitalWrite(ElementPowerPin2, HIGH);
   digitalWrite(ElementPowerPin3, HIGH);
@@ -1665,6 +1669,9 @@ void receive(const MyMessage & message)  {
       calValues.pressure4Offset = message.getFloat();
       EEPROM.put(EEPROMAddresses::PRESSURE4_OFFSET, calValues.pressure4Offset);
       break;
+    case CHILD_ID::ScaleCalibrateKnownValue:
+      setScaleCalibration(message.getFloat());
+      break;
   }
 
   // Handle Relay States
@@ -1784,4 +1791,32 @@ void sendAllStates() {
   wait(SENDDELAY);
   send(MyMessage(CHILD_ID::PIDMODE_3, V_STATUS).set(pid3.mode));
   wait(SENDDELAY);
+  send(MyMessage(CHILD_ID::ScaleCalibrateKnownValue, V_LEVEL).set(0));
+  wait(SENDDELAY);
+  send(MyMessage(CHILD_ID::LOAD_MEMORY, V_STATUS).set(false));
+  wait(SENDDELAY);
+
+
+}
+
+/**
+ * @brief Sets the scale calibration value based on a known weight.
+ *
+ * This function takes a known weight as input, measures the raw value from the load cell,
+ * and calculates the calibration factor. It then updates the calibration value in the
+ * calibration structure and stores it in EEPROM.
+ *
+ * @param knownWeight The known weight in the same units as the scale is set to measure.
+ */
+void setScaleCalibration(float knownWeight) {
+  if (LoadCell.is_ready()) {
+    float rawValue = LoadCell.get_value(10);
+    calValues.scaleCal = rawValue / knownWeight;
+    LoadCell.set_scale(calValues.scaleCal);
+    EEPROM.put(EEPROMAddresses::SCALE_CAL, calValues.scaleCal);
+    send(MyMessage(CHILD_ID::ScaleCal, V_LEVEL).set(calValues.scaleCal, 2));
+    sendInfo("Scale calibrated");
+  } else {
+    sendInfo("Scale not ready");
+  }
 }
