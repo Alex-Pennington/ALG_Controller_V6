@@ -1259,6 +1259,36 @@ void printConfig() {
 //   Serial.print("toACK: ");
 //   Serial.println(configValues.toACK);
 }
+
+/**
+ * @brief Reads the internal 1.1V reference against AVcc to calculate the supply voltage (Vcc).
+ *
+ * This function sets the ADC (Analog-to-Digital Converter) to measure the internal 1.1V reference
+ * against the supply voltage (Vcc). It then performs an ADC conversion and calculates the Vcc
+ * based on the result.
+ *
+ * The function is useful for determining the actual supply voltage of the microcontroller,
+ * which can be used for various purposes such as battery monitoring.
+ *
+ * @return The calculated Vcc in millivolts.
+ *
+ * Steps:
+ * 1. Configure the ADC to measure the internal 1.1V reference.
+ * 2. Wait for the reference voltage to settle.
+ * 3. Start an ADC conversion.
+ * 4. Wait for the conversion to complete.
+ * 5. Read the ADC result.
+ * 6. Calculate the Vcc based on the ADC result.
+ *
+ * Variables:
+ * - ADMUX: ADC Multiplexer Selection Register, used to select the reference voltage and input channel.
+ * - ADCSRA: ADC Control and Status Register A, used to control the ADC and check the conversion status.
+ * - ADCL, ADCH: ADC Data Registers, used to read the result of the ADC conversion.
+ *
+ * The calculation formula is:
+ * Vcc = 1125300L / ADC_result
+ * where 1125300 = 1.1 * 1023 * 1000 (1.1V reference, 10-bit ADC resolution, scaling factor).
+ */
 long getBandgap(void) {
   // Read 1.1V reference against AVcc
   // set the reference to Vcc and the measurement to the internal 1.1V reference
