@@ -14,10 +14,10 @@
 // Enable and select radio type attached
 #define MY_NODE_ID 201
 #define MY_RADIO_RF24
-#define MY_RF24_PA_LEVEL RF24_PA_LOW
+#define MY_RF24_PA_LEVEL RF24_PA_HIGH
 #define MY_RF24_CE_PIN 49
 #define MY_RF24_CS_PIN 53
-// #define MY_DEBUG
+#define MY_DEBUG
 #include <MySensors.h>
 
 // MySensors Child IDs
@@ -506,86 +506,76 @@ void presentation() {
   //Send the sensor node sketch version information to the gateway
   sendSketchInfo("Controller", VERSION);
 
-  present(CHILD_ID::T0, S_TEMP, "D1");
-  present(CHILD_ID::T1, S_TEMP, "D2");
-  present(CHILD_ID::T2, S_TEMP, "D3");
-  present(CHILD_ID::T3, S_TEMP, "D4");
-  present(CHILD_ID::T4, S_TEMP, "D5");
-  present(CHILD_ID::T5, S_TEMP, "S1");
-
-  present(CHILD_ID::THMS1, S_TEMP, "T1");
-  present(CHILD_ID::THMS2, S_TEMP, "T2");
-  
-  present(CHILD_ID::Scale, S_WEIGHT, "Scl");
-  present(CHILD_ID::ScaleTare, S_BINARY, "Scl T");
-  present(CHILD_ID::ScaleOffset, S_LIGHT_LEVEL, "Scl O");
-  present(CHILD_ID::ScaleCal, S_LIGHT_LEVEL, "Scl C");
-
-  present(CHILD_ID::P1, S_BARO, "P1");
-  present(CHILD_ID::P1Cal, S_LIGHT_LEVEL, "P1C");
-  present(CHILD_ID::P2, S_BARO, "P2");
-  present(CHILD_ID::P2Cal, S_LIGHT_LEVEL, "P2C");
-  present(CHILD_ID::P3, S_BARO, "P3");
-  present(CHILD_ID::P3Cal, S_LIGHT_LEVEL, "P3C");
-  present(CHILD_ID::P4, S_BARO, "P4");
-  present(CHILD_ID::P4Cal, S_LIGHT_LEVEL, "P4C");
-
-  present(CHILD_ID::MainsCurrent, S_MULTIMETER, "Mc");
-  present(CHILD_ID::MainsCurrentMultiplier, S_LIGHT_LEVEL, "McM");
-  present(CHILD_ID::MainsCurrentOffset, S_LIGHT_LEVEL, "McO");
-  
-  present(CHILD_ID::SSRFail_Threshhold, S_LIGHT_LEVEL, "SFT");
-    
-  present(CHILD_ID::VccCurrent, S_MULTIMETER, "VccC");
-  present(CHILD_ID::VccVoltage, S_LIGHT_LEVEL, "VccV");
-
-  present(CHILD_ID::dC_1, S_DIMMER, "dC1");
-  present(CHILD_ID::PIDMODE_1, S_BINARY, "PM1");
-  present(CHILD_ID::PIDSETPOINT_1, S_TEMP, "PS1");
-  present(CHILD_ID::PIDkP0_1, S_LIGHT_LEVEL, "kP1");
-  present(CHILD_ID::PIDkI0_1, S_LIGHT_LEVEL, "kI1");
-  present(CHILD_ID::PIDkD0_1, S_LIGHT_LEVEL, "kD1");
-
-  present(CHILD_ID::dC_2, S_DIMMER, "dC2");
-  present(CHILD_ID::PIDMODE_2, S_BINARY, "PM2");
-  present(CHILD_ID::PIDSETPOINT_2, S_TEMP, "PS2");
-  present(CHILD_ID::PIDkP0_2, S_LIGHT_LEVEL, "kP2");
-  present(CHILD_ID::PIDkI0_2, S_LIGHT_LEVEL, "kI2");
-  present(CHILD_ID::PIDkD0_2, S_LIGHT_LEVEL, "kD2");
-
-  present(CHILD_ID::dC_3, S_DIMMER, "dC3");
-  present(CHILD_ID::PIDMODE_3, S_BINARY, "PM3");
-  present(CHILD_ID::PIDSETPOINT_3, S_TEMP, "PS3");
-  present(CHILD_ID::PIDkP0_3, S_LIGHT_LEVEL, "kP3");
-  present(CHILD_ID::PIDkI0_3, S_LIGHT_LEVEL, "kI3");
-  present(CHILD_ID::PIDkD0_3, S_LIGHT_LEVEL, "kD3");
-
-  present(CHILD_ID::dTscale, S_LIGHT_LEVEL, "Scl R");
-  present(CHILD_ID::SSR_Armed, S_BINARY, "Armed");
-  present(CHILD_ID::SSRFail_Alarm, S_BINARY, "Fail");
-  present(CHILD_ID::Info, S_INFO, "Info");
-  present(CHILD_ID::LOAD_MEMORY, S_BINARY, "fRst");
-  present(CHILD_ID::runTime, S_CUSTOM, "rT");
+  present(CHILD_ID::T0, S_TEMP, "D1"); wait(SENDDELAY);
+  present(CHILD_ID::T1, S_TEMP, "D2"); wait(SENDDELAY);
+  present(CHILD_ID::T2, S_TEMP, "D3"); wait(SENDDELAY);
+  present(CHILD_ID::T3, S_TEMP, "D4"); wait(SENDDELAY);
+  present(CHILD_ID::T4, S_TEMP, "D5"); wait(SENDDELAY);
+  present(CHILD_ID::T5, S_TEMP, "S1"); wait(SENDDELAY);
+  present(CHILD_ID::THMS1, S_TEMP, "T1"); wait(SENDDELAY);
+  present(CHILD_ID::THMS2, S_TEMP, "T2"); wait(SENDDELAY);  
+  present(CHILD_ID::Scale, S_WEIGHT, "Scl"); wait(SENDDELAY);
+  present(CHILD_ID::ScaleTare, S_BINARY, "Scl T"); wait(SENDDELAY);
+  present(CHILD_ID::ScaleOffset, S_LIGHT_LEVEL, "Scl O"); wait(SENDDELAY);
+  present(CHILD_ID::ScaleCal, S_LIGHT_LEVEL, "Scl C"); wait(SENDDELAY);
+  present(CHILD_ID::P1, S_BARO, "P1"); wait(SENDDELAY);
+  present(CHILD_ID::P1Cal, S_LIGHT_LEVEL, "P1C"); wait(SENDDELAY);
+  present(CHILD_ID::P2, S_BARO, "P2"); wait(SENDDELAY);
+  present(CHILD_ID::P2Cal, S_LIGHT_LEVEL, "P2C"); wait(SENDDELAY);
+  present(CHILD_ID::P3, S_BARO, "P3"); wait(SENDDELAY);
+  present(CHILD_ID::P3Cal, S_LIGHT_LEVEL, "P3C"); wait(SENDDELAY);
+  present(CHILD_ID::P4, S_BARO, "P4"); wait(SENDDELAY);
+  present(CHILD_ID::P4Cal, S_LIGHT_LEVEL, "P4C"); wait(SENDDELAY);
+  present(CHILD_ID::MainsCurrent, S_MULTIMETER, "Mc"); wait(SENDDELAY);
+  present(CHILD_ID::MainsCurrentMultiplier, S_LIGHT_LEVEL, "McM"); wait(SENDDELAY);
+  present(CHILD_ID::MainsCurrentOffset, S_LIGHT_LEVEL, "McO"); wait(SENDDELAY);
+  present(CHILD_ID::SSRFail_Threshhold, S_LIGHT_LEVEL, "SFT"); wait(SENDDELAY);   
+  present(CHILD_ID::VccCurrent, S_MULTIMETER, "VccC"); wait(SENDDELAY);   
+  present(CHILD_ID::VccVoltage, S_LIGHT_LEVEL, "VccV"); wait(SENDDELAY);   
+  present(CHILD_ID::dC_1, S_DIMMER, "dC1"); wait(SENDDELAY);   
+  present(CHILD_ID::PIDMODE_1, S_BINARY, "PM1"); wait(SENDDELAY);   
+  present(CHILD_ID::PIDSETPOINT_1, S_TEMP, "PS1"); wait(SENDDELAY);   
+  present(CHILD_ID::PIDkP0_1, S_LIGHT_LEVEL, "kP1"); wait(SENDDELAY);   
+  present(CHILD_ID::PIDkI0_1, S_LIGHT_LEVEL, "kI1"); wait(SENDDELAY);   
+  present(CHILD_ID::PIDkD0_1, S_LIGHT_LEVEL, "kD1"); wait(SENDDELAY);   
+  present(CHILD_ID::dC_2, S_DIMMER, "dC2"); wait(SENDDELAY);   
+  present(CHILD_ID::PIDMODE_2, S_BINARY, "PM2"); wait(SENDDELAY);   
+  present(CHILD_ID::PIDSETPOINT_2, S_TEMP, "PS2"); wait(SENDDELAY);   
+  present(CHILD_ID::PIDkP0_2, S_LIGHT_LEVEL, "kP2"); wait(SENDDELAY);   
+  present(CHILD_ID::PIDkI0_2, S_LIGHT_LEVEL, "kI2"); wait(SENDDELAY);   
+  present(CHILD_ID::PIDkD0_2, S_LIGHT_LEVEL, "kD2"); wait(SENDDELAY);   
+  present(CHILD_ID::dC_3, S_DIMMER, "dC3"); wait(SENDDELAY);   
+  present(CHILD_ID::PIDMODE_3, S_BINARY, "PM3"); wait(SENDDELAY);   
+  present(CHILD_ID::PIDSETPOINT_3, S_TEMP, "PS3"); wait(SENDDELAY);   
+  present(CHILD_ID::PIDkP0_3, S_LIGHT_LEVEL, "kP3"); wait(SENDDELAY);   
+  present(CHILD_ID::PIDkI0_3, S_LIGHT_LEVEL, "kI3"); wait(SENDDELAY);   
+  present(CHILD_ID::PIDkD0_3, S_LIGHT_LEVEL, "kD3"); wait(SENDDELAY);   
+  present(CHILD_ID::dTscale, S_LIGHT_LEVEL, "Scl R"); wait(SENDDELAY);   
+  present(CHILD_ID::SSR_Armed, S_BINARY, "Armed"); wait(SENDDELAY);   
+  present(CHILD_ID::SSRFail_Alarm, S_BINARY, "Fail"); wait(SENDDELAY);   
+  present(CHILD_ID::Info, S_INFO, "Info"); wait(SENDDELAY);   
+  present(CHILD_ID::LOAD_MEMORY, S_BINARY, "fRst"); wait(SENDDELAY);   
+  present(CHILD_ID::runTime, S_CUSTOM, "rT"); wait(SENDDELAY);   
 
   // Present Switch Sensors
   for (int i = 0; i < 5; i++) {
-    present(CHILD_ID::switch1 + i, S_CUSTOM, "Sw");
+    present(CHILD_ID::switch1 + i, S_CUSTOM, "Sw"); wait(SENDDELAY);   
   }
 
-  present(CHILD_ID::FlowSwitch, S_BINARY, "FSw");
-  present(CHILD_ID::RefrigerantSwitch, S_BINARY, "RefSw");
+  present(CHILD_ID::FlowSwitch, S_BINARY, "FSw"); wait(SENDDELAY);   
+  present(CHILD_ID::RefrigerantSwitch, S_BINARY, "RefSw"); wait(SENDDELAY);   
 
-  present(CHILD_ID::P1Offset, S_LIGHT_LEVEL, "P1o");
-  present(CHILD_ID::P2Offset, S_LIGHT_LEVEL, "P2o");
-  present(CHILD_ID::P3Offset, S_LIGHT_LEVEL, "P3o");
-  present(CHILD_ID::P4Offset, S_LIGHT_LEVEL, "P4o");
+  present(CHILD_ID::P1Offset, S_LIGHT_LEVEL, "P1o"); wait(SENDDELAY);   
+  present(CHILD_ID::P2Offset, S_LIGHT_LEVEL, "P2o"); wait(SENDDELAY);   
+  present(CHILD_ID::P3Offset, S_LIGHT_LEVEL, "P3o"); wait(SENDDELAY);   
+  present(CHILD_ID::P4Offset, S_LIGHT_LEVEL, "P4o"); wait(SENDDELAY);   
 
   // Present Relay Sensors
   for (int i = 0; i < NUM_RELAYS; i++) {
-    present(CHILD_ID::relay1 + i, S_BINARY, "Rly");
+    present(CHILD_ID::relay1 + i, S_BINARY, "Rly"); wait(SENDDELAY);   
   }
 
-  present(CHILD_ID::ScaleCalibrateKnownValue, S_LIGHT_LEVEL, "SCalKV");
+  present(CHILD_ID::ScaleCalibrateKnownValue, S_LIGHT_LEVEL, "SCalKV"); wait(SENDDELAY);   
 
 }
 #define SSRARMED_OFF LOW
@@ -643,9 +633,9 @@ void setup() {
 
   displayLine("Booting...");
   sendInfo("Operational");
-  sendAllStates();
+  //sendAllStates();
   play_one_up();
-  delay(1000);
+  wait(1000);
 }
 
 void loop() {
@@ -782,7 +772,7 @@ void getVccCurrent()
   for (int i = 0; i < 10; i++)
   {
     VccCurrentVar += analogRead(VccCurrentSensor);
-    delay(10); // Small delay for better averaging
+    wait(10); // Small delay for better averaging
   }
   VccCurrentVar /= 10;                                                                        // Average the readings
   VccCurrentVar = (VccCurrentVar - calValues.VccCurrentOffset) * calValues.VccCurrentMultiplier; //
@@ -842,7 +832,7 @@ void emon()
   for (int i = 0; i < N; i++)  {
     float current = calValues.emonCal * (analogRead(emon_Input_PIN) - 512); // in amps I presume
     sum += current * current;                                               // sum squares
-    delay(10);
+    wait(10);
   }
   emonVars.rms = sqrt(sum / N) - calValues.currOffset;
     if ((int(emonVars.rms) > int(calValues.ssrFailThreshold)))  {
@@ -859,7 +849,7 @@ void emon()
   for (int i = 0; i < N; i++)  {
     float current = calValues.emonCal * (analogRead(emon_Input_PIN) - 512); // in amps I presume
     sum += current * current;                                               // sum squares
-    delay(10);
+    wait(10);
   }
   emonVars.rms = sqrt(sum / N) - calValues.currOffset;
   return;
@@ -888,7 +878,7 @@ float readPressure(int pin, int offset, float cal) {
   int RawADCavg = 0;
   int i = 0;
   for (i = 0; i < 10; i++) {
-    delay(10);
+    wait(10);
     RawADCavg += analogRead(Pressure1PIN);
   }
   float avgADC = (float)RawADCavg / 10.0;
@@ -907,7 +897,7 @@ float readPressure(int pin, int offset, float cal) {
 float Steinhart() {
   double adcValue = 0;
   for(int i = 0; i < 10 ; i++ ) {
-    delay(10); //this increased resolution signifigantly
+    wait(10); //this increased resolution signifigantly
     adcValue += analogRead(SteinhartPin);
   }
   steinhartValues.adcValue = (float)adcValue/10.0;
@@ -1360,7 +1350,7 @@ long getBandgap(void) {
   ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
 #endif
 
-  delay(10); // Wait for Vref to settle
+  wait(10); // Wait for Vref to settle
   ADCSRA |= _BV(ADSC); // Start conversion
   while (bit_is_set(ADCSRA, ADSC)); // measuring
 
@@ -1402,7 +1392,7 @@ void DS18B20() {
     ds.reset();
     ds.select(addr);
     ds.write(0x44, 0);
-    delay(10);
+    wait(10);
     ds.reset();
     ds.select(addr);    
     ds.write(0xBE);
@@ -1848,7 +1838,7 @@ float voltageDivider(int pin, float dividerResistor) {
   float ADCvalue = 0;
   float unknownResistance = 0.0;
   for (int n = 0; n < 10; n++) {
-    delay(10);
+    wait(10);
     ADCvalue += analogRead(pin);
   }
   ADCvalue /= 10;
