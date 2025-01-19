@@ -1007,28 +1007,25 @@ void DutyCycleLoop() {
     }
 
     // Check if the duty cycle loop is active and SSR is armed
-    if (dutyCycleValue > 0 && ssrArmed && pidMode) {
+    if (dutyCycleValue > 0.0 && ssrArmed && pidMode) {
       unsigned long currentTime = millis();
-      unsigned long onDuration = dutyCycle[i].loopTime * 1000 * dutyCycleValue;
-      unsigned long offDuration = dutyCycle[i].loopTime * 1000 * (1.0 - dutyCycleValue);
+      unsigned long onDuration = dutyCycle[i].loopTime * 1000 * dutyCycleValue; // Convert duty cycle to on milliseconds
+      unsigned long offDuration = dutyCycle[i].loopTime - onDuration; // Convert duty cycle to off milliseconds
 
       // If the element is off, check if it's time to turn it on
-      if (!dutyCycle[i].element && (currentTime - dutyCycle[i].onTime) > onDuration) {
-        dutyCycle[i].offTime = currentTime;
-        dutyCycle[i].onTime = 0;
+      if (!dutyCycle[i].element && (currentTime - dutyCycle[i].offTime) > offDuration) {
+        dutyCycle[i].onTime = currentTime;
         digitalWrite(elementPin, ELEMENT_ON);
         dutyCycle[i].element = true;
       }
       // If the element is on, check if it's time to turn it off
-      else if (dutyCycle[i].element && (currentTime - dutyCycle[i].offTime) > offDuration) {
-        dutyCycle[i].onTime = currentTime;
-        dutyCycle[i].offTime = 0;
+      else if (dutyCycle[i].element && (currentTime - dutyCycle[i].onTime) > onDuration) {
+        dutyCycle[i].offTime = currentTime;
         digitalWrite(elementPin, !ELEMENT_ON);
         dutyCycle[i].element = false;
       }
     } else { // If the duty cycle loop is not active or SSR is not armed, turn off the element
       digitalWrite(elementPin, !ELEMENT_ON);
-      dutyCycle[i].onTime = 0;
       dutyCycle[i].element = false;
     }
   }
