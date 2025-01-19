@@ -1010,7 +1010,7 @@ void DutyCycleLoop() {
     if (dutyCycleValue > 0.0 && ssrArmed && pidMode) {
       unsigned long currentTime = millis();
       unsigned long onDuration = dutyCycle[i].loopTime * 1000 * dutyCycleValue; // Convert duty cycle to on milliseconds
-      unsigned long offDuration = dutyCycle[i].loopTime - onDuration; // Convert duty cycle to off milliseconds
+      unsigned long offDuration = dutyCycle[i].loopTime * 1000 - onDuration; // Convert duty cycle to off milliseconds
 
       // If the element is off, check if it's time to turn it on
       if (!dutyCycle[i].element && (currentTime - dutyCycle[i].offTime) > offDuration) {
