@@ -851,9 +851,9 @@ void emon()
     sendInfo("emon SSR Fail");
     send(MyMessage(CHILD_ID::SSRFail_Alarm, V_STATUS).set(1), configValues.toACK);
   }  else  {
-    digitalWrite(ElementPowerPin, (!ELEMENT_ON && !dutyCycle[0].element));
-    digitalWrite(ElementPowerPin2, (!ELEMENT_ON && !dutyCycle[1].element));
-    digitalWrite(ElementPowerPin3, (!ELEMENT_ON && !dutyCycle[2].element));
+    digitalWrite(ElementPowerPin, (ELEMENT_ON && dutyCycle[0].element));
+    digitalWrite(ElementPowerPin2, (ELEMENT_ON && dutyCycle[1].element));
+    digitalWrite(ElementPowerPin3, (ELEMENT_ON && dutyCycle[2].element));
     send(MyMessage(CHILD_ID::SSRFail_Alarm, V_STATUS).set(0), configValues.toACK);
   }
   for (int i = 0; i < N; i++)  {
@@ -1828,6 +1828,7 @@ void setScaleCalibration(float knownWeight) {
     LoadCell.set_scale(calValues.scaleCal);
     EEPROM.put(EEPROMAddresses::SCALE_CAL, calValues.scaleCal);
     send(MyMessage(CHILD_ID::ScaleCal, V_LEVEL).set(calValues.scaleCal, 2));
+    wait(SENDDELAY);
     sendInfo("Scale calibrated");
   } else {
     sendInfo("Scale not ready");
