@@ -453,6 +453,29 @@ void sendRelayStates();
 void sendAllStates();
 void setScaleCalibration(float knownWeight);
 
+/**
+ * @brief Calculates the resistance using a voltage divider.
+ *
+ * This function takes an analog pin and a known divider resistor value as input,
+ * reads the analog value from the pin, and calculates the resistance of the unknown resistor
+ * using the voltage divider formula.
+ *
+ * @param pin The analog pin number where the voltage divider is connected.
+ * @param dividerResistor The known resistance value of the divider resistor in ohms.
+ * @return The calculated resistance of the unknown resistor in ohms.
+ */
+float voltageDivider(int pin, float dividerResistor) {
+  int ADCvalue = 0;
+  for (int n = 0; n < 10; n++) {
+    delay(10);
+    ADCvalue += analogRead(pin);
+  }
+  ADCvalue /= 10;
+  float voltage = ((float)ADCvalue / 1023.0) * ((float)AREF_V / 1000.0);
+  float unknownResistance = (dividerResistor * (AREF_V / 1000.0 - voltage)) / voltage;
+  return unknownResistance;
+}
+
 enum EEPROMAddresses {
   ZERO_OFFSET_SCALE = 0,       // float, 4 bytes
   PRESSURE1_OFFSET = 4,        // int, 4 bytes
@@ -875,9 +898,9 @@ float readPressure(int pin, int offset, float cal) {
     delay(10);
     RawADCavg += analogRead(Pressure1PIN);
   }
-  float avgADC1 = (float)RawADCavg / 10.0;
-  float offsetCorrected1 = avgADC1 - (float)offset;
-  return offsetCorrected1 * (1.0 / cal);
+  float avgADC = (float)RawADCavg / 10.0;
+  float offsetCorrected = avgADC - (float)offset;
+  return offsetCorrected * (1.0 / cal);
 }
 /**
  * @brief Calculates the temperature from the thermistor using the Steinhart-Hart equation.
@@ -918,23 +941,15 @@ float Steinhart() {
  * @return The temperature in Fahrenheit.
  */
 float getThermistor(const int pinVar) {
-  int ADCvalue = 0;
-  const float seriesResistor = 981.0;
-  for (int n = 0; n < 10; n++){
-      delay(10);
-      ADCvalue += analogRead(pinVar);
-  }
-  ADCvalue /= 10;
-  float Voltage = ((float)ADCvalue / 1023.0) * ((float)AREF_V / 1000.0);
-  float thermistorResistance = (seriesResistor * (AREF_V / 1000.0 - Voltage)) / Voltage;
+  float thermistorResistance = voltageDivider(pinVar, thermistorConfig.seriesResistor);
   Serial.print("Thermistor ");
   Serial.print(pinVar);
   Serial.print(" Resistance: ");
   Serial.println(thermistorResistance);
   //https://www.thinksrs.com/downloads/programs/therm%20calc/ntccalibrator/ntccalculator.html
-  const float A = 1.499168475e-3;
-  const float B = 2.766247366e-4;
-  const float C = 0.2413822162e-7;
+  const float A = 1.680995265e-3;
+  const float B = 2.392149905e-4;
+  const float C = 1.594237047e-7;
 
   float logR = log(thermistorResistance);
   float Kelvin = 1.0 / (A + B * logR + C * logR * logR * logR);
