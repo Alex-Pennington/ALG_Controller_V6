@@ -882,8 +882,8 @@ float getThermistor(const int pinVar) {
       ADCvalue += analogRead(pinVar);
   }
   ADCvalue /= 10;
-  float Va3 = (1.0 - ((float)ADCvalue / 1023.0)) * (float)(AREF_V/1000);
-  float thermistorResistance = (seriesResistor * Va3) / ((float)(AREF_V/1000) - Va3);
+  float Va3 = (1.0 - ((float)ADCvalue / 1023.0)) * ((float)AREF_V / 1000.0);
+  float thermistorResistance = (seriesResistor * Va3) / (((float)AREF_V / 1000.0) - Va3);
   //https://www.thinksrs.com/downloads/programs/therm%20calc/ntccalibrator/ntccalculator.html
   const float A = 1.499168475e-3;
   const float B = 2.766247366e-4;
