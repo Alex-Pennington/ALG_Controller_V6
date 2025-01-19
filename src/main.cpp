@@ -1367,6 +1367,7 @@ void receive(const MyMessage & message)  {
         send(msgScaleOffset.set(calValues.zeroOffsetScale, 1));
         wait(SENDDELAY);
         sendInfo("Scale Tare");
+        play_fireball();
       }
       break;
     case CHILD_ID::ScaleOffset:
@@ -1387,6 +1388,7 @@ void receive(const MyMessage & message)  {
       ssrArmed = message.getBool();
       EEPROM.put(EEPROMAddresses::SSR_ARMED, ssrArmed);
       digitalWrite(SSRArmed_PIN, ssrArmed);
+      play_coin();
       break;
     case CHILD_ID::Press1Offset:
       calValues.pressure1Offset = message.getInt();
@@ -1417,6 +1419,7 @@ void receive(const MyMessage & message)  {
       pid1.mode = message.getBool();
       myPID1.SetMode(message.getBool());
       EEPROM.put(EEPROMAddresses::PID1_MODE, message.getBool());
+      play_coin();
       break;
     case CHILD_ID::PIDSETPOINT_1:
       pid1.setpoint = message.getFloat();
@@ -1458,6 +1461,7 @@ void receive(const MyMessage & message)  {
       pid2.mode = message.getBool();
       myPID2.SetMode(message.getBool());
       EEPROM.put(EEPROMAddresses::PID2_MODE, message.getBool());
+      play_coin();
       break;
     case CHILD_ID::PIDSETPOINT_2:
       pid2.setpoint = message.getFloat();
@@ -1499,6 +1503,7 @@ void receive(const MyMessage & message)  {
       pid3.mode = message.getBool();
       myPID3.SetMode(message.getBool());
       EEPROM.put(EEPROMAddresses::PID3_MODE, message.getBool());
+      play_coin();
       break;
     case CHILD_ID::PIDSETPOINT_3:
       pid3.setpoint = message.getFloat();
