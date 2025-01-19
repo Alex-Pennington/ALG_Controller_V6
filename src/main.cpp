@@ -969,22 +969,22 @@ float getThermistor(const int pinVar) {
  * and turns the elements on or off based on the calculated on and off durations.
  */
 void DutyCycleLoop() {
-if ((millis() - dutyCycle_timer) > (unsigned long)(dutyCycle[0].loopTime * 1000)) {
-    digitalWrite(ElementPowerPin, !ELEMENT_ON);
-    digitalWrite(ElementPowerPin2, !ELEMENT_ON);
-    digitalWrite(ElementPowerPin3, !ELEMENT_ON);
-    dutyCycle_timer = millis();
-    dutyCycle[0].onTime = 0;
-    dutyCycle[0].offTime = 0;
-    dutyCycle[1].onTime = 0;
-    dutyCycle[1].offTime = 0;
-    dutyCycle[2].onTime = 0;
-    dutyCycle[2].offTime = 0;
-    dutyCycle[0].element = false;
-    dutyCycle[1].element = false;
-    dutyCycle[2].element = false;
-    emon();
-  }
+// if ((millis() - dutyCycle_timer) > (unsigned long)(dutyCycle[0].loopTime * 1000)) {
+//     digitalWrite(ElementPowerPin, !ELEMENT_ON);
+//     digitalWrite(ElementPowerPin2, !ELEMENT_ON);
+//     digitalWrite(ElementPowerPin3, !ELEMENT_ON);
+//     dutyCycle_timer = millis();
+//     dutyCycle[0].onTime = 0;
+//     dutyCycle[0].offTime = 0;
+//     dutyCycle[1].onTime = 0;
+//     dutyCycle[1].offTime = 0;
+//     dutyCycle[2].onTime = 0;
+//     dutyCycle[2].offTime = 0;
+//     dutyCycle[0].element = false;
+//     dutyCycle[1].element = false;
+//     dutyCycle[2].element = false;
+//     emon();
+//   }
 
   for (int i = 0; i < 3; i++) {
     // Determine the current PID mode and duty cycle
