@@ -1841,9 +1841,5 @@ float voltageDivider(int pin, float dividerResistor) {
     float Vout = buffer/1024.0;
     buffer = (Vin/Vout) - 1;
     float R2 = dividerResistor * buffer;
-    Serial.print("Vout: ");
-    Serial.println(Vout);
-    Serial.print("R2: ");
-    Serial.println(R2);
   }
 }
