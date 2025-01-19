@@ -845,17 +845,41 @@ void emon()
     delay(10);
   }
   emonVars.rms = sqrt(sum / N) - calValues.currOffset;
-    if ((int(emonVars.rms) > int(calValues.ssrFailThreshold)))  {
+  if ((int(emonVars.rms) > int(calValues.ssrFailThreshold)))  {
     red_alert();
     AllStop();
     sendInfo("emon SSR Fail");
     send(MyMessage(CHILD_ID::SSRFail_Alarm, V_STATUS).set(1), configValues.toACK);
   }  else  {
-    digitalWrite(ElementPowerPin, (ELEMENT_ON && dutyCycle[0].element));
-    digitalWrite(ElementPowerPin2, (ELEMENT_ON && dutyCycle[1].element));
-    digitalWrite(ElementPowerPin3, (ELEMENT_ON && dutyCycle[2].element));
-    send(MyMessage(CHILD_ID::SSRFail_Alarm, V_STATUS).set(0), configValues.toACK);
+      bool elementStatusBuffer[3] = {false, false, false};
+      send(MyMessage(CHILD_ID::SSRFail_Alarm, V_STATUS).set(0), configValues.toACK);
+      for(int i = 0; i < 3; i++)  {
+        if (ssrArmed)  {
+          if (dutyCycle[i].element)  { 
+            //the element should be on.
+            if (ELEMENT_ON) { //set the on signal
+              elementStatusBuffer[i] = ELEMENT_ON;
+            } else {
+              elementStatusBuffer[i] = !ELEMENT_ON;
+            }
+          } else { 
+            //the element should be off.
+            if (ELEMENT_ON) { //set the off signal
+              elementStatusBuffer[i] = !ELEMENT_ON;
+            } else {
+              elementStatusBuffer[i] = ELEMENT_ON;
+            }
+          }
+        } else {
+          //the SSR is not armed, so the elements should be off.
+          elementStatusBuffer[i] = !ELEMENT_ON;
+        }
+        digitalWrite(ElementPowerPin, elementStatusBuffer[0]);
+        digitalWrite(ElementPowerPin2, elementStatusBuffer[1]);
+        digitalWrite(ElementPowerPin3, elementStatusBuffer[2]);
+      }
   }
+
   for (int i = 0; i < N; i++)  {
     float current = calValues.emonCal * (analogRead(emon_Input_PIN) - 512); // in amps I presume
     sum += current * current;                                               // sum squares
@@ -864,6 +888,15 @@ void emon()
   emonVars.rms = sqrt(sum / N) - calValues.currOffset;
   return;
 }
+/**
+ * @brief Reads the temperature from a DS18B20 sensor.
+ *
+ * This function reads the temperature from a DS18B20 sensor connected to the specified pin.
+ * It reads the sensor multiple times to increase resolution, calculates the temperature in Fahrenheit,
+ * and sends the temperature value to the controller.
+ *
+ * @param pinVar The pin number where the DS18B20 sensor is connected.
+ */
 void getScale() {
   value_oldScale = valueScale;
   if (LoadCell.is_ready())
