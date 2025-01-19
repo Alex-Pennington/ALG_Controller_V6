@@ -673,8 +673,9 @@ void loop() {
     msgVccVoltage.set(AREF_V, 2); send(msgVccVoltage);
     _process();
 
+    Serial.println("emon start");
     emon();
-    Serial.println("emon");
+    Serial.println("emon end");
     msgMainsCurrent.set(emonVars.rms, 2); send(msgMainsCurrent);
     _process();
 
