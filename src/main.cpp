@@ -919,11 +919,7 @@ float Steinhart() {
  * @return The temperature in Fahrenheit.
  */
 float getThermistor(const int pinVar) {
-  float thermistorResistance = voltageDivider(pinVar, thermistorConfig.seriesResistor);
-  Serial.print("Thermistor ");
-  Serial.print(pinVar);
-  Serial.print(" Resistance: ");
-  Serial.println(thermistorResistance);
+  float thermistorResistance = voltageDivider(pinVar, 981.0);
   //https://www.thinksrs.com/downloads/programs/therm%20calc/ntccalibrator/ntccalculator.html
   const float A = 1.680995265e-3;
   const float B = 2.392149905e-4;
@@ -932,6 +928,12 @@ float getThermistor(const int pinVar) {
   float logR = log(thermistorResistance);
   float Kelvin = 1.0 / (A + B * logR + C * logR * logR * logR);
   float tempF = (Kelvin - 273.15) * CELSIUS_TO_FAHRENHEIT_FACTOR + CELSIUS_TO_FAHRENHEIT_OFFSET;
+  Serial.print("Thermistor ");
+  Serial.print(pinVar);
+  Serial.print(" Resistance: ");
+  Serial.print(thermistorResistance);
+  Serial.print(" Temp: ");
+  Serial.println(tempF);
   return tempF;
 }
 /**
@@ -1188,7 +1190,6 @@ void FactoryResetEEPROM() {
   StoreEEPROM();
 }
 void printConfig() {
-
 //   Serial.print("zeroOffsetScale: ");
 //   Serial.println(calValues.zeroOffsetScale);
 //   Serial.print("pressure1Offset: ");
@@ -1830,6 +1831,7 @@ void setScaleCalibration(float knownWeight) {
  */
 float voltageDivider(int pin, float dividerResistor) {
   float ADCvalue = 0;
+  float unknownResistance = 0.0;
   for (int n = 0; n < 10; n++) {
     delay(10);
     ADCvalue += analogRead(pin);
@@ -1837,9 +1839,13 @@ float voltageDivider(int pin, float dividerResistor) {
   ADCvalue /= 10;
   float Vin = (AREF_V/1000.0);
   if(ADCvalue){
-    float buffer = ADCvalue * Vin;
-    float Vout = buffer/1024.0;
-    buffer = (Vin/Vout) - 1;
-    float R2 = dividerResistor * buffer;
+    float Vadc = ADCvalue * (Vin / 1023.0);
+    Serial.print("Voltage Pin ");
+    Serial.print(pin);
+    Serial.print(" : ");
+    Serial.println(Vadc,2);
+    float buffer = abs(1-(Vin/Vadc));
+    unknownResistance = dividerResistor * buffer;
   }
+  return unknownResistance;
 }
