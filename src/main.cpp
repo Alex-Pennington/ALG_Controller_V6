@@ -643,7 +643,7 @@ void setup() {
 
   displayLine("Booting...");
   sendInfo("Operational");
-  //sendAllStates();
+  sendAllStates();
   play_one_up();
   delay(1000);
 }
@@ -1745,6 +1745,7 @@ void sendAllStates() {
   wait(SENDDELAY);
   send(MyMessage(CHILD_ID::SSR_Armed, V_STATUS).set(ssrArmed));
   wait(SENDDELAY);
+  send(MyMessage(CHILD_ID::ScaleTare, V_STATUS).set(false));
 
   // Send PID values
   send(MyMessage(CHILD_ID::PIDSETPOINT_1, V_TEMP).set(pid1.setpoint, 2));
