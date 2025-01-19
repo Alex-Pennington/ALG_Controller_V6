@@ -588,6 +588,10 @@ void presentation() {
   present(CHILD_ID::ScaleCalibrateKnownValue, S_LIGHT_LEVEL, "SCalKV");
 
 }
+#define SSRARMED_OFF LOW
+#define SSRARMED_ON LOW
+#define ELEMENT_ON LOW
+#define ELEMENT_OFF HIGH
 
 void setup() {
   Serial.begin(115200);
@@ -599,10 +603,14 @@ void setup() {
   LoadCell.set_gain();
   pinMode(Thermistor1PIN, INPUT);
   pinMode(Thermistor2PIN, INPUT);
-  pinMode(ElementPowerPin3, OUTPUT);
   pinMode(SSRArmed_PIN, OUTPUT);
+  digitalWrite(SSRArmed_PIN, SSRARMED_OFF);
   pinMode(ElementPowerPin, OUTPUT);
+  digitalWrite(ElementPowerPin3, ELEMENT_OFF);
   pinMode(ElementPowerPin2, OUTPUT);
+  digitalWrite(ElementPowerPin3, ELEMENT_OFF);
+  pinMode(ElementPowerPin3, OUTPUT);
+  digitalWrite(ElementPowerPin3, ELEMENT_OFF);
   pinMode(speakerPin, OUTPUT);
   pinMode(SteinhartPin, INPUT);
   pinMode(Pressure1PIN, INPUT);
@@ -616,12 +624,19 @@ void setup() {
     while (true); // Halt execution if display initialization fails
   }
 
+  pid1.mode = false;
+  pid2.mode = false;
+  pid3.mode = false;
+
   myPID1.SetSampleTime(configValues.pidLoopTime);
   myPID1.SetOutputLimits(0, 100);
   myPID2.SetSampleTime(configValues.pidLoopTime);
   myPID2.SetOutputLimits(0, 100);
   myPID3.SetSampleTime(configValues.pidLoopTime);
   myPID3.SetOutputLimits(0, 100);
+  myPID1.SetMode(MANUAL);
+  myPID2.SetMode(MANUAL);
+  myPID3.SetMode(MANUAL);
 
   for (int i = 0; i < NUM_SWITCHES; i++) {
     switches[i].setDebounceTime(50);
@@ -816,9 +831,9 @@ void TempAlarm()
  */
 void emon()
 {
-  digitalWrite(ElementPowerPin, HIGH);
-  digitalWrite(ElementPowerPin2, HIGH);
-  digitalWrite(ElementPowerPin3, HIGH);
+  digitalWrite(ElementPowerPin, ELEMENT_OFF);
+  digitalWrite(ElementPowerPin2, ELEMENT_OFF);
+  digitalWrite(ElementPowerPin3, ELEMENT_OFF);
   float sum = 0;
 
   emonVars.sampleTime = millis();
@@ -990,18 +1005,19 @@ void DutyCycleLoop() {
       if (!dutyCycle[i].element && (currentTime - dutyCycle[i].onTime) > onDuration) {
         dutyCycle[i].offTime = currentTime;
         dutyCycle[i].onTime = 0;
-        digitalWrite(elementPin, LOW);
+        digitalWrite(elementPin, ELEMENT_ON);
+          Serial.println("ELEMENT_ON");
         dutyCycle[i].element = true;
       }
       // If the element is on, check if it's time to turn it off
       else if (dutyCycle[i].element && (currentTime - dutyCycle[i].offTime) > offDuration) {
         dutyCycle[i].onTime = currentTime;
         dutyCycle[i].offTime = 0;
-        digitalWrite(elementPin, HIGH);
+        digitalWrite(elementPin, ELEMENT_OFF);
         dutyCycle[i].element = false;
       }
     } else { // If the duty cycle loop is not active or SSR is not armed, turn off the element
-      digitalWrite(elementPin, HIGH);
+      digitalWrite(elementPin, ELEMENT_OFF);
       dutyCycle[i].onTime = 0;
       dutyCycle[i].element = false;
     }
