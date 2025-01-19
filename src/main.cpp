@@ -664,22 +664,18 @@ void loop() {
 
   if ( (millis() - SensorLoop_timer) > (unsigned long)configValues.SENSORLOOPTIME)  {
     AREF_V = getBandgap();
-    // Serial.println("getBandgap");
 
     getVccCurrent();
-    // Serial.println("getVccCurrent");
     msgVccCurrent.set(VccCurrentVar, 2); send(msgVccCurrent);
     msgVccVoltage.set(AREF_V, 2); send(msgVccVoltage);
     _process();
 
-    Serial.println("emon start");
+    
     emon();
-    // Serial.println("emon");
     msgMainsCurrent.set(emonVars.rms, 2); send(msgMainsCurrent);
     _process();
 
     DS18B20();
-    // Serial.println("DS18B20");
     for (int i = 0; i < 5; i++) {
       temperatureValues[i] = ds18b20Values[i].F;
       send(MyMessage(CHILD_ID::T0 + i, V_TEMP).set(temperatureValues[i], 2));
@@ -687,13 +683,11 @@ void loop() {
     _process();
     
     float steinhartVar = Steinhart();
-    // Serial.println("Steinhart");
     temperatureValues[5] = steinhartVar;
     msgTemp5.set(temperatureValues[5], 2); send(msgTemp5);
     _process();
 
     getScale();
-    // Serial.println("getScale");
     msgScale.set(valueScale, 2); send(msgScale);
     msgScaleRate.set(gramsPerSecondScale, 2); send(msgScaleRate);
     _process();
@@ -701,7 +695,6 @@ void loop() {
     char buffer[16];
     dtostrf(valueScale, 6, 2, buffer);
     displayLine(buffer);
-    // Serial.println("displayLine");
     _process();
 
     pressure1Var = readPressure(Pressure1PIN, calValues.pressure1Offset, calValues.pressure1Cal);
@@ -712,12 +705,10 @@ void loop() {
     msgPressure3.set(pressure3Var, 2); send(msgPressure3);
     pressure4Var = readPressure(Pressure4PIN, calValues.pressure4Offset, calValues.pressure4Cal);
     msgPressure4.set(pressure4Var, 2); send(msgPressure4);
-    // Serial.println("readPressure");
     _process();
     
     temperatureValues[6] = getThermistor(Thermistor1PIN);
     temperatureValues[7] = getThermistor(Thermistor2PIN);
-    // Serial.println("getThermistor");
     msgTHMS1.set(temperatureValues[6], 2); send(msgTHMS1);
     msgTHMS2.set(temperatureValues[7], 2); send(msgTHMS2);
     _process();
@@ -726,12 +717,9 @@ void loop() {
     _process();
             
     TempAlarm();
-    // Serial.println("TempAlarm");
     _process();
     queryRelayStates();
-    // Serial.println("queryRelayStates");
     sendRelayStates();
-    // Serial.println("sendRelayStates");
     SensorLoop_timer = millis();
   }
   
@@ -1866,12 +1854,19 @@ float voltageDivider(int pin, float dividerResistor) {
   float Vin = (AREF_V/1000.0);
   if(ADCvalue){
     float Vadc = ADCvalue * (Vin / 1023.0);
-    Serial.print("Voltage Pin ");
-    Serial.print(pin);
-    Serial.print(" : ");
-    Serial.println(Vadc,2);
-    float buffer = abs(1-(Vin/Vadc));
-    unknownResistance = dividerResistor * buffer;
+    //Serial.print("Voltage Pin ");
+    //Serial.print(pin);
+    //Serial.print(" : ");
+    //Serial.print(Vadc,2);
+    //Serial.print(" : ");
+    //Serial.print(Vin,2);
+    if (( Vadc / Vin ) > 0.5 ) {
+      unknownResistance = (Vadc/ Vin) * dividerResistor;
+    } else {
+      unknownResistance = (Vin / Vadc) * dividerResistor;
+    }  
+    //Serial.print(" : ");
+    //Serial.println(unknownResistance,2);
   }
   return unknownResistance;
 }
