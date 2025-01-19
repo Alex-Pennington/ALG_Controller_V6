@@ -927,6 +927,10 @@ float getThermistor(const int pinVar) {
   ADCvalue /= 10;
   float Voltage = ((float)ADCvalue / 1023.0) * ((float)AREF_V / 1000.0);
   float thermistorResistance = (seriesResistor * (AREF_V / 1000.0 - Voltage)) / Voltage;
+  Serial.print("Thermistor ");
+  Serial.print(pinVar);
+  Serial.print(" Resistance: ");
+  Serial.println(thermistorResistance);
   //https://www.thinksrs.com/downloads/programs/therm%20calc/ntccalibrator/ntccalculator.html
   const float A = 1.499168475e-3;
   const float B = 2.766247366e-4;
