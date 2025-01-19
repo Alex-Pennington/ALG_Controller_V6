@@ -289,7 +289,7 @@ struct SteinhartConfig {
 SteinhartConfig thermistorConfig;
 
 struct EmonVars {
-    unsigned long sampleTime = 0;
+    //unsigned long sampleTime = 0;
     bool ssrFail = false;
     int ssrFailCount = 0;
     float rms = 0.0;
@@ -321,6 +321,7 @@ buttons button[7];
 //button 7 is the refrigerant tank capacity switch
 
 //Working Variables
+unsigned long dutyCycle_timer = 0;
 unsigned long SensorLoop_timer = 0;
 unsigned long pid_compute_loop_time = 0;
 unsigned long switchesLoop_timer = 0;
@@ -453,6 +454,7 @@ void sendRelayStates();
 void sendAllStates();
 void setScaleCalibration(float knownWeight);
 float voltageDivider(int pin, float dividerResistor);
+void getMainsCurrent();
 
 enum EEPROMAddresses {
   ZERO_OFFSET_SCALE = 0,       // float, 4 bytes
@@ -661,7 +663,7 @@ void loop() {
     _process();
 
     
-    emon();
+    getMainsCurrent();
     msgMainsCurrent.set(emonVars.rms, 2); send(msgMainsCurrent);
     _process();
 
@@ -681,7 +683,8 @@ void loop() {
     msgScale.set(valueScale, 2); send(msgScale);
     msgScaleRate.set(gramsPerSecondScale, 2); send(msgScaleRate);
     _process();
-
+    DutyCycleLoop();
+    
     char buffer[16];
     dtostrf(valueScale, 6, 2, buffer);
     displayLine(buffer);
@@ -821,61 +824,29 @@ void TempAlarm()
  */
 void emon()
 {
-  digitalWrite(ElementPowerPin, !ELEMENT_ON);
-  digitalWrite(ElementPowerPin2, !ELEMENT_ON);
-  digitalWrite(ElementPowerPin3, !ELEMENT_ON);
   float sum = 0;
 
-  emonVars.sampleTime = millis();
-
-  int N = 1000;
-  for (int i = 0; i < N; i++)  {
+  for (int i = 0; i < 1000; i++)  {
     float current = calValues.emonCal * (analogRead(emon_Input_PIN) - 512); // in amps I presume
     sum += current * current;                                               // sum squares
     wait(10);
   }
-  emonVars.rms = sqrt(sum / N) - calValues.currOffset;
+  emonVars.rms = sqrt(sum / 1000) - calValues.currOffset;
   if ((int(emonVars.rms) > int(calValues.ssrFailThreshold)))  {
     red_alert();
     AllStop();
     sendInfo("emon SSR Fail");
     send(MyMessage(CHILD_ID::SSRFail_Alarm, V_STATUS).set(1), configValues.toACK);
-  }  else  {
-      bool elementStatusBuffer[3] = {false, false, false};
-      send(MyMessage(CHILD_ID::SSRFail_Alarm, V_STATUS).set(0), configValues.toACK);
-      for(int i = 0; i < 3; i++)  {
-        if (ssrArmed)  {
-          if (dutyCycle[i].element)  { 
-            //the element should be on.
-            if (ELEMENT_ON) { //set the on signal
-              elementStatusBuffer[i] = ELEMENT_ON;
-            } else {
-              elementStatusBuffer[i] = !ELEMENT_ON;
-            }
-          } else { 
-            //the element should be off.
-            if (ELEMENT_ON) { //set the off signal
-              elementStatusBuffer[i] = !ELEMENT_ON;
-            } else {
-              elementStatusBuffer[i] = ELEMENT_ON;
-            }
-          }
-        } else {
-          //the SSR is not armed, so the elements should be off.
-          elementStatusBuffer[i] = !ELEMENT_ON;
-        }
-        digitalWrite(ElementPowerPin, elementStatusBuffer[0]);
-        digitalWrite(ElementPowerPin2, elementStatusBuffer[1]);
-        digitalWrite(ElementPowerPin3, elementStatusBuffer[2]);
-      }
   }
-
-  for (int i = 0; i < N; i++)  {
+}
+void getMainsCurrent() {
+  float sum = 0;
+  for (int i = 0; i < 1000; i++)  {
     float current = calValues.emonCal * (analogRead(emon_Input_PIN) - 512); // in amps I presume
     sum += current * current;                                               // sum squares
     wait(10);
   }
-  emonVars.rms = sqrt(sum / N) - calValues.currOffset;
+  emonVars.rms = sqrt(sum / 1000) - calValues.currOffset;
   return;
 }
 /**
@@ -997,7 +968,24 @@ float getThermistor(const int pinVar) {
  * The function iterates over the three elements, checks their respective PID modes and duty cycle values,
  * and turns the elements on or off based on the calculated on and off durations.
  */
-void DutyCycleLoop() {
+void DutyCycleLoop() {\
+if ((millis() - dutyCycle_timer) > (dutyCycle[0].loopTime * 1000)) {
+    digitalWrite(ElementPowerPin, !ELEMENT_ON);
+    digitalWrite(ElementPowerPin2, !ELEMENT_ON);
+    digitalWrite(ElementPowerPin3, !ELEMENT_ON);
+    dutyCycle_timer = millis();
+    dutyCycle[0].onTime = 0;
+    dutyCycle[0].offTime = 0;
+    dutyCycle[1].onTime = 0;
+    dutyCycle[1].offTime = 0;
+    dutyCycle[2].onTime = 0;
+    dutyCycle[2].offTime = 0;
+    dutyCycle[0].element = false;
+    dutyCycle[1].element = false;
+    dutyCycle[2].element = false;
+    emon();
+  }
+
   for (int i = 0; i < 3; i++) {
     // Determine the current PID mode and duty cycle
     bool pidMode;
