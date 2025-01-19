@@ -703,9 +703,6 @@ void loop() {
   }
   
   if ((millis() - pid_compute_loop_time) > (unsigned long)configValues.pidLoopTime)  {
-    pid1.input = THMS1var;
-    pid2.input = THMS2var;
-    pid3.input = steinhartValues.steinhart;
     int gap = abs(pid1.setpoint - pid1.input); //distance away from setpoint
     if ((gap < pid1.aggSP && pid1.adaptiveMode == true) || pid1.adaptiveMode == false) {
       myPID1.SetTunings(pid1.kp, pid1.ki, pid1.kp);
@@ -724,6 +721,9 @@ void loop() {
     dC = pid1.output;
     dC2 = pid2.output;
     dC3 = pid3.output;
+    send(MyMessage(CHILD_ID::dC_1, V_PERCENTAGE).set(dC,2), configValues.toACK);
+    send(MyMessage(CHILD_ID::dC_2, V_PERCENTAGE).set(dC2,2), configValues.toACK);
+    send(MyMessage(CHILD_ID::dC_3, V_PERCENTAGE).set(dC3,2), configValues.toACK);
     pid_compute_loop_time = millis();
   }
 }
@@ -896,24 +896,33 @@ float getThermistor(const int pinVar) {
 }
 void DutyCycleLoop() {
   for (int i = 0; i < 3; i++) {
-    if ((dutyCycle[i].loopTime > 0 && ssrArmed == true) && (i == 0 ? pid1.mode : (i == 1 ? pid2.mode : pid3.mode))) {
-      if (!dutyCycle[i].element) {
-        if ((millis() - dutyCycle[i].onTime) > (static_cast<unsigned long>(dutyCycle[i].loopTime) * 1000)) {
-          dutyCycle[i].offTime = millis();
-          dutyCycle[i].onTime = 0;
-          digitalWrite(i == 0 ? ElementPowerPin : (i == 1 ? ElementPowerPin2 : ElementPowerPin3), HIGH);
-          dutyCycle[i].element = HIGH;
-        }
-      } else {
-        if ((millis() - dutyCycle[i].offTime) > ((1U - static_cast<unsigned long>(dutyCycle[i].loopTime)) * 1000)) {
-          dutyCycle[i].onTime = millis();
-          dutyCycle[i].offTime = 0;
-          digitalWrite(i == 0 ? ElementPowerPin : (i == 1 ? ElementPowerPin2 : ElementPowerPin3), LOW);
-          dutyCycle[i].element = LOW;
-        }
+    // Determine the current PID mode and duty cycle
+    bool pidMode = (i == 0) ? pid1.mode : (i == 1) ? pid2.mode : pid3.mode;
+    float dutyCycleValue = (i == 0) ? dC : (i == 1) ? dC2 : dC3;
+    int elementPin = (i == 0) ? ElementPowerPin : (i == 1) ? ElementPowerPin2 : ElementPowerPin3;
+
+    // Check if the duty cycle loop is active and SSR is armed
+    if (dutyCycle[i].loopTime > 0 && ssrArmed && pidMode) {
+      unsigned long currentTime = millis();
+      unsigned long onDuration = dutyCycle[i].loopTime * 1000 * dutyCycleValue;
+      unsigned long offDuration = dutyCycle[i].loopTime * 1000 * (1.0 - dutyCycleValue);
+
+      // If the element is off, check if it's time to turn it on
+      if (!dutyCycle[i].element && (currentTime - dutyCycle[i].onTime) > onDuration) {
+        dutyCycle[i].offTime = currentTime;
+        dutyCycle[i].onTime = 0;
+        digitalWrite(elementPin, HIGH);
+        dutyCycle[i].element = HIGH;
       }
-    } else {
-      digitalWrite(i == 0 ? ElementPowerPin : (i == 1 ? ElementPowerPin2 : ElementPowerPin3), HIGH);
+      // If the element is on, check if it's time to turn it off
+      else if (dutyCycle[i].element && (currentTime - dutyCycle[i].offTime) > offDuration) {
+        dutyCycle[i].onTime = currentTime;
+        dutyCycle[i].offTime = 0;
+        digitalWrite(elementPin, LOW);
+        dutyCycle[i].element = LOW;
+      }
+    } else { // If the duty cycle loop is not active or SSR is not armed, turn off the element
+      digitalWrite(elementPin, HIGH);
       dutyCycle[i].onTime = 0;
       dutyCycle[i].element = HIGH;
     }
