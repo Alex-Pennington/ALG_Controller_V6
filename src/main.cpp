@@ -17,7 +17,7 @@
 #define MY_RF24_PA_LEVEL RF24_PA_HIGH
 #define MY_RF24_CE_PIN 49
 #define MY_RF24_CS_PIN 53
-#define MY_DEBUG
+//#define MY_DEBUG
 #include <MySensors.h>
 
 // MySensors Child IDs
@@ -968,7 +968,7 @@ float getThermistor(const int pinVar) {
  * The function iterates over the three elements, checks their respective PID modes and duty cycle values,
  * and turns the elements on or off based on the calculated on and off durations.
  */
-void DutyCycleLoop() {\
+void DutyCycleLoop() {
 if ((millis() - dutyCycle_timer) > (unsigned long)(dutyCycle[0].loopTime * 1000)) {
     digitalWrite(ElementPowerPin, !ELEMENT_ON);
     digitalWrite(ElementPowerPin2, !ELEMENT_ON);
