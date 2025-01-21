@@ -362,8 +362,6 @@ float temperatureValues[8] = {0.0}; // 5 DS18B20 sensors, 3 thermistors
 #define Pressure4PIN A12 
 #define emon_Input_PIN A8
 #define VccCurrentSensor A0 
-#define Thermistor1PIN A2 
-#define Thermistor2PIN A1 
 #define SteinhartPin A3 
 #define Serial3_RX 15 
 #define Serial3_TX 14 
@@ -439,7 +437,7 @@ void printConfig();
 long getBandgap(void);
 void sendInfo(String);
 void DS18B20();
-float getThermistor(int);
+//float getThermistor(int);
 float readPressure(int pin, int offset, float cal);
 void displayLine(const char* line);
 int freeMemory();
@@ -592,8 +590,8 @@ void setup() {
   LoadCell.set_scale(calValues.scaleCal);
   LoadCell.set_offset(calValues.zeroOffsetScale);
   LoadCell.set_gain();
-  pinMode(Thermistor1PIN, INPUT);
-  pinMode(Thermistor2PIN, INPUT);
+  //pinMode(Thermistor1PIN, INPUT);
+  //pinMode(Thermistor2PIN, INPUT);
   pinMode(SSRArmed_PIN, OUTPUT);
   digitalWrite(SSRArmed_PIN, SSRARMED_OFF);
   pinMode(ElementPowerPin, OUTPUT);
@@ -645,8 +643,8 @@ void loop() {
   _process();
   switchesLoop();
 
-  pid1.input = temperatureValues[6]; //Thermistor 1
-  pid2.input = temperatureValues[7]; //Thermistor 2
+  pid1.input = temperatureValues[0];
+  pid2.input = temperatureValues[1];
   pid3.input = temperatureValues[5]; //Steinhart
 
   if ( (millis() - switchesLoop_timer) > (unsigned long)configValues.SENSORLOOPTIME) {
@@ -701,11 +699,11 @@ void loop() {
     msgPressure4.set(pressure4Var, 2); send(msgPressure4);
     _process();
     
-    temperatureValues[6] = getThermistor(Thermistor1PIN);
-    temperatureValues[7] = getThermistor(Thermistor2PIN);
-    msgTHMS1.set(temperatureValues[6], 2); send(msgTHMS1);
-    msgTHMS2.set(temperatureValues[7], 2); send(msgTHMS2);
-    _process();
+    //temperatureValues[6] = getThermistor(Thermistor1PIN);
+    //temperatureValues[7] = getThermistor(Thermistor2PIN);
+    //msgTHMS1.set(temperatureValues[6], 2); send(msgTHMS1);
+    //msgTHMS2.set(temperatureValues[7], 2); send(msgTHMS2);
+    //_process();
     
     msgRunTime.set((float)(millis()/1000.0/60.0/60.0),2); send(msgRunTime);
     _process();
@@ -929,24 +927,7 @@ float Steinhart() {
  * @param pinVar The analog pin number where the thermistor is connected.
  * @return The temperature in Fahrenheit.
  */
-float getThermistor(const int pinVar) {
-  float thermistorResistance = voltageDivider(pinVar, 981.0);
-  //https://www.thinksrs.com/downloads/programs/therm%20calc/ntccalibrator/ntccalculator.html
-  const float A = 1.680995265e-3;
-  const float B = 2.392149905e-4;
-  const float C = 1.594237047e-7;
-
-  float logR = log(thermistorResistance);
-  float Kelvin = 1.0 / (A + B * logR + C * logR * logR * logR);
-  float tempF = (Kelvin - 273.15) * CELSIUS_TO_FAHRENHEIT_FACTOR + CELSIUS_TO_FAHRENHEIT_OFFSET;
-  Serial.print("Thermistor ");
-  Serial.print(pinVar);
-  Serial.print(" Resistance: ");
-  Serial.print(thermistorResistance);
-  Serial.print(" Temp: ");
-  Serial.println(tempF);
-  return tempF;
-}
+//}
 /**
  * @brief Manages the duty cycle for three PID-controlled elements.
  *
@@ -971,22 +952,22 @@ float getThermistor(const int pinVar) {
  * and turns the elements on or off based on the calculated on and off durations.
  */
 void DutyCycleLoop() {
-// if ((millis() - dutyCycle_timer) > (unsigned long)(dutyCycle[0].loopTime * 1000)) {
-//     digitalWrite(ElementPowerPin, !ELEMENT_ON);
-//     digitalWrite(ElementPowerPin2, !ELEMENT_ON);
-//     digitalWrite(ElementPowerPin3, !ELEMENT_ON);
-//     dutyCycle_timer = millis();
-//     dutyCycle[0].onTime = 0;
-//     dutyCycle[0].offTime = 0;
-//     dutyCycle[1].onTime = 0;
-//     dutyCycle[1].offTime = 0;
-//     dutyCycle[2].onTime = 0;
-//     dutyCycle[2].offTime = 0;
-//     dutyCycle[0].element = false;
-//     dutyCycle[1].element = false;
-//     dutyCycle[2].element = false;
-//     emon();
-//   }
+if ((millis() - dutyCycle_timer) > (unsigned long)(dutyCycle[0].loopTime * 1000)) {
+    digitalWrite(ElementPowerPin, !ELEMENT_ON);
+    digitalWrite(ElementPowerPin2, !ELEMENT_ON);
+    digitalWrite(ElementPowerPin3, !ELEMENT_ON);
+    dutyCycle_timer = millis();
+    dutyCycle[0].onTime = 0;
+    dutyCycle[0].offTime = 0;
+    dutyCycle[1].onTime = 0;
+    dutyCycle[1].offTime = 0;
+    dutyCycle[2].onTime = 0;
+    dutyCycle[2].offTime = 0;
+    dutyCycle[0].element = false;
+    dutyCycle[1].element = false;
+    dutyCycle[2].element = false;
+    emon();
+  }
 
   for (int i = 0; i < 3; i++) {
     // Determine the current PID mode and duty cycle
