@@ -361,6 +361,7 @@ extern unsigned int __heap_start;
 extern void *__brkval;
 float THMS1var = 0.0;
 float THMS2var = 0.0;
+bool firstrunSensorLoop = false;
 
 // Array to hold all temperature sensor values
 float temperatureValues[8] = {0.0}; // 5 DS18B20 sensors, 3 thermistors
@@ -460,6 +461,7 @@ void DS18B20();
 //float getThermistor(int);
 float readPressure(int pin, int offset, float cal, float lastValue);
 void displayLine(const char* line);
+void displayLine2(const char* line);
 int freeMemory();
 void emon();
 void switchesLoop();
@@ -664,16 +666,18 @@ void loop() {
   _process();
   switchesLoop();
 
-  pid1.input = temperatureValues[0];
-  pid2.input = temperatureValues[1];
-  pid3.input = temperatureValues[5]; //Steinhart
-
-   if ( (millis() - scaleLoop_timer) > (unsigned long)configValues.scaleLoopTime) {
+  if ( (millis() - scaleLoop_timer) > (unsigned long)configValues.scaleLoopTime) {
     getScale();
+    
+    display.clearDisplay();
     char buffer[16];
     dtostrf(valueScale, 6, 2, buffer);
     displayLine(buffer);
+    dtostrf((float)(millis()/1000.0/60.0), 6, 2, buffer);
+    displayLine2(buffer);
     _process();
+    display.display();
+
     msgScale.set(valueScale, 2); send(msgScale); wait(SENDDELAY);
     msgScaleRate.set(gramsPerSecondScale, 2); send(msgScaleRate);
     _process();
@@ -686,6 +690,9 @@ void loop() {
   }
 
   if ( (millis() - SensorLoop_timer) > (unsigned long)configValues.sensorLoopTime)  {
+    if (!firstrunSensorLoop) {
+      firstrunSensorLoop = true;
+    }
     unsigned long sensorLoopTime = millis();
     AREF_V = getBandgap();
 
@@ -707,7 +714,7 @@ void loop() {
     _process();
     
     float steinhartVar = Steinhart();
-    temperatureValues[5] = steinhartVar;
+    temperatureValues[6] = steinhartVar;
     msgTemp5.set(temperatureValues[5], 2); send(msgTemp5);
     _process();
 
@@ -732,15 +739,28 @@ void loop() {
     msgRunTime.set((float)(millis()/1000.0/60.0/60.0),2); send(msgRunTime);
     _process();
             
-    TempAlarm();
-    _process();
     queryRelayStates();
     sendRelayStates();
     SensorLoop_timer = millis();
-    Serial.println(millis()-sensorLoopTime);
+    Serial.print(millis()-sensorLoopTime);
+    Serial.println(" ms");
   }
   
-  if ((millis() - pid_compute_loop_time) > (unsigned long)configValues.pidLoopTime)  {
+  if (((millis() - pid_compute_loop_time) > (unsigned long)configValues.pidLoopTime) & firstrunSensorLoop) {
+  pid1.input = temperatureValues[0];
+  pid2.input = temperatureValues[1];
+  pid3.input = temperatureValues[5]; //Steinhart
+  TempAlarm();
+
+  // Serial.println("Temps: ");
+  // Serial.println(temperatureValues[0]);
+  // Serial.println(temperatureValues[1]);
+  // Serial.println(temperatureValues[2]);
+  // Serial.println(temperatureValues[3]);
+  // Serial.println(temperatureValues[4]);
+  // Serial.println(temperatureValues[5]);
+  // Serial.println(temperatureValues[6]);
+
     int gap = abs(pid1.setpoint - pid1.input); //distance away from setpoint
     if ((gap < pid1.aggSP && pid1.adaptiveMode == true) || pid1.adaptiveMode == false) {
       myPID1.SetTunings(pid1.kp, pid1.ki, pid1.kp);
@@ -805,26 +825,24 @@ void getVccCurrent()
   }
 void TempAlarm() {
   // Temp Alarm
-  if ((pid1.alarmThreshold < pid1.input) || (pid1.input < 1))
+  if ((pid1.alarmThreshold < pid1.input) || (pid1.input < 1.0))
   {
     sendInfo("PID1!");
+    //Serial.println("PID1!");
     red_alert();
     AllStop();
   }
-  if ((pid2.alarmThreshold < pid2.input) || (pid2.input < 1))
+  if ((pid2.alarmThreshold < pid2.input) || (pid2.input < 1.0))
   {
     sendInfo("PID2!");
-    red_alert();
-    AllStop();
-  }
-  {
-    sendInfo("PID2!");
+    //Serial.println("PID2!");
     red_alert();
     AllStop();
   }
   if ((pid3.alarmThreshold < pid3.input) || (pid3.input < 1))
   {
     sendInfo("PID3!");
+    //Serial.println("PID3!");
     red_alert();
     AllStop();
   }
@@ -862,6 +880,7 @@ void emon()
     red_alert();
     AllStop();
     sendInfo("emon SSR Fail");
+    //Serial.println("emon SSR Fail");
     send(MyMessage(CHILD_ID::SSRFail_Alarm, V_STATUS).set(1), configValues.toACK);
   }
 }
@@ -889,7 +908,7 @@ void getScale() {
   if (LoadCell.is_ready())
   {
     float tempOffset = (72 - temperatureValues[1]) * calValues.scaleTempCalibrationMultiplier  ; // 72 is calibration temp in degrees Farhenheit
-    scaleWeightFiltered.Filter(LoadCell.get_units(10) + tempOffset);
+    scaleWeightFiltered.Filter((LoadCell.get_units(10)) + tempOffset);
   }
   else
   {
@@ -1447,12 +1466,16 @@ void DS18B20() {
   return;
 }
 void displayLine(const char* line) {
-  display.clearDisplay();
   display.setCursor(0,0);
   display.setTextSize(3);             // Draw 2X-scale text
   display.setTextColor(SSD1306_WHITE);
   display.print(line); 
-  display.display();
+}
+void displayLine2(const char* line) {
+  display.setCursor(0,30);
+  display.setTextSize(3);             // Draw 2X-scale text
+  display.setTextColor(SSD1306_WHITE);
+  display.print(line); 
 }
 int freeMemory() {
   int free_memory;
