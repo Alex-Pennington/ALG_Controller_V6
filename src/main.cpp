@@ -133,7 +133,7 @@ enum CHILD_ID {
   relay6 = 87,
   relay7 = 88,
   relay8 = 89,
-  RefrigerantSwitch = 90,
+  RefrigerantPumpHighPressureSwitch = 90,
   FlowSwitch = 91,
   ScaleCalibrateKnownValue = 92,
   ScaleTempCalibrationMultiplier = 93
@@ -201,7 +201,7 @@ MyMessage msgSwitch2(CHILD_ID::switch2, V_VAR1);
 MyMessage msgSwitch3(CHILD_ID::switch3, V_VAR1);
 MyMessage msgSwitch4(CHILD_ID::switch4, V_VAR1);
 MyMessage msgSwitch5(CHILD_ID::switch5, V_VAR1);
-MyMessage msgRefrigerantSwitch(CHILD_ID::RefrigerantSwitch, V_STATUS);
+MyMessage msgRefrigerantSwitch(CHILD_ID::RefrigerantPumpHighPressureSwitch, V_STATUS);
 MyMessage msgFlowSwitch(CHILD_ID::FlowSwitch, V_STATUS);
 MyMessage msgScaleCalibrateKnownValue(CHILD_ID::ScaleCalibrateKnownValue, V_LEVEL);
 MyMessage msgScaleTempCalibrationMultiplier(CHILD_ID::ScaleTempCalibrationMultiplier, V_LEVEL);
@@ -362,6 +362,8 @@ extern void *__brkval;
 float THMS1var = 0.0;
 float THMS2var = 0.0;
 bool firstrunSensorLoop = false;
+#define SSRARMED_ON LOW
+#define ELEMENT_ON LOW
 
 // Array to hold all temperature sensor values
 float temperatureValues[8] = {0.0}; // 5 DS18B20 sensors, 3 thermistors
@@ -585,7 +587,7 @@ void presentation() {
   }
 
   present(CHILD_ID::FlowSwitch, S_BINARY, "FSw"); wait(SENDDELAY);   
-  present(CHILD_ID::RefrigerantSwitch, S_BINARY, "RefSw"); wait(SENDDELAY);   
+  present(CHILD_ID::RefrigerantPumpHighPressureSwitch, S_BINARY, "RefSw"); wait(SENDDELAY);   
 
   present(CHILD_ID::P1Offset, S_LIGHT_LEVEL, "P1o"); wait(SENDDELAY);   
   present(CHILD_ID::P2Offset, S_LIGHT_LEVEL, "P2o"); wait(SENDDELAY);   
@@ -598,11 +600,9 @@ void presentation() {
   }
 
   present(CHILD_ID::ScaleCalibrateKnownValue, S_LIGHT_LEVEL, "SCalKV"); wait(SENDDELAY);   
+  present(CHILD_ID::ScaleTempCalibrationMultiplier, S_LIGHT_LEVEL, "STCM"); wait(SENDDELAY);
 
 }
-#define SSRARMED_OFF LOW
-#define SSRARMED_ON LOW
-#define ELEMENT_ON LOW
 
 void setup() {
   Serial.begin(115200);
@@ -617,7 +617,7 @@ void setup() {
   //pinMode(Thermistor1PIN, INPUT);
   //pinMode(Thermistor2PIN, INPUT);
   pinMode(SSRArmed_PIN, OUTPUT);
-  digitalWrite(SSRArmed_PIN, SSRARMED_OFF);
+  digitalWrite(SSRArmed_PIN, !SSRARMED_ON);
   pinMode(ElementPowerPin, OUTPUT);
   digitalWrite(ElementPowerPin, !ELEMENT_ON);
   pinMode(ElementPowerPin2, OUTPUT);
@@ -729,13 +729,7 @@ void loop() {
     pressure4Var = readPressure(Pressure4PIN, calValues.pressure4Offset, calValues.pressure4Cal, pressure4Var);
     msgPressure4.set(pressure4Var, 2); send(msgPressure4);
     _process();
-    
-    //temperatureValues[6] = getThermistor(Thermistor1PIN);
-    //temperatureValues[7] = getThermistor(Thermistor2PIN);
-    //msgTHMS1.set(temperatureValues[6], 2); send(msgTHMS1);
-    //msgTHMS2.set(temperatureValues[7], 2); send(msgTHMS2);
-    //_process();
-    
+       
     msgRunTime.set((float)(millis()/1000.0/60.0/60.0),2); send(msgRunTime);
     _process();
             
@@ -751,15 +745,6 @@ void loop() {
   pid2.input = temperatureValues[1];
   pid3.input = temperatureValues[5]; //Steinhart
   TempAlarm();
-
-  // Serial.println("Temps: ");
-  // Serial.println(temperatureValues[0]);
-  // Serial.println(temperatureValues[1]);
-  // Serial.println(temperatureValues[2]);
-  // Serial.println(temperatureValues[3]);
-  // Serial.println(temperatureValues[4]);
-  // Serial.println(temperatureValues[5]);
-  // Serial.println(temperatureValues[6]);
 
     int gap = abs(pid1.setpoint - pid1.input); //distance away from setpoint
     if ((gap < pid1.aggSP && pid1.adaptiveMode == true) || pid1.adaptiveMode == false) {
