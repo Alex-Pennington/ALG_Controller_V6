@@ -1,3 +1,12 @@
+/*TODO:
+  1) add function to check if pid inputs are out of bounds, hi or low, and allStop()
+  2) update default values for PID to be stored in EEPROM
+  3) update all calValues to be stored in EEPROM
+  4) add function to check if pressure sensor readings are out of bounds, hi, and allStop()
+  5) add function to check if temperature sensor readings are out of bounds, hi, and alertOperator()
+  6) check out HX711_ADC by Olav Kallhovd
+
+*/
 #include <Arduino.h>
 #include "HX711.h"
 #include <PID_v1.h>
@@ -10,6 +19,8 @@
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include "MegunoLink.h"
+#include "Filter.h"
 
 // Enable and select radio type attached
 #define MY_NODE_ID 201
@@ -124,7 +135,8 @@ enum CHILD_ID {
   relay8 = 89,
   RefrigerantSwitch = 90,
   FlowSwitch = 91,
-  ScaleCalibrateKnownValue = 92
+  ScaleCalibrateKnownValue = 92,
+  ScaleTempCalibrationMultiplier = 93
 
 };
 
@@ -192,6 +204,7 @@ MyMessage msgSwitch5(CHILD_ID::switch5, V_VAR1);
 MyMessage msgRefrigerantSwitch(CHILD_ID::RefrigerantSwitch, V_STATUS);
 MyMessage msgFlowSwitch(CHILD_ID::FlowSwitch, V_STATUS);
 MyMessage msgScaleCalibrateKnownValue(CHILD_ID::ScaleCalibrateKnownValue, V_LEVEL);
+MyMessage msgScaleTempCalibrationMultiplier(CHILD_ID::ScaleTempCalibrationMultiplier, V_LEVEL);
 
 #define NUM_RELAYS 8
 
@@ -236,10 +249,13 @@ struct DS18B20Values {
 DS18B20Values ds18b20Values[5];
 
 struct ConfigurationValues {
-  int SENSORLOOPTIME = 23000;
+  int sensorLoopTime = 23000;
+  int scaleLoopTime = 5000;
   bool sDebug = true;
   bool toACK = false;
   int pidLoopTime = 10000;
+  int pressureFilterWeight = 90;
+  int scaleFilterWeight = 90;
 };
 ConfigurationValues configValues;
 
@@ -277,6 +293,7 @@ struct CalibrationValues {
   int rScale =  1000; //rate scalar coefficient
   int VccCurrentOffset = 566;
   float VccCurrentMultiplier = 0.004887;
+  float scaleTempCalibrationMultiplier = 7.77;
 };
 CalibrationValues calValues;
 
@@ -321,6 +338,7 @@ buttons button[7];
 //button 7 is the refrigerant tank capacity switch
 
 //Working Variables
+unsigned long scaleLoop_timer = 0;
 unsigned long dutyCycle_timer = 0;
 unsigned long SensorLoop_timer = 0;
 unsigned long pid_compute_loop_time = 0;
@@ -346,6 +364,8 @@ float THMS2var = 0.0;
 
 // Array to hold all temperature sensor values
 float temperatureValues[8] = {0.0}; // 5 DS18B20 sensors, 3 thermistors
+
+ExponentialFilter<float> scaleWeightFiltered(10, 0);
 
 //Pin Definitions
 #define HX711_dout 9 
@@ -438,7 +458,7 @@ long getBandgap(void);
 void sendInfo(String);
 void DS18B20();
 //float getThermistor(int);
-float readPressure(int pin, int offset, float cal);
+float readPressure(int pin, int offset, float cal, float lastValue);
 void displayLine(const char* line);
 int freeMemory();
 void emon();
@@ -585,11 +605,13 @@ void presentation() {
 void setup() {
   Serial.begin(115200);
   Serial3.begin(9600);
+
   getEEPROM();
   LoadCell.begin(HX711_dout, HX711_sck);
   LoadCell.set_scale(calValues.scaleCal);
   LoadCell.set_offset(calValues.zeroOffsetScale);
   LoadCell.set_gain();
+  scaleWeightFiltered.SetWeight(configValues.scaleFilterWeight);
   //pinMode(Thermistor1PIN, INPUT);
   //pinMode(Thermistor2PIN, INPUT);
   pinMode(SSRArmed_PIN, OUTPUT);
@@ -647,12 +669,20 @@ void loop() {
   pid2.input = temperatureValues[1];
   pid3.input = temperatureValues[5]; //Steinhart
 
-  if ( (millis() - switchesLoop_timer) > (unsigned long)configValues.SENSORLOOPTIME) {
+   if ( (millis() - scaleLoop_timer) > (unsigned long)configValues.scaleLoopTime) {
+    getScale();
+    msgScale.set(valueScale, 2); send(msgScale); wait(SENDDELAY);
+    msgScaleRate.set(gramsPerSecondScale, 2); send(msgScaleRate);
+    _process();
+    scaleLoop_timer = millis();
+  }
+
+  if ( (millis() - switchesLoop_timer) > (unsigned long)configValues.sensorLoopTime) {
     getSwitches();
     switchesLoop_timer = millis();
   }
 
-  if ( (millis() - SensorLoop_timer) > (unsigned long)configValues.SENSORLOOPTIME)  {
+  if ( (millis() - SensorLoop_timer) > (unsigned long)configValues.sensorLoopTime)  {
     unsigned long sensorLoopTime = millis();
     AREF_V = getBandgap();
 
@@ -678,10 +708,6 @@ void loop() {
     msgTemp5.set(temperatureValues[5], 2); send(msgTemp5);
     _process();
 
-    getScale();
-    msgScale.set(valueScale, 2); send(msgScale);
-    msgScaleRate.set(gramsPerSecondScale, 2); send(msgScaleRate);
-    _process();
     DutyCycleLoop();
     
     char buffer[16];
@@ -689,13 +715,13 @@ void loop() {
     displayLine(buffer);
     _process();
 
-    pressure1Var = readPressure(Pressure1PIN, calValues.pressure1Offset, calValues.pressure1Cal);
+    pressure1Var = readPressure(Pressure1PIN, calValues.pressure1Offset, calValues.pressure1Cal, pressure1Var);
     msgPressure1.set(pressure1Var, 2); send(msgPressure1);
-    pressure2Var = readPressure(Pressure2PIN, calValues.pressure2Offset, calValues.pressure2Cal);
+    pressure2Var = readPressure(Pressure2PIN, calValues.pressure2Offset, calValues.pressure2Cal, pressure2Var);
     msgPressure2.set(pressure2Var, 2); send(msgPressure2);
-    pressure3Var = readPressure(Pressure3PIN, calValues.pressure3Offset, calValues.pressure3Cal);
+    pressure3Var = readPressure(Pressure3PIN, calValues.pressure3Offset, calValues.pressure3Cal, pressure3Var);
     msgPressure3.set(pressure3Var, 2); send(msgPressure3);
-    pressure4Var = readPressure(Pressure4PIN, calValues.pressure4Offset, calValues.pressure4Cal);
+    pressure4Var = readPressure(Pressure4PIN, calValues.pressure4Offset, calValues.pressure4Cal, pressure4Var);
     msgPressure4.set(pressure4Var, 2); send(msgPressure4);
     _process();
     
@@ -747,7 +773,6 @@ void switchesLoop() {
     switches[i].loop();
   }
 }
-
 void getSwitches() {
   for (int i = 0; i < 5; i++) {
     int btnState_UP = switches[i * 2].getState();
@@ -769,7 +794,6 @@ void getSwitches() {
 
   return;
 }
-
 void getVccCurrent()
 {
   for (int i = 0; i < 10; i++)
@@ -781,22 +805,26 @@ void getVccCurrent()
   VccCurrentVar = (VccCurrentVar - calValues.VccCurrentOffset) * calValues.VccCurrentMultiplier; //
   return;
   }
-void TempAlarm()
-{
+void TempAlarm() {
   // Temp Alarm
-  if (pid1.alarmThreshold < pid1.input)
+  if ((pid1.alarmThreshold < pid1.input) || (pid1.input < 1))
   {
     sendInfo("PID1!");
     red_alert();
     AllStop();
   }
-  if (pid2.alarmThreshold < pid2.input)
+  if ((pid2.alarmThreshold < pid2.input) || (pid2.input < 1))
   {
     sendInfo("PID2!");
     red_alert();
     AllStop();
   }
-  if (pid3.alarmThreshold < pid3.input)
+  {
+    sendInfo("PID2!");
+    red_alert();
+    AllStop();
+  }
+  if ((pid3.alarmThreshold < pid3.input) || (pid3.input < 1))
   {
     sendInfo("PID3!");
     red_alert();
@@ -862,31 +890,34 @@ void getScale() {
   value_oldScale = valueScale;
   if (LoadCell.is_ready())
   {
-    valueScale = LoadCell.get_units(10) * calValues.mScale;
+    float tempOffset = (72 - temperatureValues[1]) * calValues.scaleTempCalibrationMultiplier  ; // 72 is calibration temp in degrees Farhenheit
+    scaleWeightFiltered.Filter(LoadCell.get_units(10) + tempOffset);
   }
   else
   {
     sendInfo("E2");
     valueScale = value_oldScale; // or handle the error as needed
   }
-  if (valueScale < 0)
+  if (scaleWeightFiltered.Current() < 0)
   {
     valueScale = 0;
+  } else {
+    valueScale = scaleWeightFiltered.Current();
   }
 
   gramsPerSecondScale = ((valueScale - value_oldScale) / ((millis() - oldtimeScale)));
   oldtimeScale = millis();
   return;
 }
-float readPressure(int pin, int offset, float cal) {
-  int RawADCavg = 0;
+float readPressure(int pin, int offset, float cal, float lastValue) {
+  ExponentialFilter<long> adcFilter(10, lastValue);
+  adcFilter.SetWeight(configValues.pressureFilterWeight);
   int i = 0;
   for (i = 0; i < 10; i++) {
     wait(10);
-    RawADCavg += analogRead(Pressure1PIN);
+    adcFilter.Filter(analogRead(Pressure1PIN));
   }
-  float avgADC = (float)RawADCavg / 10.0;
-  float offsetCorrected = avgADC - (float)offset;
+  float offsetCorrected = adcFilter.Current() - (float)offset;
   return offsetCorrected * (1.0 / cal);
 }
 /**
@@ -1189,7 +1220,7 @@ void FactoryResetEEPROM() {
 
   // Reset other configurations
   ssrArmed = false;
-  configValues.SENSORLOOPTIME = 23000;
+  configValues.sensorLoopTime = 23000;
   configValues.sDebug = true;
   configValues.toACK = false;
 
@@ -1703,7 +1734,6 @@ void sendRelayStates() {
   }
   Serial3.write(relayByte);
 }
-
 void sendAllStates() {
   // Send calibration values
   send(MyMessage(CHILD_ID::P1Cal, V_LEVEL).set(calValues.pressure1Cal, 2));
@@ -1802,7 +1832,6 @@ void sendAllStates() {
 
 
 }
-
 /**
  * @brief Sets the scale calibration value based on a known weight.
  *
