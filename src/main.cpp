@@ -794,13 +794,14 @@ void getSwitches() {
 }
 void getVccCurrent()
 {
+  ExponentialFilter<long> adcFilter(10, VccCurrentVar);
   for (int i = 0; i < 10; i++)
   {
-    VccCurrentVar += analogRead(VccCurrentSensor);
+    adcFilter.Filter(analogRead(VccCurrentSensor));
     wait(10); // Small delay for better averaging
   }
-  VccCurrentVar /= 10;                                                                        // Average the readings
-  VccCurrentVar = (VccCurrentVar - calValues.VccCurrentOffset) * calValues.VccCurrentMultiplier; //
+  VccCurrentVar = adcFilter.Current();
+  VccCurrentVar = -1.0  * (VccCurrentVar - (float)calValues.VccCurrentOffset) * calValues.VccCurrentMultiplier; //
   return;
   }
 void TempAlarm() {
