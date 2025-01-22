@@ -655,7 +655,6 @@ void setup() {
 
   displayLine("Booting...");
   sendInfo("Operational");
-  //sendAllStates();
   play_one_up();
   wait(1000);
 }
@@ -671,6 +670,10 @@ void loop() {
 
    if ( (millis() - scaleLoop_timer) > (unsigned long)configValues.scaleLoopTime) {
     getScale();
+    char buffer[16];
+    dtostrf(valueScale, 6, 2, buffer);
+    displayLine(buffer);
+    _process();
     msgScale.set(valueScale, 2); send(msgScale); wait(SENDDELAY);
     msgScaleRate.set(gramsPerSecondScale, 2); send(msgScaleRate);
     _process();
@@ -710,11 +713,6 @@ void loop() {
 
     DutyCycleLoop();
     
-    char buffer[16];
-    dtostrf(valueScale, 6, 2, buffer);
-    displayLine(buffer);
-    _process();
-
     pressure1Var = readPressure(Pressure1PIN, calValues.pressure1Offset, calValues.pressure1Cal, pressure1Var);
     msgPressure1.set(pressure1Var, 2); send(msgPressure1);
     pressure2Var = readPressure(Pressure2PIN, calValues.pressure2Offset, calValues.pressure2Cal, pressure2Var);
@@ -1733,104 +1731,6 @@ void sendRelayStates() {
     send(msgRelay[i].set(relayStates[i]), configValues.toACK);
   }
   Serial3.write(relayByte);
-}
-void sendAllStates() {
-  // Send calibration values
-  send(MyMessage(CHILD_ID::P1Cal, V_LEVEL).set(calValues.pressure1Cal, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::P2Cal, V_LEVEL).set(calValues.pressure2Cal, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::P3Cal, V_LEVEL).set(calValues.pressure3Cal, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::P4Cal, V_LEVEL).set(calValues.pressure4Cal, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::ScaleCal, V_LEVEL).set(calValues.scaleCal, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::MainsCurrentMultiplier, V_LEVEL).set(calValues.emonCal, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::SSRFail_Threshhold, V_LEVEL).set(calValues.ssrFailThreshold));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::MainsCurrentOffset, V_LEVEL).set(calValues.currOffset, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::P1Offset, V_LEVEL).set(calValues.pressure1Offset));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::P2Offset, V_LEVEL).set(calValues.pressure2Offset));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::P3Offset, V_LEVEL).set(calValues.pressure3Offset));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::P4Offset, V_LEVEL).set(calValues.pressure4Offset));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::ScaleOffset, V_LEVEL).set(calValues.zeroOffsetScale, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::s_debug, V_STATUS).set(configValues.sDebug));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::SSR_Armed, V_STATUS).set(ssrArmed));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::ScaleTare, V_STATUS).set(false));
-
-  // Send PID values
-  send(MyMessage(CHILD_ID::PIDSETPOINT_1, V_TEMP).set(pid1.setpoint, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::PIDkP0_1, V_LEVEL).set(pid1.kp, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::PIDkI0_1, V_LEVEL).set(pid1.ki, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::PIDkD0_1, V_LEVEL).set(pid1.kd, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::PIDkP1_1, V_LEVEL).set(pid1.aggKp, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::PIDkI1_1, V_LEVEL).set(pid1.aggKi, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::PIDkD1_1, V_LEVEL).set(pid1.aggKd, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::AdaptiveSP_1, V_LEVEL).set(pid1.aggSP));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::AdaptiveMode_1, V_STATUS).set(pid1.adaptiveMode));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::PIDThreshold_1, V_LEVEL).set(pid1.alarmThreshold));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::PIDMODE_1, V_STATUS).set(pid1.mode));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::PIDSETPOINT_2, V_TEMP).set(pid2.setpoint, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::PIDkP0_2, V_LEVEL).set(pid2.kp, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::PIDkI0_2, V_LEVEL).set(pid2.ki, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::PIDkD0_2, V_LEVEL).set(pid2.kd, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::PIDkP1_2, V_LEVEL).set(pid2.aggKp, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::PIDkI1_2, V_LEVEL).set(pid2.aggKi, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::PIDkD1_2, V_LEVEL).set(pid2.aggKd, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::AdaptiveSP_2, V_LEVEL).set(pid2.aggSP));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::AdaptiveMode_2, V_STATUS).set(pid2.adaptiveMode));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::PIDThreshold_2, V_LEVEL).set(pid2.alarmThreshold));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::PIDMODE_2, V_STATUS).set(pid2.mode));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::PIDSETPOINT_3, V_TEMP).set(pid3.setpoint, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::PIDkP0_3, V_LEVEL).set(pid3.kp, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::PIDkI0_3, V_LEVEL).set(pid3.ki, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::PIDkD0_3, V_LEVEL).set(pid3.kd, 2));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::PIDThreshold_3, V_LEVEL).set(pid3.alarmThreshold));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::PIDMODE_3, V_STATUS).set(pid3.mode));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::ScaleCalibrateKnownValue, V_LEVEL).set(0));
-  wait(SENDDELAY);
-  send(MyMessage(CHILD_ID::LOAD_MEMORY, V_STATUS).set(false));
-  wait(SENDDELAY);
-
-
 }
 /**
  * @brief Sets the scale calibration value based on a known weight.
