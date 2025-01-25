@@ -234,7 +234,7 @@ MyMessage msgRelay[NUM_RELAYS] = {
 #define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-#define VERSION "0.6.0.1"
+#define VERSION "0.6.0.2"
 #define SENDDELAY 50
 #define CELSIUS_TO_FAHRENHEIT_FACTOR 1.8
 #define CELSIUS_TO_FAHRENHEIT_OFFSET 32.0
@@ -309,7 +309,6 @@ struct EmonVars {
     //unsigned long sampleTime = 0;
     bool ssrFail = false;
     int ssrFailCount = 0;
-    float rms = 0.0;
 };
 EmonVars emonVars;
 
@@ -343,30 +342,48 @@ unsigned long dutyCycle_timer = 0;
 unsigned long SensorLoop_timer = 0;
 unsigned long pid_compute_loop_time = 0;
 unsigned long switchesLoop_timer = 0;
-float dC = 0.0;
-float dC2 = 0.0;
-float dC3 = 0.0;
-float valueScale = 0;
 float value_oldScale = 0;
 unsigned long oldtimeScale = 0;
-float gramsPerSecondScale = 0; //rate of change of scale in kilograms per second
-long AREF_V = 0;
-bool ssrArmed = false;
-float pressure1Var = 0;
-float pressure2Var = 0;
-float pressure3Var = 0;
-float pressure4Var = 0;
-float VccCurrentVar = 0;
 extern unsigned int __heap_start;
 extern void *__brkval;
-float THMS1var = 0.0;
-float THMS2var = 0.0;
 bool firstrunSensorLoop = false;
 #define SSRARMED_ON LOW
 #define ELEMENT_ON LOW
 
 // Array to hold all temperature sensor values
-float temperatureValues[8] = {0.0}; // 5 DS18B20 sensors, 3 thermistors
+struct SensorValues {
+  float T1 = 0.0;
+  float T2 = 0.0;
+  float T3 = 0.0;
+  float T4 = 0.0;
+  float T5 = 0.0;
+  float Steinhart = 0.0;
+  float Scale = 0.0;
+  float ScaleRate = 0.0;
+  float Pressure1 = 0.0;
+  float Pressure2 = 0.0;
+  float Pressure3 = 0.0;
+  float Pressure4 = 0.0;
+  float VccVoltage = 0.0;
+  float VccCurrent = 0.0;
+  float MainsCurrent = 0.0;
+  bool SSRFail_Alarm = false;
+  bool relay1 = false;
+  bool relay2 = false;
+  bool relay3 = false;
+  bool relay4 = false;
+  bool relay5 = false;
+  bool relay6 = false;
+  bool relay7 = false;
+  bool relay8 = false;
+  bool RefrigerantPumpHighPressureSwitch = false;
+  bool FlowSwitch = false;
+  float dC1 = 0.0;
+  float dC2 = 0.0;
+  float dC3 = 0.0;
+  bool ssrArmed = false;
+  };
+SensorValues sensorValues;
 
 ExponentialFilter<float> scaleWeightFiltered(10, 0);
 
@@ -669,17 +686,17 @@ void loop() {
   if ( (millis() - scaleLoop_timer) > (unsigned long)configValues.scaleLoopTime) {
     getScale();
     
-    display.clearDisplay();
-    char buffer[16];
-    dtostrf(valueScale, 6, 2, buffer);
-    displayLine(buffer);
-    dtostrf((float)(millis()/1000.0/60.0), 6, 2, buffer);
-    displayLine2(buffer);
-    _process();
-    display.display();
+    // display.clearDisplay();
+    // char buffer[16];
+    // dtostrf(valueScale, 6, 2, buffer);
+    // displayLine(buffer);
+    // dtostrf((float)(millis()/1000.0/60.0), 6, 2, buffer);
+    // displayLine2(buffer);
+    // _process();
+    // display.display();
 
-    msgScale.set(valueScale, 2); send(msgScale); wait(SENDDELAY);
-    msgScaleRate.set(gramsPerSecondScale, 2); send(msgScaleRate);
+    msgScale.set(sensorValues.Scale, 2); send(msgScale); wait(SENDDELAY);
+    msgScaleRate.set(sensorValues.ScaleRate, 2); send(msgScaleRate);
     _process();
     scaleLoop_timer = millis();
   }
@@ -694,40 +711,40 @@ void loop() {
       firstrunSensorLoop = true;
     }
     unsigned long sensorLoopTime = millis();
-    AREF_V = getBandgap();
+    sensorValues.VccVoltage = getBandgap();
 
     getVccCurrent();
-    msgVccCurrent.set(VccCurrentVar, 2); send(msgVccCurrent);
-    msgVccVoltage.set(AREF_V, 2); send(msgVccVoltage);
+    msgVccCurrent.set(sensorValues.VccCurrent, 2); send(msgVccCurrent);
+    msgVccVoltage.set(sensorValues.VccVoltage, 2); send(msgVccVoltage);
     _process();
 
     
     getMainsCurrent();
-    msgMainsCurrent.set(emonVars.rms, 2); send(msgMainsCurrent);
+    msgMainsCurrent.set(sensorValues.MainsCurrent, 2); send(msgMainsCurrent);
     _process();
 
     DS18B20();
-    for (int i = 0; i < 5; i++) {
-      temperatureValues[i] = ds18b20Values[i].F;
-      send(MyMessage(CHILD_ID::T0 + i, V_TEMP).set(temperatureValues[i], 2));
-    }
+    send(MyMessage(CHILD_ID::T0, V_TEMP).set(sensorValues.T1, 2));
+    send(MyMessage(CHILD_ID::T1, V_TEMP).set(sensorValues.T2, 2));
+    send(MyMessage(CHILD_ID::T2, V_TEMP).set(sensorValues.T3, 2));
+    send(MyMessage(CHILD_ID::T3, V_TEMP).set(sensorValues.T4, 2));
+    send(MyMessage(CHILD_ID::T4, V_TEMP).set(sensorValues.T5, 2));
     _process();
     
-    float steinhartVar = Steinhart();
-    temperatureValues[6] = steinhartVar;
-    msgTemp5.set(temperatureValues[5], 2); send(msgTemp5);
+    sensorValues.Steinhart = Steinhart();
+    msgTemp5.set(sensorValues.Steinhart, 2); send(msgTemp5);
     _process();
 
     DutyCycleLoop();
     
-    pressure1Var = readPressure(Pressure1PIN, calValues.pressure1Offset, calValues.pressure1Cal, pressure1Var);
-    msgPressure1.set(pressure1Var, 2); send(msgPressure1);
-    pressure2Var = readPressure(Pressure2PIN, calValues.pressure2Offset, calValues.pressure2Cal, pressure2Var);
-    msgPressure2.set(pressure2Var, 2); send(msgPressure2);
-    pressure3Var = readPressure(Pressure3PIN, calValues.pressure3Offset, calValues.pressure3Cal, pressure3Var);
-    msgPressure3.set(pressure3Var, 2); send(msgPressure3);
-    pressure4Var = readPressure(Pressure4PIN, calValues.pressure4Offset, calValues.pressure4Cal, pressure4Var);
-    msgPressure4.set(pressure4Var, 2); send(msgPressure4);
+    sensorValues.Pressure1 = readPressure(Pressure1PIN, calValues.pressure1Offset, calValues.pressure1Cal, sensorValues.Pressure1);
+    msgPressure1.set(sensorValues.Pressure1, 2); send(msgPressure1);
+    sensorValues.Pressure2 = readPressure(Pressure2PIN, calValues.pressure2Offset, calValues.pressure2Cal, sensorValues.Pressure2);
+    msgPressure2.set(sensorValues.Pressure2, 2); send(msgPressure2);
+    sensorValues.Pressure3 = readPressure(Pressure3PIN, calValues.pressure3Offset, calValues.pressure3Cal, sensorValues.Pressure3);
+    msgPressure3.set(sensorValues.Pressure3, 2); send(msgPressure3);
+    sensorValues.Pressure4 = readPressure(Pressure4PIN, calValues.pressure4Offset, calValues.pressure4Cal, sensorValues.Pressure4);
+    msgPressure4.set(sensorValues.Pressure4, 2); send(msgPressure4);
     _process();
        
     msgRunTime.set((float)(millis()/1000.0/60.0/60.0),2); send(msgRunTime);
@@ -741,9 +758,9 @@ void loop() {
   }
   
   if (((millis() - pid_compute_loop_time) > (unsigned long)configValues.pidLoopTime) & firstrunSensorLoop) {
-  pid1.input = temperatureValues[0];
-  pid2.input = temperatureValues[1];
-  pid3.input = temperatureValues[5]; //Steinhart
+  pid1.input = sensorValues.T1;
+  pid2.input = sensorValues.T2;
+  pid3.input = sensorValues.Steinhart; //Steinhart
   TempAlarm();
 
     int gap = abs(pid1.setpoint - pid1.input); //distance away from setpoint
@@ -761,9 +778,9 @@ void loop() {
     myPID1.Compute();
     myPID2.Compute();
     myPID3.Compute();
-    dC = pid1.output / 100.0;
-    dC2 = pid2.output / 100.0;
-    dC3 = pid3.output / 100.0;
+    sensorValues.dC1 = pid1.output / 100.0;
+    sensorValues.dC2 = pid2.output / 100.0;
+    sensorValues.dC3 = pid3.output / 100.0;
     send(MyMessage(CHILD_ID::dC_1, V_PERCENTAGE).set(pid1.output,2), configValues.toACK);
     send(MyMessage(CHILD_ID::dC_2, V_PERCENTAGE).set(pid2.output,2), configValues.toACK);
     send(MyMessage(CHILD_ID::dC_3, V_PERCENTAGE).set(pid3.output,2), configValues.toACK);
@@ -799,14 +816,14 @@ void getSwitches() {
 }
 void getVccCurrent()
 {
-  ExponentialFilter<long> adcFilter(10, VccCurrentVar);
+  ExponentialFilter<long> adcFilter(10, sensorValues.VccCurrent);
   for (int i = 0; i < 10; i++)
   {
     adcFilter.Filter(analogRead(VccCurrentSensor));
     wait(10); // Small delay for better averaging
   }
-  VccCurrentVar = adcFilter.Current();
-  VccCurrentVar = -1.0  * (VccCurrentVar - (float)calValues.VccCurrentOffset) * calValues.VccCurrentMultiplier; //
+  sensorValues.VccCurrent = adcFilter.Current();
+  sensorValues.VccCurrent = -1.0  * (sensorValues.VccCurrent - (float)calValues.VccCurrentOffset) * calValues.VccCurrentMultiplier; //
   return;
   }
 void TempAlarm() {
@@ -861,8 +878,8 @@ void emon()
     sum += current * current;                                               // sum squares
     wait(10);
   }
-  emonVars.rms = sqrt(sum / 1000) - calValues.currOffset;
-  if ((int(emonVars.rms) > int(calValues.ssrFailThreshold)))  {
+  sensorValues.MainsCurrent = sqrt(sum / 1000) - calValues.currOffset;
+  if ((int(sensorValues.MainsCurrent) > int(calValues.ssrFailThreshold)))  {
     red_alert();
     AllStop();
     sendInfo("emon SSR Fail");
@@ -877,7 +894,7 @@ void getMainsCurrent() {
     sum += current * current;                                               // sum squares
     wait(10);
   }
-  emonVars.rms = sqrt(sum / 1000) - calValues.currOffset;
+  sensorValues.MainsCurrent = sqrt(sum / 1000) - calValues.currOffset;
   return;
 }
 /**
@@ -890,25 +907,25 @@ void getMainsCurrent() {
  * @param pinVar The pin number where the DS18B20 sensor is connected.
  */
 void getScale() {
-  value_oldScale = valueScale;
+  value_oldScale = sensorValues.Scale;
   if (LoadCell.is_ready())
   {
-    float tempOffset = (72 - temperatureValues[1]) * calValues.scaleTempCalibrationMultiplier  ; // 72 is calibration temp in degrees Farhenheit
+    float tempOffset = (72 - sensorValues.T2) * calValues.scaleTempCalibrationMultiplier  ; // 72 is calibration temp in degrees Farhenheit
     scaleWeightFiltered.Filter((LoadCell.get_units(10)) + tempOffset);
   }
   else
   {
     sendInfo("E2");
-    valueScale = value_oldScale; // or handle the error as needed
+    sensorValues.Scale = value_oldScale; // or handle the error as needed
   }
   if (scaleWeightFiltered.Current() < 0)
   {
-    valueScale = 0;
+    sensorValues.Scale = 0;
   } else {
-    valueScale = scaleWeightFiltered.Current();
+    sensorValues.Scale = scaleWeightFiltered.Current();
   }
 
-  gramsPerSecondScale = ((valueScale - value_oldScale) / ((millis() - oldtimeScale)));
+  sensorValues.ScaleRate = ((sensorValues.Scale - value_oldScale) / ((millis() - oldtimeScale)));
   oldtimeScale = millis();
   return;
 }
@@ -1011,20 +1028,20 @@ if ((millis() - dutyCycle_timer) > (unsigned long)(dutyCycle[0].loopTime * 1000)
 
     if (i == 0) {
       pidMode = pid1.mode;
-      dutyCycleValue = dC;
+      dutyCycleValue = sensorValues.dC1;
       elementPin = ElementPowerPin;
     } else if (i == 1) {
       pidMode = pid2.mode;
-      dutyCycleValue = dC2;
+      dutyCycleValue = sensorValues.dC2;
       elementPin = ElementPowerPin2;
     } else {
       pidMode = pid3.mode;
-      dutyCycleValue = dC3;
+      dutyCycleValue = sensorValues.dC3;
       elementPin = ElementPowerPin3;
     }
 
     // Check if the duty cycle loop is active and SSR is armed
-    if (dutyCycleValue > 0.0 && ssrArmed && pidMode) {
+    if (dutyCycleValue > 0.0 && sensorValues.ssrArmed && pidMode) {
       unsigned long currentTime = millis();
       unsigned long onDuration = dutyCycle[i].loopTime * 1000 * dutyCycleValue; // Convert duty cycle to on milliseconds
       unsigned long offDuration = dutyCycle[i].loopTime * 1000 - onDuration; // Convert duty cycle to off milliseconds
@@ -1052,7 +1069,7 @@ void AllStop() {
   pid1.mode = false;
   pid2.mode = false;
   pid3.mode = false;
-  ssrArmed = false;
+  sensorValues.ssrArmed = false;
   myPID1.SetMode(MANUAL);
   myPID2.SetMode(MANUAL);
   myPID3.SetMode(MANUAL);
@@ -1094,7 +1111,7 @@ void StoreEEPROM() {
   EEPROM.put(EEPROMAddresses::EMON_CAL, calValues.emonCal);
   EEPROM.put(EEPROMAddresses::SSR_FAIL_THRESHOLD, calValues.ssrFailThreshold);
   EEPROM.put(EEPROMAddresses::CURR_OFFSET, calValues.currOffset);
-  EEPROM.put(EEPROMAddresses::SSR_ARMED, ssrArmed);
+  EEPROM.put(EEPROMAddresses::SSR_ARMED, sensorValues.ssrArmed);
   EEPROM.put(EEPROMAddresses::PID1_MODE, pid1.mode);
   EEPROM.put(EEPROMAddresses::PID2_MODE, pid2.mode);
   EEPROM.put(EEPROMAddresses::PID3_MODE, pid3.mode);
@@ -1222,7 +1239,7 @@ void FactoryResetEEPROM() {
   pid3.output = 0;
 
   // Reset other configurations
-  ssrArmed = false;
+  sensorValues.ssrArmed = false;
   configValues.sensorLoopTime = 23000;
   configValues.sDebug = true;
   configValues.toACK = false;
@@ -1515,18 +1532,18 @@ void receive(const MyMessage & message)  {
       LoadCell.set_offset(calValues.zeroOffsetScale);
       break;
     case CHILD_ID::dC_1:
-      dC = message.getFloat() / 100.0;
+      sensorValues.dC1 = message.getFloat() / 100.0;
       break;
     case CHILD_ID::dC_2:
-      dC2 = message.getFloat() / 100.0;
+      sensorValues.dC2 = message.getFloat() / 100.0;
       break;
     case CHILD_ID::dC_3:
-      dC3 = message.getFloat() / 100.0;
+      sensorValues.dC3 = message.getFloat() / 100.0;
       break;
     case CHILD_ID::SSR_Armed:
-      ssrArmed = message.getBool();
-      EEPROM.put(EEPROMAddresses::SSR_ARMED, ssrArmed);
-      digitalWrite(SSRArmed_PIN, ssrArmed);
+      sensorValues.ssrArmed = message.getBool();
+      EEPROM.put(EEPROMAddresses::SSR_ARMED, sensorValues.ssrArmed);
+      digitalWrite(SSRArmed_PIN, sensorValues.ssrArmed);
       play_coin();
       break;
     case CHILD_ID::Press1Offset:
@@ -1782,7 +1799,7 @@ float voltageDivider(int pin, float dividerResistor) {
     ADCvalue += analogRead(pin);
   }
   ADCvalue /= 10;
-  float Vin = (AREF_V/1000.0);
+  float Vin = (sensorValues.VccVoltage/1000.0);
   if(ADCvalue){
     float Vadc = ADCvalue * (Vin / 1023.0);
     //Serial.print("Voltage Pin ");
