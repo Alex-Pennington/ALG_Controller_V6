@@ -2142,17 +2142,17 @@ void receive(const MyMessage &message)
     break;
   case CHILD_ID::PID1_SENSORID:
     sensorValues.PID1_SENSORID_VAR = message.getInt();
-    EEPROM.put(EEPROMAddresses::PID1_SENSORID_ADDR, PID1_SENSORID_ADDR);
+    EEPROM.put(EEPROMAddresses::PID1_SENSORID_ADDR, sensorValues.PID1_SENSORID_VAR);
     updateEEPROMCRC();
     break;
   case CHILD_ID::PID2_SENSORID:
     sensorValues.PID2_SENSORID_VAR = message.getInt();
-    EEPROM.put(EEPROMAddresses::PID2_SENSORID_ADDR, PID2_SENSORID_ADDR);
+    EEPROM.put(EEPROMAddresses::PID2_SENSORID_ADDR, sensorValues.PID2_SENSORID_VAR);
     updateEEPROMCRC();
     break;
   case CHILD_ID::PID3_SENSORID:
     sensorValues.PID3_SENSORID_VAR = message.getInt();
-    EEPROM.put(EEPROMAddresses::PID3_SENSORID_ADDR, PID3_SENSORID_ADDR);
+    EEPROM.put(EEPROMAddresses::PID3_SENSORID_ADDR, sensorValues.PID3_SENSORID_VAR);
     updateEEPROMCRC();
     break;
   case CHILD_ID::OLED_line3:
