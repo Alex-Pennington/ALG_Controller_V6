@@ -539,6 +539,7 @@ bool checkEEPROMCRC();
 void updateEEPROMCRC();
 void sanityCheckEEPROM();
 float getThermistor(int pin);
+void displayKnightRider();
 
 enum EEPROMAddresses
 {
@@ -988,6 +989,7 @@ void loop()
     strncpy(buffer, getSensorString(sensorValues.OLED_line6_SENSORID), sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
     displayLine(buffer, 5);
+    displayKnightRider();
     display.display();
     SensorLoop_timer = millis();
     Serial.print(millis() - sensorLoopTime);
@@ -2886,4 +2888,17 @@ float getThermistor(const int pinVar)
   Serial.print(" Temp: ");
   Serial.println(tempF);
   return tempF;
+}
+
+void displayKnightRider() {
+  static int position = 0;
+  static int direction = 1;
+
+  display.drawLine(0, SCREEN_HEIGHT - 4, SCREEN_WIDTH, SCREEN_HEIGHT - 4, SSD1306_BLACK); // Clear previous line
+  display.drawLine(position, SCREEN_HEIGHT - 4, position + 4, SCREEN_HEIGHT - 4, SSD1306_WHITE); // Draw new line
+
+  position += direction;
+  if (position <= 0 || position >= SCREEN_WIDTH - 4) {
+    direction = -direction; // Change direction
+  }
 }
