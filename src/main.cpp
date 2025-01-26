@@ -29,7 +29,7 @@
 #define MY_RF24_PA_LEVEL RF24_PA_HIGH
 #define MY_RF24_CE_PIN 49
 #define MY_RF24_CS_PIN 53
-//#define MY_DEBUG
+// #define MY_DEBUG
 #include <MySensors.h>
 
 // MySensors Child IDs
@@ -224,6 +224,11 @@ MyMessage msgRefrigerantSwitch(CHILD_ID::RefrigerantPumpHighPressureSwitch, V_ST
 MyMessage msgFlowSwitch(CHILD_ID::FlowSwitch, V_STATUS);
 MyMessage msgScaleCalibrateKnownValue(CHILD_ID::ScaleCalibrateKnownValue, V_LEVEL);
 MyMessage msgScaleTempCalibrationMultiplier(CHILD_ID::ScaleTempCalibrationMultiplier, V_LEVEL);
+MyMessage msgOLED_line1(CHILD_ID::OLED_line1, V_LEVEL);
+MyMessage msgOLED_line2(CHILD_ID::OLED_line2, V_LEVEL);
+MyMessage msgPID1_SENSORID(CHILD_ID::PID1_SENSORID, V_LEVEL);
+MyMessage msgPID2_SENSORID(CHILD_ID::PID2_SENSORID, V_LEVEL);
+MyMessage msgPID3_SENSORID(CHILD_ID::PID3_SENSORID, V_LEVEL);
 
 #define NUM_RELAYS 8
 
@@ -764,7 +769,7 @@ void setup()
     display.clearDisplay();
     displayLine("E");
     display.display();
-    //FactoryResetEEPROM();
+    // FactoryResetEEPROM();
   }
   getEEPROM();
   LoadCell.begin(HX711_dout, HX711_sck);
@@ -881,17 +886,31 @@ void loop()
     sensorValues.T10 = ds18b20Values[9].F;
 
     send(MyMessage(CHILD_ID::T0, V_TEMP).set(sensorValues.T1, 2));
+    _process();
     send(MyMessage(CHILD_ID::T1, V_TEMP).set(sensorValues.T2, 2));
+    _process();
     send(MyMessage(CHILD_ID::T2, V_TEMP).set(sensorValues.T3, 2));
+    _process();
     send(MyMessage(CHILD_ID::T3, V_TEMP).set(sensorValues.T4, 2));
+    _process();
     send(MyMessage(CHILD_ID::T4, V_TEMP).set(sensorValues.T5, 2));
+    _process();
+    send(MyMessage(CHILD_ID::T5, V_TEMP).set(sensorValues.T6, 2));
+    _process();
+    send(MyMessage(CHILD_ID::T6, V_TEMP).set(sensorValues.T7, 2));
+    _process();
+    send(MyMessage(CHILD_ID::T7, V_TEMP).set(sensorValues.T8, 2));
+    _process();
+    send(MyMessage(CHILD_ID::T8, V_TEMP).set(sensorValues.T9, 2));
+    _process();
+    send(MyMessage(CHILD_ID::T9, V_TEMP).set(sensorValues.T10, 2));
+    _process();
     send(MyMessage(CHILD_ID::Steinhart_SensorID, V_TEMP).set(sensorValues.T6, 2));
 
     _process();
 
     sensorValues.Steinhart = Steinhart();
-    msgSteinhart.set(sensorValues.Steinhart, 2);
-    send(msgSteinhart);
+    send(msgSteinhart.set(sensorValues.Steinhart, 2));
     _process();
 
     DutyCycleLoop();
@@ -899,15 +918,22 @@ void loop()
     sensorValues.Pressure1 = readPressure(Pressure1PIN, calValues.pressure1Offset, calValues.pressure1Cal, sensorValues.Pressure1);
     msgPressure1.set(sensorValues.Pressure1, 2);
     send(msgPressure1);
+    wait(SENDDELAY);
+    _process();
     sensorValues.Pressure2 = readPressure(Pressure2PIN, calValues.pressure2Offset, calValues.pressure2Cal, sensorValues.Pressure2);
     msgPressure2.set(sensorValues.Pressure2, 2);
     send(msgPressure2);
+    wait(SENDDELAY);
+    _process();
     sensorValues.Pressure3 = readPressure(Pressure3PIN, calValues.pressure3Offset, calValues.pressure3Cal, sensorValues.Pressure3);
     msgPressure3.set(sensorValues.Pressure3, 2);
     send(msgPressure3);
+    wait(SENDDELAY);
+    _process();
     sensorValues.Pressure4 = readPressure(Pressure4PIN, calValues.pressure4Offset, calValues.pressure4Cal, sensorValues.Pressure4);
     msgPressure4.set(sensorValues.Pressure4, 2);
     send(msgPressure4);
+    wait(SENDDELAY);
     _process();
 
     msgRunTime.set((float)(millis() / 1000.0 / 60.0 / 60.0), 2);
@@ -915,7 +941,28 @@ void loop()
     _process();
 
     queryRelayStates();
+    wait(SENDDELAY);
+    _process();
     sendRelayStates();
+    wait(SENDDELAY);
+    _process();
+
+    send(msgOLED_line1.set(sensorValues.OLED_line1_SENSORID));
+    wait(SENDDELAY);
+    _process();
+    send(msgOLED_line2.set(sensorValues.OLED_line2_SENSORID));
+    wait(SENDDELAY);
+    _process();
+    send(MyMessage(CHILD_ID::PID1_SENSORID, V_LIGHT_LEVEL).set(sensorValues.PID1_SENSORID_VAR));
+    wait(SENDDELAY);
+    _process();
+    send(MyMessage(CHILD_ID::PID2_SENSORID, V_LIGHT_LEVEL).set(sensorValues.PID2_SENSORID_VAR));
+    wait(SENDDELAY);
+    _process();
+    send(MyMessage(CHILD_ID::PID3_SENSORID, V_LIGHT_LEVEL).set(sensorValues.PID3_SENSORID_VAR));
+    wait(SENDDELAY);
+    _process();
+
     SensorLoop_timer = millis();
     Serial.print(millis() - sensorLoopTime);
     Serial.println(" ms");
@@ -1339,12 +1386,6 @@ void StoreEEPROM()
 }
 void getEEPROM()
 {
-  EEPROM.get(EEPROMAddresses::PRESSURE3_CAL, calValues.pressure3Cal);
-  EEPROM.get(EEPROMAddresses::PRESSURE4_CAL, calValues.pressure4Cal);
-  EEPROM.get(EEPROMAddresses::PRESSURE3_OFFSET, calValues.pressure3Offset);
-  EEPROM.get(EEPROMAddresses::PRESSURE4_OFFSET, calValues.pressure4Offset);
-  EEPROM.get(EEPROMAddresses::VCC_CURRENT_OFFSET, calValues.VccCurrentOffset);
-  EEPROM.get(EEPROMAddresses::VCC_CURRENT_MULTIPLIER, calValues.VccCurrentMultiplier);
   EEPROM.get(EEPROMAddresses::ZERO_OFFSET_SCALE, calValues.zeroOffsetScale);
   EEPROM.get(EEPROMAddresses::PRESSURE1_OFFSET, calValues.pressure1Offset);
   EEPROM.get(EEPROMAddresses::SCALE_CAL, calValues.scaleCal);
@@ -1372,7 +1413,7 @@ void getEEPROM()
   EEPROM.get(EEPROMAddresses::EMON_CAL, calValues.emonCurrCal);
   EEPROM.get(EEPROMAddresses::SSR_FAIL_THRESHOLD, calValues.ssrFailThreshold);
   EEPROM.get(EEPROMAddresses::CURR_OFFSET, calValues.emonCurrOffset);
-  // EEPROM.get(EEPROMAddresses::SSR_ARMED, ssrArmed);
+  // EEPROM.get(EEPROMAddresses::SSR_ARMED, sensorValues.ssrArmed);
   // EEPROM.get(EEPROMAddresses::PID1_MODE, pid1.mode);
   // EEPROM.get(EEPROMAddresses::PID2_MODE, pid2.mode);
   // EEPROM.get(EEPROMAddresses::PID3_MODE, pid3.mode);
@@ -1384,6 +1425,12 @@ void getEEPROM()
   EEPROM.get(EEPROMAddresses::PID3_ALARM_THRESHOLD, pid3.alarmThreshold);
   EEPROM.get(EEPROMAddresses::PRESSURE2_OFFSET, calValues.pressure2Offset);
   EEPROM.get(EEPROMAddresses::PRESSURE2_CAL, calValues.pressure2Cal);
+  EEPROM.get(EEPROMAddresses::PRESSURE3_OFFSET, calValues.pressure3Offset);
+  EEPROM.get(EEPROMAddresses::PRESSURE3_CAL, calValues.pressure3Cal);
+  EEPROM.get(EEPROMAddresses::PRESSURE4_OFFSET, calValues.pressure4Offset);
+  EEPROM.get(EEPROMAddresses::PRESSURE4_CAL, calValues.pressure4Cal);
+  EEPROM.get(EEPROMAddresses::VCC_CURRENT_OFFSET, calValues.VccCurrentOffset);
+  EEPROM.get(EEPROMAddresses::VCC_CURRENT_MULTIPLIER, calValues.VccCurrentMultiplier);
   EEPROM.get(EEPROMAddresses::OLED_line1_SENSORID_ADDR, sensorValues.OLED_line1_SENSORID);
   EEPROM.get(EEPROMAddresses::OLED_line2_SENSORID_ADDR, sensorValues.OLED_line2_SENSORID);
   EEPROM.get(EEPROMAddresses::PID1_SENSORID_ADDR, sensorValues.PID1_SENSORID_VAR);
