@@ -377,12 +377,13 @@ unsigned long oldtimeScale = 0;
 extern unsigned int __heap_start;
 extern void *__brkval;
 bool firstrunSensorLoop = false;
-#define SSRARMED_ON LOW
-#define ELEMENT_ON LOW
+#define SSRARMED_ON HIGH //Note to Copilot: Do Not Modify this value
+#define ELEMENT_ON LOW //Note to Copilot: Do Not Modify this value
 
 // Array to hold all temperature sensor values
 struct SensorValues
 {
+  float T0 = 0.0;
   float T1 = 0.0;
   float T2 = 0.0;
   float T3 = 0.0;
@@ -392,7 +393,6 @@ struct SensorValues
   float T7 = 0.0;
   float T8 = 0.0;
   float T9 = 0.0;
-  float T10 = 0.0;
   float Steinhart = 0.0;
   float Scale = 0.0;
   float ScaleRate = 0.0;
@@ -595,31 +595,31 @@ void presentation()
   // Send the sensor node sketch version information to the gateway
   sendSketchInfo("Controller", VERSION);
 
-  present(CHILD_ID::T0, S_TEMP, "D1");
+  present(CHILD_ID::T0, S_TEMP, "D0");
   wait(SENDDELAY);
-  present(CHILD_ID::T1, S_TEMP, "D2");
+  present(CHILD_ID::T1, S_TEMP, "D1");
   wait(SENDDELAY);
-  present(CHILD_ID::T2, S_TEMP, "D3");
+  present(CHILD_ID::T2, S_TEMP, "D2");
   wait(SENDDELAY);
-  present(CHILD_ID::T3, S_TEMP, "D4");
+  present(CHILD_ID::T3, S_TEMP, "D3");
   wait(SENDDELAY);
-  present(CHILD_ID::T4, S_TEMP, "D5");
+  present(CHILD_ID::T4, S_TEMP, "D4");
   wait(SENDDELAY);
-  present(CHILD_ID::T5, S_TEMP, "D6");
+  present(CHILD_ID::T5, S_TEMP, "D5");
   wait(SENDDELAY);
-  present(CHILD_ID::T6, S_TEMP, "D7");
+  present(CHILD_ID::T6, S_TEMP, "D6");
   wait(SENDDELAY);
-  present(CHILD_ID::T7, S_TEMP, "D8");
+  present(CHILD_ID::T7, S_TEMP, "D7");
   wait(SENDDELAY);
-  present(CHILD_ID::T8, S_TEMP, "D9");
+  present(CHILD_ID::T8, S_TEMP, "D8");
   wait(SENDDELAY);
-  present(CHILD_ID::T9, S_TEMP, "D10");
+  present(CHILD_ID::T9, S_TEMP, "D9");
   wait(SENDDELAY);
   present(CHILD_ID::Steinhart_SensorID, S_TEMP, "S1");
   wait(SENDDELAY);
-  present(CHILD_ID::THMS1, S_TEMP, "T1");
+  present(CHILD_ID::THMS1, S_TEMP, "Th1");
   wait(SENDDELAY);
-  present(CHILD_ID::THMS2, S_TEMP, "T2");
+  present(CHILD_ID::THMS2, S_TEMP, "Th2");
   wait(SENDDELAY);
   present(CHILD_ID::Scale, S_WEIGHT, "Scl");
   wait(SENDDELAY);
@@ -813,7 +813,9 @@ void setup()
     switches[i].setDebounceTime(50);
   }
 
+  display.clearDisplay();
   displayLine("Booting...");
+  display.display();
   sendInfo("Operational");
   play_one_up();
   wait(1000);
@@ -829,6 +831,7 @@ void loop()
   {
     getScale();
 
+    display.clearDisplay();
     static char buffer[20];
     strncpy(buffer, getSensorString(sensorValues.OLED_line1_SENSORID), sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
@@ -836,6 +839,7 @@ void loop()
     strncpy(buffer, getSensorString(sensorValues.OLED_line2_SENSORID), sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
     displayLine2(buffer);
+    display.display();
 
     msgScale.set(sensorValues.Scale, 2);
     send(msgScale);
@@ -874,41 +878,37 @@ void loop()
     _process();
 
     DS18B20();
-    sensorValues.T1 = ds18b20Values[0].F;
-    sensorValues.T2 = ds18b20Values[1].F;
-    sensorValues.T3 = ds18b20Values[2].F;
-    sensorValues.T4 = ds18b20Values[3].F;
-    sensorValues.T5 = ds18b20Values[4].F;
-    sensorValues.T6 = ds18b20Values[5].F;
-    sensorValues.T7 = ds18b20Values[6].F;
-    sensorValues.T8 = ds18b20Values[7].F;
-    sensorValues.T9 = ds18b20Values[8].F;
-    sensorValues.T10 = ds18b20Values[9].F;
+    sensorValues.T0 = ds18b20Values[0].F;
+    sensorValues.T1 = ds18b20Values[1].F;
+    sensorValues.T2 = ds18b20Values[2].F;
+    sensorValues.T3 = ds18b20Values[3].F;
+    sensorValues.T4 = ds18b20Values[4].F;
+    sensorValues.T5 = ds18b20Values[5].F;
+    sensorValues.T6 = ds18b20Values[6].F;
+    sensorValues.T7 = ds18b20Values[7].F;
+    sensorValues.T8 = ds18b20Values[8].F;
+    sensorValues.T9 = ds18b20Values[9].F;
 
-    send(MyMessage(CHILD_ID::T0, V_TEMP).set(sensorValues.T1, 2));
+    send(MyMessage(CHILD_ID::T0, V_TEMP).set(sensorValues.T0, 2));
     _process();
-    send(MyMessage(CHILD_ID::T1, V_TEMP).set(sensorValues.T2, 2));
+    send(MyMessage(CHILD_ID::T1, V_TEMP).set(sensorValues.T1, 2));
     _process();
-    send(MyMessage(CHILD_ID::T2, V_TEMP).set(sensorValues.T3, 2));
+    send(MyMessage(CHILD_ID::T2, V_TEMP).set(sensorValues.T2, 2));
     _process();
-    send(MyMessage(CHILD_ID::T3, V_TEMP).set(sensorValues.T4, 2));
+    send(MyMessage(CHILD_ID::T3, V_TEMP).set(sensorValues.T3, 2));
     _process();
-    send(MyMessage(CHILD_ID::T4, V_TEMP).set(sensorValues.T5, 2));
+    send(MyMessage(CHILD_ID::T4, V_TEMP).set(sensorValues.T4, 2));
     _process();
-    send(MyMessage(CHILD_ID::T5, V_TEMP).set(sensorValues.T6, 2));
+    send(MyMessage(CHILD_ID::T5, V_TEMP).set(sensorValues.T5, 2));
     _process();
-    send(MyMessage(CHILD_ID::T6, V_TEMP).set(sensorValues.T7, 2));
+    send(MyMessage(CHILD_ID::T6, V_TEMP).set(sensorValues.T6, 2));
     _process();
-    send(MyMessage(CHILD_ID::T7, V_TEMP).set(sensorValues.T8, 2));
+    send(MyMessage(CHILD_ID::T7, V_TEMP).set(sensorValues.T7, 2));
     _process();
-    send(MyMessage(CHILD_ID::T8, V_TEMP).set(sensorValues.T9, 2));
+    send(MyMessage(CHILD_ID::T8, V_TEMP).set(sensorValues.T8, 2));
     _process();
-    send(MyMessage(CHILD_ID::T9, V_TEMP).set(sensorValues.T10, 2));
+    send(MyMessage(CHILD_ID::T9, V_TEMP).set(sensorValues.T9, 2));
     _process();
-    send(MyMessage(CHILD_ID::Steinhart_SensorID, V_TEMP).set(sensorValues.T6, 2));
-
-    _process();
-
     sensorValues.Steinhart = Steinhart();
     send(msgSteinhart.set(sensorValues.Steinhart, 2));
     _process();
@@ -947,21 +947,21 @@ void loop()
     wait(SENDDELAY);
     _process();
 
-    send(msgOLED_line1.set(sensorValues.OLED_line1_SENSORID));
-    wait(SENDDELAY);
-    _process();
-    send(msgOLED_line2.set(sensorValues.OLED_line2_SENSORID));
-    wait(SENDDELAY);
-    _process();
-    send(MyMessage(CHILD_ID::PID1_SENSORID, V_LIGHT_LEVEL).set(sensorValues.PID1_SENSORID_VAR));
-    wait(SENDDELAY);
-    _process();
-    send(MyMessage(CHILD_ID::PID2_SENSORID, V_LIGHT_LEVEL).set(sensorValues.PID2_SENSORID_VAR));
-    wait(SENDDELAY);
-    _process();
-    send(MyMessage(CHILD_ID::PID3_SENSORID, V_LIGHT_LEVEL).set(sensorValues.PID3_SENSORID_VAR));
-    wait(SENDDELAY);
-    _process();
+    // send(msgOLED_line1.set(sensorValues.OLED_line1_SENSORID));
+    // wait(SENDDELAY);
+    // _process();
+    // send(msgOLED_line2.set(sensorValues.OLED_line2_SENSORID));
+    // wait(SENDDELAY);
+    // _process();
+    // send(MyMessage(CHILD_ID::PID1_SENSORID, V_LIGHT_LEVEL).set(sensorValues.PID1_SENSORID_VAR));
+    // wait(SENDDELAY);
+    // _process();
+    // send(MyMessage(CHILD_ID::PID2_SENSORID, V_LIGHT_LEVEL).set(sensorValues.PID2_SENSORID_VAR));
+    // wait(SENDDELAY);
+    // _process();
+    // send(MyMessage(CHILD_ID::PID3_SENSORID, V_LIGHT_LEVEL).set(sensorValues.PID3_SENSORID_VAR));
+    // wait(SENDDELAY);
+    // _process();
 
     SensorLoop_timer = millis();
     Serial.print(millis() - sensorLoopTime);
@@ -2399,12 +2399,12 @@ bool checkEEPROMCRC()
   }
   uint32_t storedCRC;
   EEPROM.get(EEPROM_SIZE - 4, storedCRC);
-  Serial.print("Check: ");
-  Serial.print("stored CRC: ");
-  Serial.println(storedCRC);
+  // Serial.print("Check: ");
+  // Serial.print("stored CRC: ");
+  // Serial.println(storedCRC);
   uint32_t finalCRC = crc.finalize();
-  Serial.print("final CRC: ");
-  Serial.println(finalCRC);
+  // Serial.print("final CRC: ");
+  // Serial.println(finalCRC);
   return storedCRC == finalCRC;
 }
 void updateEEPROMCRC()
@@ -2415,12 +2415,12 @@ void updateEEPROMCRC()
     crc.update(EEPROM.read(i));
   }
   uint32_t newCRC = crc.finalize();
-  Serial.print("Update: ");
-  Serial.print("New CRC: ");
-  Serial.println(newCRC);
+  // Serial.print("Update: ");
+  // Serial.print("New CRC: ");
+  // Serial.println(newCRC);
   EEPROM.put(EEPROM_SIZE - 4, newCRC);
   uint32_t storedCRC;
   EEPROM.get(EEPROM_SIZE - 4, storedCRC);
-  Serial.print("Stored CRC: ");
-  Serial.println(storedCRC);
+  // Serial.print("Stored CRC: ");
+  // Serial.println(storedCRC);
 }
