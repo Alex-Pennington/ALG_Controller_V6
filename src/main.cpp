@@ -150,7 +150,8 @@ enum CHILD_ID
   T8 = 102,
   T9 = 103,
   T10 = 104,
-  ScaleDeltaRate = 105
+  OLED_line3 = 105,
+  OLED_line4 = 106,
 
 };
 
@@ -222,13 +223,6 @@ MyMessage msgSwitch4(CHILD_ID::switch4, V_VAR1);
 MyMessage msgSwitch5(CHILD_ID::switch5, V_VAR1);
 MyMessage msgRefrigerantSwitch(CHILD_ID::RefrigerantPumpHighPressureSwitch, V_STATUS);
 MyMessage msgFlowSwitch(CHILD_ID::FlowSwitch, V_STATUS);
-MyMessage msgScaleCalibrateKnownValue(CHILD_ID::ScaleCalibrateKnownValue, V_LEVEL);
-MyMessage msgScaleTempCalibrationMultiplier(CHILD_ID::ScaleTempCalibrationMultiplier, V_LEVEL);
-MyMessage msgOLED_line1(CHILD_ID::OLED_line1, V_LEVEL);
-MyMessage msgOLED_line2(CHILD_ID::OLED_line2, V_LEVEL);
-MyMessage msgPID1_SENSORID(CHILD_ID::PID1_SENSORID, V_LEVEL);
-MyMessage msgPID2_SENSORID(CHILD_ID::PID2_SENSORID, V_LEVEL);
-MyMessage msgPID3_SENSORID(CHILD_ID::PID3_SENSORID, V_LEVEL);
 
 #define NUM_RELAYS 8
 
@@ -423,6 +417,8 @@ struct SensorValues
   int PID1_SENSORID_VAR = 0;
   int PID2_SENSORID_VAR = 0;
   int PID3_SENSORID_VAR = 0;
+  int OLED_line3_SENSORID = 0;
+  int OLED_line4_SENSORID = 0;
 };
 SensorValues sensorValues;
 
@@ -588,8 +584,9 @@ enum EEPROMAddresses
   OLED_line2_SENSORID_ADDR = 144, // int, 2 bytes
   PID1_SENSORID_ADDR = 146,       // int, 2 bytes
   PID2_SENSORID_ADDR = 148,       // int, 2 bytes
-  PID3_SENSORID_ADDR = 150        // int, 2 bytes
-
+  PID3_SENSORID_ADDR = 150,        // int, 2 bytes
+  OLED_line3_SENSORID_ADDR = 152, // int, 2 bytes
+  OLED_line4_SENSORID_ADDR = 154 // int, 2 bytes
 };
 
 void presentation()
@@ -1371,6 +1368,14 @@ void StoreEEPROM()
   EEPROM.put(EEPROMAddresses::PID3_ALARM_THRESHOLD, pid3.alarmThreshold);
   EEPROM.put(EEPROMAddresses::PRESSURE2_OFFSET, calValues.pressure2Offset);
   EEPROM.put(EEPROMAddresses::PRESSURE2_CAL, calValues.pressure2Cal);
+  EEPROM.put(EEPROMAddresses::OLED_line1_SENSORID_ADDR, sensorValues.OLED_line1_SENSORID);
+  EEPROM.put(EEPROMAddresses::OLED_line2_SENSORID_ADDR, sensorValues.OLED_line2_SENSORID);
+  EEPROM.put(EEPROMAddresses::OLED_line3_SENSORID_ADDR, sensorValues.OLED_line3_SENSORID);
+  EEPROM.put(EEPROMAddresses::OLED_line4_SENSORID_ADDR, sensorValues.OLED_line4_SENSORID);
+  EEPROM.put(EEPROMAddresses::PID1_SENSORID_ADDR, sensorValues.PID1_SENSORID_VAR);
+  EEPROM.put(EEPROMAddresses::PID2_SENSORID_ADDR, sensorValues.PID2_SENSORID_VAR);
+  EEPROM.put(EEPROMAddresses::PID3_SENSORID_ADDR, sensorValues.PID3_SENSORID_VAR);
+
 
   printConfig();
   updateEEPROMCRC();
@@ -1424,6 +1429,8 @@ void getEEPROM()
   EEPROM.get(EEPROMAddresses::VCC_CURRENT_MULTIPLIER, calValues.VccCurrentMultiplier);
   EEPROM.get(EEPROMAddresses::OLED_line1_SENSORID_ADDR, sensorValues.OLED_line1_SENSORID);
   EEPROM.get(EEPROMAddresses::OLED_line2_SENSORID_ADDR, sensorValues.OLED_line2_SENSORID);
+  EEPROM.get(EEPROMAddresses::OLED_line3_SENSORID_ADDR, sensorValues.OLED_line3_SENSORID);
+  EEPROM.get(EEPROMAddresses::OLED_line4_SENSORID_ADDR, sensorValues.OLED_line4_SENSORID);
   EEPROM.get(EEPROMAddresses::PID1_SENSORID_ADDR, sensorValues.PID1_SENSORID_VAR);
   EEPROM.get(EEPROMAddresses::PID2_SENSORID_ADDR, sensorValues.PID2_SENSORID_VAR);
   EEPROM.get(EEPROMAddresses::PID3_SENSORID_ADDR, sensorValues.PID3_SENSORID_VAR);
@@ -1510,6 +1517,8 @@ void FactoryResetEEPROM()
   configValues.scaleFilterWeight = 0.1;
   sensorValues.OLED_line1_SENSORID = 0;
   sensorValues.OLED_line2_SENSORID = 1;
+  sensorValues.OLED_line3_SENSORID = 0;
+  sensorValues.OLED_line4_SENSORID = 1;
   sensorValues.PID1_SENSORID_VAR = 0;
   sensorValues.PID2_SENSORID_VAR = 1;
   sensorValues.PID3_SENSORID_VAR = 5;
@@ -2066,6 +2075,14 @@ void receive(const MyMessage &message)
     sensorValues.PID3_SENSORID_VAR = message.getInt();
     EEPROM.put(EEPROMAddresses::PID3_SENSORID_ADDR, PID3_SENSORID);
     break;
+  case CHILD_ID::OLED_line3:
+    sensorValues.OLED_line3_SENSORID = message.getInt();
+    EEPROM.put(EEPROMAddresses::OLED_line3_SENSORID_ADDR, sensorValues.OLED_line3_SENSORID);
+    break;
+  case CHILD_ID::OLED_line4:
+    sensorValues.OLED_line4_SENSORID = message.getInt();
+    EEPROM.put(EEPROMAddresses::OLED_line4_SENSORID_ADDR, sensorValues.OLED_line4_SENSORID);
+    break;
   }
 
   // Handle Relay States
@@ -2211,9 +2228,9 @@ char *getSensorString(int sensorID)
     dtostrf(sensorValues.Scale, 4, 1, vBuffer);
     sprintf(tempString, "Scale: %s", vBuffer);
     break;
-  case CHILD_ID::ScaleDeltaRate:
-    dtostrf(sensorValues.ScaleRate, 4, 1, vBuffer);
-    sprintf(tempString, "ScaleRate: %s", vBuffer);
+  case CHILD_ID::dTscale:
+    dtostrf(sensorValues.ScaleRate, 4, 2, vBuffer);
+    sprintf(tempString, "dTs: %s", vBuffer);
     break;
   case CHILD_ID::P1:
     dtostrf(sensorValues.Pressure1, 4, 1, vBuffer);
@@ -2345,7 +2362,7 @@ float getSensorFloat(int sensorID)
   case CHILD_ID::Scale:
     tempFloat = sensorValues.Scale;
     break;
-  case CHILD_ID::ScaleDeltaRate:
+  case CHILD_ID::dTscale:
     tempFloat = sensorValues.ScaleRate;
     break;
   case CHILD_ID::P1:
