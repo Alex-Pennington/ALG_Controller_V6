@@ -2890,15 +2890,28 @@ float getThermistor(const int pinVar)
   return tempF;
 }
 
+/**
+ * @brief Displays a Knight Rider style progress indicator on the bottom four pixels of the display.
+ *
+ * This function draws a moving line on the bottom four pixels of the OLED display,
+ * creating a Knight Rider style effect. The line moves back and forth across the screen.
+ * Each time this function is called, it iterates its movement one step.
+ */
 void displayKnightRider() {
-  static int position = 0;
-  static int direction = 1;
+  static int position = 0; // Current position of the line
+  static int direction = 1; // Direction of movement (1 for right, -1 for left)
 
-  display.drawLine(0, SCREEN_HEIGHT - 4, SCREEN_WIDTH, SCREEN_HEIGHT - 4, SSD1306_BLACK); // Clear previous line
-  display.drawLine(position, SCREEN_HEIGHT - 4, position + 4, SCREEN_HEIGHT - 4, SSD1306_WHITE); // Draw new line
+  // Clear the previous line
+  display.drawLine(0, SCREEN_HEIGHT - 4, SCREEN_WIDTH, SCREEN_HEIGHT - 4, SSD1306_BLACK);
+  
+  // Draw the new line at the current position
+  display.drawLine(position, SCREEN_HEIGHT - 4, position + 4, SCREEN_HEIGHT - 4, SSD1306_WHITE);
 
+  // Update the position for the next frame
   position += direction;
+  
+  // Change direction if the line reaches the edge of the screen
   if (position <= 0 || position >= SCREEN_WIDTH - 4) {
-    direction = -direction; // Change direction
+    direction = -direction;
   }
 }
