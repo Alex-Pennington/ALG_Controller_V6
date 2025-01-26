@@ -364,6 +364,7 @@ buttons button[7];
 
 // Working Variables
 unsigned long scaleLoop_timer = 0;
+unsigned long KnightRider_timer = 0;
 unsigned long dutyCycle_timer = 0;
 unsigned long SensorLoop_timer = 0;
 unsigned long pid_compute_loop_time = 0;
@@ -597,7 +598,7 @@ enum EEPROMAddresses
   OLED_line4_SENSORID_ADDR = 156, // int, 2 bytes
   OLED_line5_SENSORID_ADDR = 158, // int, 2 bytes
   OLED_line6_SENSORID_ADDR = 160, // int, 2 bytes
-  ZERO_OFFSET_SCALE = 162,          // float, 4 bytes
+  ZERO_OFFSET_SCALE = 162,        // float, 4 bytes
 };
 
 void presentation()
@@ -794,7 +795,7 @@ void setup()
     displayLine("EPROM", 0);
     displayLine("ERROR", 1);
     display.display();
-    //wait(30000);
+    // wait(30000);
     FactoryResetEEPROM();
   }
   getEEPROM();
@@ -853,10 +854,15 @@ void loop()
   _process();
   switchesLoop();
 
+  if ((millis() - KnightRider_timer) > (unsigned long)1000)
+  {
+    displayKnightRider();
+    KnightRider_timer = millis();
+  }
+
   if ((millis() - scaleLoop_timer) > (unsigned long)configValues.scaleLoopTime)
   {
     getScale();
-
     msgScale.set(sensorValues.Scale, 2);
     send(msgScale);
     wait(SENDDELAY);
@@ -1479,8 +1485,9 @@ void getEEPROM()
   EEPROM.get(EEPROMAddresses::OLED_line6_SENSORID_ADDR, sensorValues.OLED_line6_SENSORID);
   printConfig();
 }
-void initDefaultValues() {
-  
+void initDefaultValues()
+{
+
   /*Note to current future mainainers:
   It is my intention that this be the source function for the configurations and sensor definitions.
   When a change is made to the functionality of the apparatus make the changes here first.
@@ -1568,7 +1575,8 @@ void initDefaultValues() {
   sensorValues.PID2_SENSORID_VAR = 1;
   sensorValues.PID3_SENSORID_VAR = 71;
 }
-void FactoryResetEEPROM() {
+void FactoryResetEEPROM()
+{
   initDefaultValues();
   StoreEEPROM();
 }
@@ -2562,7 +2570,8 @@ float getSensorFloat(int sensorID)
 
   return tempFloat;
 }
-uint32_t getEEPROMCRC() {
+uint32_t getEEPROMCRC()
+{
   CRC32 crc;
   for (int i = 0; i < EEPROM_SIZE - 4; i++)
   {
@@ -2594,7 +2603,8 @@ void updateEEPROMCRC()
   Serial.print("  Stored CRC: ");
   Serial.println(storedCRC);
 }
-void sanityCheckEEPROM() {
+void sanityCheckEEPROM()
+{
   int tempINT;
   float tempFLOAT;
   double tempDOUBLE;
@@ -2688,11 +2698,13 @@ void sanityCheckEEPROM() {
     Serial.print("PID2 Agg KI: ");
     Serial.println(tempDOUBLE);
   }
-  if (EEPROM.get(EEPROMAddresses::PID2_AGG_KD, tempDOUBLE) != pid2.aggKd) {
+  if (EEPROM.get(EEPROMAddresses::PID2_AGG_KD, tempDOUBLE) != pid2.aggKd)
+  {
     Serial.print("PID2 Agg KD: ");
     Serial.println(tempDOUBLE);
   }
-  if (EEPROM.get(EEPROMAddresses::PID1_AGG_SP, tempBYTE) != pid1.aggSP) {
+  if (EEPROM.get(EEPROMAddresses::PID1_AGG_SP, tempBYTE) != pid1.aggSP)
+  {
     Serial.print("PID1 Agg SP: ");
     Serial.println(tempBYTE);
   }
@@ -2746,11 +2758,13 @@ void sanityCheckEEPROM() {
     Serial.print("PID1 Mode: ");
     Serial.println(tempBOOL);
   }
-  if (EEPROM.get(EEPROMAddresses::PID2_MODE, tempBOOL) != pid2.mode) {
+  if (EEPROM.get(EEPROMAddresses::PID2_MODE, tempBOOL) != pid2.mode)
+  {
     Serial.print("PID2 Mode: ");
     Serial.println(tempBOOL);
   }
-  if (EEPROM.get(EEPROMAddresses::PID3_MODE, tempBOOL) != pid3.mode) {
+  if (EEPROM.get(EEPROMAddresses::PID3_MODE, tempBOOL) != pid3.mode)
+  {
     Serial.print("PID3 Mode: ");
     Serial.println(tempBOOL);
   }
@@ -2799,11 +2813,13 @@ void sanityCheckEEPROM() {
     Serial.print("Pressure3 Offset: ");
     Serial.println(tempINT);
   }
-  if (EEPROM.get(EEPROMAddresses::PRESSURE3_CAL, tempFLOAT) != calValues.pressure3Cal) {
+  if (EEPROM.get(EEPROMAddresses::PRESSURE3_CAL, tempFLOAT) != calValues.pressure3Cal)
+  {
     Serial.print("Pressure3 Cal: ");
     Serial.println(tempFLOAT);
   }
-  if (EEPROM.get(EEPROMAddresses::PRESSURE4_OFFSET, tempINT) != calValues.pressure4Offset) {
+  if (EEPROM.get(EEPROMAddresses::PRESSURE4_OFFSET, tempINT) != calValues.pressure4Offset)
+  {
     Serial.print("Pressure4 Offset: ");
     Serial.println(tempINT);
   }
@@ -2897,21 +2913,23 @@ float getThermistor(const int pinVar)
  * creating a Knight Rider style effect. The line moves back and forth across the screen.
  * Each time this function is called, it iterates its movement one step.
  */
-void displayKnightRider() {
-  static int position = 0; // Current position of the line
+void displayKnightRider()
+{
+  static int position = 0;  // Current position of the line
   static int direction = 1; // Direction of movement (1 for right, -1 for left)
 
   // Clear the previous line
   display.drawLine(0, SCREEN_HEIGHT - 4, SCREEN_WIDTH, SCREEN_HEIGHT - 4, SSD1306_BLACK);
-  
+
   // Draw the new line at the current position
   display.drawLine(position, SCREEN_HEIGHT - 4, position + 4, SCREEN_HEIGHT - 4, SSD1306_WHITE);
 
   // Update the position for the next frame
   position += direction;
-  
+
   // Change direction if the line reaches the edge of the screen
-  if (position <= 0 || position >= SCREEN_WIDTH - 4) {
+  if (position <= 0 || position >= SCREEN_WIDTH - 4)
+  {
     direction = -direction;
   }
 }
