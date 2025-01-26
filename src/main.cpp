@@ -461,6 +461,8 @@ ExponentialFilter<float> scaleWeightFiltered(10, 0);
 #define Switch5_DOWN_Pin 34
 #define FlowSwitchPin 33
 #define RefrigerantSwitchPin 32
+#define Thermistor1_PIN A1
+#define Thermistor2_PIN A2
 
 /*Connector Pinouts
 Pressure(3)  1 5V, 2 GND, 3 SIG
@@ -536,6 +538,7 @@ char *getSensorString(int sensorID);
 bool checkEEPROMCRC();
 void updateEEPROMCRC();
 void sanityCheckEEPROM();
+float getThermistor(int pin);
 
 enum EEPROMAddresses
 {
@@ -799,8 +802,8 @@ void setup()
   LoadCell.set_offset(calValues.zeroOffsetScale);
   LoadCell.set_gain();
   scaleWeightFiltered.SetWeight(configValues.scaleFilterWeight);
-  // pinMode(Thermistor1PIN, INPUT);
-  // pinMode(Thermistor2PIN, INPUT);
+  pinMode(Thermistor1_PIN, INPUT);
+  pinMode(Thermistor2_PIN, INPUT);
   pinMode(SSRArmed_PIN, OUTPUT);
   digitalWrite(SSRArmed_PIN, !SSRARMED_ON);
   pinMode(ElementPowerPin, OUTPUT);
@@ -923,6 +926,12 @@ void loop()
     _process();
     sensorValues.Steinhart = Steinhart();
     send(msgSteinhart.set(sensorValues.Steinhart, 2));
+    _process();
+    sensorValues.THMS1 = getThermistor(Thermistor1_PIN);
+    send(msgTHMS1.set(sensorValues.THMS1, 2));
+    _process();
+    sensorValues.THMS2 = getThermistor(Thermistor2_PIN);
+    send(msgTHMS2.set(sensorValues.THMS2, 2));
     _process();
 
     DutyCycleLoop();
@@ -2451,6 +2460,18 @@ float getSensorFloat(int sensorID)
   case CHILD_ID::T5:
     tempFloat = sensorValues.T5;
     break;
+  case CHILD_ID::T6:
+    tempFloat = sensorValues.T6;
+    break;
+  case CHILD_ID::T7:
+    tempFloat = sensorValues.T7;
+    break;
+  case CHILD_ID::T8:
+    tempFloat = sensorValues.T8;
+    break;
+  case CHILD_ID::T9:
+    tempFloat = sensorValues.T9;
+    break;
   case CHILD_ID::Steinhart_SensorID:
     tempFloat = sensorValues.Steinhart;
     break;
@@ -2525,6 +2546,12 @@ float getSensorFloat(int sensorID)
     break;
   case CHILD_ID::SSR_Armed:
     tempFloat = (float)sensorValues.ssrArmed;
+    break;
+  case CHILD_ID::THMS1:
+    tempFloat = sensorValues.THMS1;
+    break;
+  case CHILD_ID::THMS2:
+    tempFloat = sensorValues.THMS2;
     break;
   default:
     tempFloat = -999.010101;
