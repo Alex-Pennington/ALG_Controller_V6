@@ -585,7 +585,7 @@ enum EEPROMAddresses
   OLED_line2_SENSORID_ADDR = 144, // int, 2 bytes
   PID1_SENSORID_ADDR = 146,       // int, 2 bytes
   PID2_SENSORID_ADDR = 148,       // int, 2 bytes
-  PID3_SENSORID_ADDR = 150,        // int, 2 bytes
+  PID3_SENSORID_ADDR = 150,       // int, 2 bytes
   OLED_line3_SENSORID_ADDR = 152, // int, 2 bytes
   OLED_line4_SENSORID_ADDR = 154, // int, 2 bytes
   OLED_line5_SENSORID_ADDR = 156, // int, 2 bytes
@@ -785,8 +785,8 @@ void setup()
     sendInfo("EPROM ERROR");
     Serial.println("EEPRIM ERROR");
     display.clearDisplay();
-    displayLine("EPROM",0);
-    displayLine("ERROR",1);
+    displayLine("EPROM", 0);
+    displayLine("ERROR", 1);
     display.display();
     delay(30000);
     FactoryResetEEPROM();
@@ -834,7 +834,7 @@ void setup()
   }
 
   display.clearDisplay();
-  displayLine("Booting...",1);
+  displayLine("Booting...", 1);
   display.display();
   sendInfo("Operational");
   play_one_up();
@@ -964,19 +964,19 @@ void loop()
     displayLine(buffer, 0);
     strncpy(buffer, getSensorString(sensorValues.OLED_line2_SENSORID), sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
-    displayLine(buffer,1);
+    displayLine(buffer, 1);
     strncpy(buffer, getSensorString(sensorValues.OLED_line3_SENSORID), sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
-    displayLine(buffer,2);
+    displayLine(buffer, 2);
     strncpy(buffer, getSensorString(sensorValues.OLED_line4_SENSORID), sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
-    displayLine(buffer,3);
+    displayLine(buffer, 3);
     strncpy(buffer, getSensorString(sensorValues.OLED_line5_SENSORID), sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
-    displayLine(buffer,4);
+    displayLine(buffer, 4);
     strncpy(buffer, getSensorString(sensorValues.OLED_line6_SENSORID), sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
-    displayLine(buffer,5);
+    displayLine(buffer, 5);
     display.display();
     SensorLoop_timer = millis();
     Serial.print(millis() - sensorLoopTime);
@@ -1404,7 +1404,6 @@ void StoreEEPROM()
   EEPROM.put(EEPROMAddresses::PID3_SENSORID_ADDR, sensorValues.PID3_SENSORID_VAR);
   EEPROM.put(EEPROMAddresses::OLED_line5_SENSORID_ADDR, sensorValues.OLED_line5_SENSORID);
   EEPROM.put(EEPROMAddresses::OLED_line6_SENSORID_ADDR, sensorValues.OLED_line6_SENSORID);
-
 
   printConfig();
   updateEEPROMCRC();
@@ -1856,6 +1855,7 @@ void receive(const MyMessage &message)
       if (configValues.sDebug)
         Serial.println(" done.");
       EEPROM.put(EEPROMAddresses::ZERO_OFFSET_SCALE, calValues.zeroOffsetScale);
+      updateEEPROMCRC();
       LoadCell.set_offset(calValues.zeroOffsetScale);
       send(msgScaleTare.set(false), configValues.toACK);
       wait(SENDDELAY);
@@ -1868,6 +1868,7 @@ void receive(const MyMessage &message)
   case CHILD_ID::ScaleOffset:
     calValues.zeroOffsetScale = message.getFloat();
     EEPROM.put(EEPROMAddresses::ZERO_OFFSET_SCALE, calValues.zeroOffsetScale);
+    updateEEPROMCRC();
     LoadCell.set_offset(calValues.zeroOffsetScale);
     break;
   case CHILD_ID::dC_1:
@@ -1882,151 +1883,186 @@ void receive(const MyMessage &message)
   case CHILD_ID::SSR_Armed:
     sensorValues.ssrArmed = message.getBool();
     EEPROM.put(EEPROMAddresses::SSR_ARMED, sensorValues.ssrArmed);
+    updateEEPROMCRC();
     digitalWrite(SSRArmed_PIN, sensorValues.ssrArmed);
     play_coin();
     break;
   case CHILD_ID::Press1Offset:
     calValues.pressure1Offset = message.getInt();
     EEPROM.put(EEPROMAddresses::PRESSURE1_OFFSET, calValues.pressure1Offset);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::ScaleCal:
     calValues.scaleCal = message.getFloat();
     LoadCell.set_scale(calValues.scaleCal);
     EEPROM.put(EEPROMAddresses::SCALE_CAL, calValues.scaleCal);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::P1Cal:
     calValues.pressure1Cal = message.getFloat();
     EEPROM.put(EEPROMAddresses::PRESSURE1_CAL, calValues.pressure1Cal);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::P2Cal:
     calValues.pressure2Cal = message.getFloat();
     EEPROM.put(EEPROMAddresses::PRESSURE2_CAL, calValues.pressure2Cal);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::P3Cal:
     calValues.pressure3Cal = message.getFloat();
     EEPROM.put(EEPROMAddresses::PRESSURE3_CAL, calValues.pressure3Cal);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::P4Cal:
     calValues.pressure4Cal = message.getFloat();
     EEPROM.put(EEPROMAddresses::PRESSURE4_CAL, calValues.pressure4Cal);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::PIDMODE_1:
     pid1.mode = message.getBool();
     myPID1.SetMode(message.getBool());
     EEPROM.put(EEPROMAddresses::PID1_MODE, message.getBool());
+    updateEEPROMCRC();
     play_coin();
     break;
   case CHILD_ID::PIDSETPOINT_1:
     pid1.setpoint = message.getFloat();
     EEPROM.put(EEPROMAddresses::PID1_SETPOINT, pid1.setpoint);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::PIDkP0_1:
     pid1.kp = message.getFloat();
     EEPROM.put(EEPROMAddresses::PID1_KP, pid1.kp);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::PIDkI0_1:
     pid1.ki = message.getFloat();
     EEPROM.put(EEPROMAddresses::PID1_KI, pid1.ki);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::PIDkD0_1:
     pid1.kd = message.getFloat();
     EEPROM.put(EEPROMAddresses::PID1_KD, pid1.kd);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::PIDkP1_1:
     pid1.aggKp = message.getFloat();
     EEPROM.put(EEPROMAddresses::PID1_AGG_KP, pid1.aggKp);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::PIDkI1_1:
     pid1.aggKi = message.getFloat();
     EEPROM.put(EEPROMAddresses::PID1_AGG_KI, pid1.aggKi);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::PIDkD1_1:
     pid1.aggKd = message.getFloat();
     EEPROM.put(EEPROMAddresses::PID1_AGG_KD, pid1.aggKd);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::AdaptiveSP_1:
     pid1.aggSP = message.getByte();
     EEPROM.put(EEPROMAddresses::PID1_AGG_SP, pid1.aggSP);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::AdaptiveMode_1:
     pid1.adaptiveMode = message.getBool();
     EEPROM.put(EEPROMAddresses::PID1_ADAPTIVE_MODE, pid1.adaptiveMode);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::PIDMODE_2:
     pid2.mode = message.getBool();
     myPID2.SetMode(message.getBool());
     EEPROM.put(EEPROMAddresses::PID2_MODE, message.getBool());
+    updateEEPROMCRC();
     play_coin();
     break;
   case CHILD_ID::PIDSETPOINT_2:
     pid2.setpoint = message.getFloat();
     EEPROM.put(EEPROMAddresses::PID2_SETPOINT, pid2.setpoint);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::PIDkP0_2:
     pid2.kp = message.getFloat();
     EEPROM.put(EEPROMAddresses::PID2_KP, pid2.kp);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::PIDkI0_2:
     pid2.ki = message.getFloat();
     EEPROM.put(EEPROMAddresses::PID2_KI, pid2.ki);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::PIDkD0_2:
     pid2.kd = message.getFloat();
     EEPROM.put(EEPROMAddresses::PID2_KD, pid2.kd);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::PIDkP1_2:
     pid2.aggKp = message.getFloat();
     EEPROM.put(EEPROMAddresses::PID2_AGG_KP, pid2.aggKp);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::PIDkI1_2:
     pid2.aggKi = message.getFloat();
     EEPROM.put(EEPROMAddresses::PID2_AGG_KI, pid2.aggKi);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::PIDkD1_2:
     pid2.aggKd = message.getFloat();
     EEPROM.put(EEPROMAddresses::PID2_AGG_KD, pid2.aggKd);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::AdaptiveSP_2:
     pid2.aggSP = message.getByte();
     EEPROM.put(EEPROMAddresses::PID2_AGG_SP, pid2.aggSP);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::AdaptiveMode_2:
     pid2.adaptiveMode = message.getBool();
     EEPROM.put(EEPROMAddresses::PID2_ADAPTIVE_MODE, pid2.adaptiveMode);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::PIDMODE_3:
     pid3.mode = message.getBool();
     myPID3.SetMode(message.getBool());
     EEPROM.put(EEPROMAddresses::PID3_MODE, message.getBool());
+    updateEEPROMCRC();
     play_coin();
     break;
   case CHILD_ID::PIDSETPOINT_3:
     pid3.setpoint = message.getFloat();
     EEPROM.put(EEPROMAddresses::PID3_SETPOINT, pid3.setpoint);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::PIDkP0_3:
     pid3.kp = message.getFloat();
     EEPROM.put(EEPROMAddresses::PID3_KP, pid3.kp);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::PIDkI0_3:
     pid3.ki = message.getFloat();
     EEPROM.put(EEPROMAddresses::PID3_KI, pid3.ki);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::PIDkD0_3:
     pid3.kd = message.getFloat();
     EEPROM.put(EEPROMAddresses::PID3_KD, pid3.kd);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::MainsCurrentMultiplier:
     calValues.emonCurrCal = message.getFloat();
     EEPROM.put(EEPROMAddresses::EMON_CAL, calValues.emonCurrCal);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::SSRFail_Threshhold:
     calValues.ssrFailThreshold = message.getByte();
     EEPROM.put(EEPROMAddresses::SSR_FAIL_THRESHOLD, calValues.ssrFailThreshold);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::MainsCurrentOffset:
     calValues.emonCurrOffset = message.getFloat();
     EEPROM.put(EEPROMAddresses::CURR_OFFSET, calValues.emonCurrOffset);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::LOAD_MEMORY:
     if (message.getBool())
@@ -2038,73 +2074,91 @@ void receive(const MyMessage &message)
   case CHILD_ID::s_debug:
     configValues.sDebug = message.getBool();
     EEPROM.put(EEPROMAddresses::S_DEBUG, configValues.sDebug);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::PIDThreshold_1:
     pid1.alarmThreshold = message.getInt();
     EEPROM.put(EEPROMAddresses::PID1_ALARM_THRESHOLD, pid1.alarmThreshold);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::PIDThreshold_2:
     pid2.alarmThreshold = message.getInt();
     EEPROM.put(EEPROMAddresses::PID2_ALARM_THRESHOLD, pid2.alarmThreshold);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::PIDThreshold_3:
     pid3.alarmThreshold = message.getInt();
     EEPROM.put(EEPROMAddresses::PID3_ALARM_THRESHOLD, pid3.alarmThreshold);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::P1Offset:
     calValues.pressure1Offset = message.getFloat();
     EEPROM.put(EEPROMAddresses::PRESSURE1_OFFSET, calValues.pressure1Offset);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::P2Offset:
     calValues.pressure2Offset = message.getFloat();
     EEPROM.put(EEPROMAddresses::PRESSURE2_OFFSET, calValues.pressure2Offset);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::P3Offset:
     calValues.pressure3Offset = message.getFloat();
     EEPROM.put(EEPROMAddresses::PRESSURE3_OFFSET, calValues.pressure3Offset);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::P4Offset:
     calValues.pressure4Offset = message.getFloat();
     EEPROM.put(EEPROMAddresses::PRESSURE4_OFFSET, calValues.pressure4Offset);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::ScaleCalibrateKnownValue:
     setScaleCalibration(message.getFloat());
+    updateEEPROMCRC();
     break;
   case CHILD_ID::OLED_line1:
     sensorValues.OLED_line1_SENSORID = message.getInt();
     EEPROM.put(EEPROMAddresses::OLED_line1_SENSORID_ADDR, sensorValues.OLED_line1_SENSORID);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::OLED_line2:
     sensorValues.OLED_line2_SENSORID = message.getInt();
     EEPROM.put(EEPROMAddresses::OLED_line2_SENSORID_ADDR, sensorValues.OLED_line2_SENSORID);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::PID1_SENSORID:
     sensorValues.PID1_SENSORID_VAR = message.getInt();
     EEPROM.put(EEPROMAddresses::PID1_SENSORID_ADDR, PID1_SENSORID_ADDR);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::PID2_SENSORID:
     sensorValues.PID2_SENSORID_VAR = message.getInt();
     EEPROM.put(EEPROMAddresses::PID2_SENSORID_ADDR, PID2_SENSORID_ADDR);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::PID3_SENSORID:
     sensorValues.PID3_SENSORID_VAR = message.getInt();
     EEPROM.put(EEPROMAddresses::PID3_SENSORID_ADDR, PID3_SENSORID_ADDR);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::OLED_line3:
     sensorValues.OLED_line3_SENSORID = message.getInt();
     EEPROM.put(EEPROMAddresses::OLED_line3_SENSORID_ADDR, sensorValues.OLED_line3_SENSORID);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::OLED_line4:
     sensorValues.OLED_line4_SENSORID = message.getInt();
     EEPROM.put(EEPROMAddresses::OLED_line4_SENSORID_ADDR, sensorValues.OLED_line4_SENSORID);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::OLED_line5:
     sensorValues.OLED_line5_SENSORID = message.getInt();
     EEPROM.put(EEPROMAddresses::OLED_line5_SENSORID_ADDR, sensorValues.OLED_line5_SENSORID);
+    updateEEPROMCRC();
     break;
   case CHILD_ID::OLED_line6:
     sensorValues.OLED_line6_SENSORID = message.getInt();
     EEPROM.put(EEPROMAddresses::OLED_line6_SENSORID_ADDR, sensorValues.OLED_line6_SENSORID);
+    updateEEPROMCRC();
     break;
   }
 
@@ -2117,7 +2171,6 @@ void receive(const MyMessage &message)
       sendRelayStates();
     }
   }
-  updateEEPROMCRC();
 }
 void queryRelayStates()
 {
@@ -2160,6 +2213,7 @@ void setScaleCalibration(float knownWeight)
     calValues.scaleCal = rawValue / knownWeight;
     LoadCell.set_scale(calValues.scaleCal);
     EEPROM.put(EEPROMAddresses::SCALE_CAL, calValues.scaleCal);
+    updateEEPROMCRC();
     send(MyMessage(CHILD_ID::ScaleCal, V_LEVEL).set(calValues.scaleCal, 2));
     wait(SENDDELAY);
     sendInfo("Scale calibrated");
@@ -2468,34 +2522,34 @@ float getSensorFloat(int sensorID)
 bool checkEEPROMCRC()
 {
   CRC32 crc;
-  for (int i = 0; i < EEPROM_SIZE - 6; i++)
+  for (int i = 0; i < EEPROM_SIZE - 4; i++)
   {
     crc.update(EEPROM.read(i));
   }
-  uint32_t finalCRC = crc.finalize();
+  uint32_t newCRC = crc.finalize();
   uint32_t storedCRC;
-  EEPROM.get(EEPROM_SIZE - 6, storedCRC);
+  EEPROM.get(EEPROM_SIZE - 4, storedCRC);
   Serial.print("Check: ");
   Serial.print("stored CRC: ");
-  Serial.println(storedCRC);
-  Serial.print("final CRC: ");
-  Serial.println(finalCRC);
-  return storedCRC == finalCRC;
+  Serial.print(storedCRC);
+  Serial.print("  finalized() CRC: ");
+  Serial.println(newCRC);
+  return storedCRC == newCRC;
 }
 void updateEEPROMCRC()
 {
   CRC32 crc;
-  for (int i = 0; i < EEPROM_SIZE - 6; i++)
+  for (int i = 0; i < EEPROM_SIZE - 4; i++)
   {
     crc.update(EEPROM.read(i));
   }
   uint32_t newCRC = crc.finalize();
   Serial.print("Update: ");
   Serial.print("New CRC: ");
-  Serial.println(newCRC);
-  EEPROM.put(EEPROM_SIZE - 6, newCRC);
+  Serial.print(newCRC);
+  EEPROM.put(EEPROM_SIZE - 4, newCRC);
   uint32_t storedCRC;
-  EEPROM.get(EEPROM_SIZE - 6, storedCRC);
-  Serial.print("Stored CRC: ");
+  EEPROM.get(EEPROM_SIZE - 4, storedCRC);
+  Serial.print("  Stored CRC: ");
   Serial.println(storedCRC);
 }
