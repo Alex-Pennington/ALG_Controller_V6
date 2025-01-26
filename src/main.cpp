@@ -2171,61 +2171,78 @@ char *getSensorString(int sensorID)
   static char tempString[20] = "";
 
 char vBuffer[15];
-  dtostrf(voltage,4,2, vBuffer);
+  // dtostrf(voltage,4,2, vBuffer);
  
-  char buffer[80];    
-  sprintf(buffer,"{\"psi\": \"%d\",\"voltage\": \"%s\",\"analogRead\": \"%d\",\"loop\": \"%d\"}", pressurePSI, vBuffer, pressureValue, loopCounter);
-  Serial.println(buffer);
+  // char buffer[80];    
+  // sprintf(buffer,"{\"psi\": \"%d\",\"voltage\": \"%s\",\"analogRead\": \"%d\",\"loop\": \"%d\"}", pressurePSI, vBuffer, pressureValue, loopCounter);
+  // Serial.println(buffer);
 
+  char vBuffer[15];
   switch (sensorID)
   {
   case CHILD_ID::T0:
-    sprintf(tempString, "T0: %.2f", sensorValues.T0);
+    dtostrf(sensorValues.T0, 4, 2, vBuffer);
+    sprintf(tempString, "T0: %s", vBuffer);
     break;
   case CHILD_ID::T1:
-    sprintf(tempString, "T1: %.2f", sensorValues.T1);
+    dtostrf(sensorValues.T1, 4, 2, vBuffer);
+    sprintf(tempString, "T1: %s", vBuffer);
     break;
   case CHILD_ID::T2:
-    sprintf(tempString, "T2: %.2f", (double)sensorValues.T2);
+    dtostrf(sensorValues.T2, 4, 2, vBuffer);
+    sprintf(tempString, "T2: %s", vBuffer);
     break;
   case CHILD_ID::T3:
-    sprintf(tempString, "T3: %.2f", (double)sensorValues.T3);
+    dtostrf(sensorValues.T3, 4, 2, vBuffer);
+    sprintf(tempString, "T3: %s", vBuffer);
     break;
   case CHILD_ID::T4:
-    sprintf(tempString, "T4: %.2f", (double)sensorValues.T4);
+    dtostrf(sensorValues.T4, 4, 2, vBuffer);
+    sprintf(tempString, "T4: %s", vBuffer);
     break;
   case CHILD_ID::T5:
-    sprintf(tempString, "T5: %.2f", (double)sensorValues.T5);
+    dtostrf(sensorValues.T5, 4, 2, vBuffer);
+    sprintf(tempString, "T5: %s", vBuffer);
     break;
   case CHILD_ID::Steinhart_SensorID:
-    sprintf(tempString, "Steinhart: %.2f", (double)sensorValues.Steinhart);
+    dtostrf(sensorValues.Steinhart, 4, 2, vBuffer);
+    sprintf(tempString, "Steinhart: %s", vBuffer);
     break;
   case CHILD_ID::Scale:
-    sprintf(tempString, "Scale: %.2f", (double)sensorValues.Scale);
+    dtostrf(sensorValues.Scale, 4, 2, vBuffer);
+    sprintf(tempString, "Scale: %s", vBuffer);
     break;
   case CHILD_ID::ScaleDeltaRate:
-    sprintf(tempString, "ScaleRate: %.2f", (double)sensorValues.ScaleRate);
+    dtostrf(sensorValues.ScaleRate, 4, 2, vBuffer);
+    sprintf(tempString, "ScaleRate: %s", vBuffer);
     break;
   case CHILD_ID::P1:
-    sprintf(tempString, "P1: %.2f", (double)sensorValues.Pressure1);
+    dtostrf(sensorValues.Pressure1, 4, 2, vBuffer);
+    sprintf(tempString, "P1: %s", vBuffer);
     break;
   case CHILD_ID::P2:
-    sprintf(tempString, "P2: %.2f", (double)sensorValues.Pressure2);
+    dtostrf(sensorValues.Pressure2, 4, 2, vBuffer);
+    sprintf(tempString, "P2: %s", vBuffer);
     break;
   case CHILD_ID::P3:
-    sprintf(tempString, "P3: %.2f", (double)sensorValues.Pressure3);
+    dtostrf(sensorValues.Pressure3, 4, 2, vBuffer);
+    sprintf(tempString, "P3: %s", vBuffer);
     break;
   case CHILD_ID::P4:
-    sprintf(tempString, "P4: %.2f", (double)sensorValues.Pressure4);
+    dtostrf(sensorValues.Pressure4, 4, 2, vBuffer);
+    sprintf(tempString, "P4: %s", vBuffer);
     break;
   case CHILD_ID::VccVoltage:
-    sprintf(tempString, "VccVoltage: %.2f", (double)sensorValues.VccVoltage);
+    dtostrf(sensorValues.VccVoltage, 4, 2, vBuffer);
+    sprintf(tempString, "VccVoltage: %s", vBuffer);
     break;
   case CHILD_ID::VccCurrent:
-    sprintf(tempString, "VccCurrent: %.2f", (double)sensorValues.VccCurrent);
+    dtostrf(sensorValues.VccCurrent, 4, 2, vBuffer);
+    sprintf(tempString, "VccCurrent: %s", vBuffer);
     break;
   case CHILD_ID::MainsCurrent:
-    sprintf(tempString, "MainsCurrent: %.2f", (double)sensorValues.MainsCurrent);
+    dtostrf(sensorValues.MainsCurrent, 4, 2, vBuffer);
+    sprintf(tempString, "MainsCurrent: %s", vBuffer);
     break;
   case CHILD_ID::SSRFail_Alarm:
     sprintf(tempString, "SSRFail_Alarm: %d", (int)sensorValues.SSRFail_Alarm);
@@ -2261,13 +2278,16 @@ char vBuffer[15];
     sprintf(tempString, "FlSw: %d", (int)sensorValues.FlowSwitch);
     break;
   case CHILD_ID::dC_1:
-    sprintf(tempString, "dC1: %.2f", (double)sensorValues.dC1);
+    dtostrf(sensorValues.dC1, 4, 2, vBuffer);
+    sprintf(tempString, "dC1: %s", vBuffer);
     break;
   case CHILD_ID::dC_2:
-    sprintf(tempString, "dC2: %.2f", (double)sensorValues.dC2);
+    dtostrf(sensorValues.dC2, 4, 2, vBuffer);
+    sprintf(tempString, "dC2: %s", vBuffer);
     break;
   case CHILD_ID::dC_3:
-    sprintf(tempString, "dC3: %.2f", (double)sensorValues.dC3);
+    dtostrf(sensorValues.dC3, 4, 2, vBuffer);
+    sprintf(tempString, "dC3: %s", vBuffer);
     break;
   case CHILD_ID::SSR_Armed:
     sprintf(tempString, "ssrArmed: %d", (int)sensorValues.ssrArmed);
@@ -2276,19 +2296,24 @@ char vBuffer[15];
   //   sprintf(tempString, "FreeMem: %d", freeMemory());
   //   break;
   case CHILD_ID::T6:
-    sprintf(tempString, "T6: %.2f", (double)ds18b20Values[0].F);
+    dtostrf(ds18b20Values[0].F, 4, 2, vBuffer);
+    sprintf(tempString, "T6: %s", vBuffer);
     break;
   case CHILD_ID::T7:
-    sprintf(tempString, "T7: %.2f", (double)ds18b20Values[1].F);
+    dtostrf(ds18b20Values[1].F, 4, 2, vBuffer);
+    sprintf(tempString, "T7: %s", vBuffer);
     break;
   case CHILD_ID::T8:
-    sprintf(tempString, "T8: %.2f", (double)ds18b20Values[2].F);
+    dtostrf(ds18b20Values[2].F, 4, 2, vBuffer);
+    sprintf(tempString, "T8: %s", vBuffer);
     break;
   case CHILD_ID::T9:
-    sprintf(tempString, "T9: %.2f", (double)ds18b20Values[3].F);
+    dtostrf(ds18b20Values[3].F, 4, 2, vBuffer);
+    sprintf(tempString, "T9: %s", vBuffer);
     break;
   case CHILD_ID::T10:
-    sprintf(tempString, "T10: %.2f", (double)ds18b20Values[4].F);
+    dtostrf(ds18b20Values[4].F, 4, 2, vBuffer);
+    sprintf(tempString, "T10: %s", vBuffer);
     break;
   default:
     sprintf(tempString, "Unk");
