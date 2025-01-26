@@ -538,6 +538,7 @@ char *getSensorString(int sensorID);
 bool checkEEPROMCRC();
 void updateEEPROMCRC();
 void sanityCheckEEPROM();
+float getThermistor(int pin);
 
 enum EEPROMAddresses
 {
@@ -2418,6 +2419,14 @@ char *getSensorString(int sensorID)
   case CHILD_ID::T10:
     dtostrf(ds18b20Values[4].F, 4, 1, vBuffer);
     sprintf(tempString, "T10: %s", vBuffer);
+    break;
+  case CHILD_ID::THMS1:
+    dtostrf(sensorValues.THMS1, 4, 1, vBuffer);
+    sprintf(tempString, "THMS1: %s", vBuffer);
+    break;
+  case CHILD_ID::THMS2:
+    dtostrf(sensorValues.THMS2, 4, 1, vBuffer);
+    sprintf(tempString, "THMS2: %s", vBuffer);
     break;
   default:
     sprintf(tempString, "Unk");
