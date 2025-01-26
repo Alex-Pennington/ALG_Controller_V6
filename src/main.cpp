@@ -29,7 +29,7 @@
 #define MY_RF24_PA_LEVEL RF24_PA_HIGH
 #define MY_RF24_CE_PIN 49
 #define MY_RF24_CS_PIN 53
-// #define MY_DEBUG
+//#define MY_DEBUG
 #include <MySensors.h>
 
 // MySensors Child IDs
@@ -749,13 +749,22 @@ void setup()
 {
   Serial.begin(115200);
   Serial3.begin(9600);
+  _process();
 
+  // OLED
+  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
+  {
+    sendInfo("E_OLED");
+    while (true)
+      ; // Halt execution if display initialization fails
+  }
   if (!checkEEPROMCRC())
   {
-    displayLine("EEPROM");
-    displayLine2("ERROR");
-    Serial.println("EEPROM ERROR");
-    FactoryResetEEPROM();
+    sendInfo("E");
+    display.clearDisplay();
+    displayLine("E");
+    display.display();
+    //FactoryResetEEPROM();
   }
   getEEPROM();
   LoadCell.begin(HX711_dout, HX711_sck);
@@ -779,14 +788,6 @@ void setup()
   pinMode(Pressure2PIN, INPUT);
   pinMode(emon_Input_PIN, INPUT);
   pinMode(VccCurrentSensor, INPUT);
-
-  // OLED
-  if (!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS))
-  {
-    sendInfo("E_OLED");
-    while (true)
-      ; // Halt execution if display initialization fails
-  }
 
   pid1.mode = false;
   pid2.mode = false;
@@ -2351,7 +2352,13 @@ bool checkEEPROMCRC()
   }
   uint32_t storedCRC;
   EEPROM.get(EEPROM_SIZE - 4, storedCRC);
-  return storedCRC == crc.finalize();
+  Serial.print("Check: ");
+  Serial.print("stored CRC: ");
+  Serial.println(storedCRC);
+  uint32_t finalCRC = crc.finalize();
+  Serial.print("final CRC: ");
+  Serial.println(finalCRC);
+  return storedCRC == finalCRC;
 }
 void updateEEPROMCRC()
 {
@@ -2361,5 +2368,12 @@ void updateEEPROMCRC()
     crc.update(EEPROM.read(i));
   }
   uint32_t newCRC = crc.finalize();
+  Serial.print("Update: ");
+  Serial.print("New CRC: ");
+  Serial.println(newCRC);
   EEPROM.put(EEPROM_SIZE - 4, newCRC);
+  uint32_t storedCRC;
+  EEPROM.get(EEPROM_SIZE - 4, storedCRC);
+  Serial.print("Stored CRC: ");
+  Serial.println(storedCRC);
 }
