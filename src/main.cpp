@@ -1377,6 +1377,14 @@ void StoreEEPROM()
   EEPROM.put(EEPROMAddresses::PID3_ALARM_THRESHOLD, pid3.alarmThreshold);
   EEPROM.put(EEPROMAddresses::PRESSURE2_OFFSET, calValues.pressure2Offset);
   EEPROM.put(EEPROMAddresses::PRESSURE2_CAL, calValues.pressure2Cal);
+  EEPROM.put(EEPROMAddresses::OLED_line1_SENSORID_ADDR, sensorValues.OLED_line1_SENSORID);
+  EEPROM.put(EEPROMAddresses::OLED_line2_SENSORID_ADDR, sensorValues.OLED_line2_SENSORID);
+  EEPROM.put(EEPROMAddresses::OLED_line3_SENSORID_ADDR, sensorValues.OLED_line3_SENSORID);
+  EEPROM.put(EEPROMAddresses::OLED_line4_SENSORID_ADDR, sensorValues.OLED_line4_SENSORID);
+  EEPROM.put(EEPROMAddresses::PID1_SENSORID_ADDR, sensorValues.PID1_SENSORID_VAR);
+  EEPROM.put(EEPROMAddresses::PID2_SENSORID_ADDR, sensorValues.PID2_SENSORID_VAR);
+  EEPROM.put(EEPROMAddresses::PID3_SENSORID_ADDR, sensorValues.PID3_SENSORID_VAR);
+
 
   printConfig();
   updateEEPROMCRC();
@@ -1430,6 +1438,8 @@ void getEEPROM()
   EEPROM.get(EEPROMAddresses::VCC_CURRENT_MULTIPLIER, calValues.VccCurrentMultiplier);
   EEPROM.get(EEPROMAddresses::OLED_line1_SENSORID_ADDR, sensorValues.OLED_line1_SENSORID);
   EEPROM.get(EEPROMAddresses::OLED_line2_SENSORID_ADDR, sensorValues.OLED_line2_SENSORID);
+  EEPROM.get(EEPROMAddresses::OLED_line3_SENSORID_ADDR, sensorValues.OLED_line3_SENSORID);
+  EEPROM.get(EEPROMAddresses::OLED_line4_SENSORID_ADDR, sensorValues.OLED_line4_SENSORID);
   EEPROM.get(EEPROMAddresses::PID1_SENSORID_ADDR, sensorValues.PID1_SENSORID_VAR);
   EEPROM.get(EEPROMAddresses::PID2_SENSORID_ADDR, sensorValues.PID2_SENSORID_VAR);
   EEPROM.get(EEPROMAddresses::PID3_SENSORID_ADDR, sensorValues.PID3_SENSORID_VAR);
@@ -1516,6 +1526,8 @@ void FactoryResetEEPROM()
   configValues.scaleFilterWeight = 0.1;
   sensorValues.OLED_line1_SENSORID = 0;
   sensorValues.OLED_line2_SENSORID = 1;
+  sensorValues.OLED_line3_SENSORID = 0;
+  sensorValues.OLED_line4_SENSORID = 1;
   sensorValues.PID1_SENSORID_VAR = 0;
   sensorValues.PID2_SENSORID_VAR = 1;
   sensorValues.PID3_SENSORID_VAR = 5;
