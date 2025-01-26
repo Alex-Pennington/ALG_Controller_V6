@@ -519,7 +519,6 @@ void printConfig();
 long getBandgap(void);
 void sendInfo(String);
 void DS18B20();
-// float getThermistor(int);
 float readPressure(int pin, int offset, float cal, float lastValue);
 void displayLine(const char *line, int row);
 int freeMemory();
@@ -1144,8 +1143,7 @@ void emon()
   {
     float current = calValues.emonCurrCal * (analogRead(emon_Input_PIN) - 512); // in amps I presume
     sum += current * current;                                                   // sum squares
-    wait(5);
-    displayKnightRider();
+    wait(10);
   }
   sensorValues.MainsCurrent = sqrt(sum / 1000) - calValues.emonCurrOffset;
   if ((int(sensorValues.MainsCurrent) > int(calValues.ssrFailThreshold)))
@@ -1874,7 +1872,7 @@ void receive(const MyMessage &message)
     Serial.print(" : Set sensor ");
     Serial.print(message.sender);
     Serial.print("/");
-    Serial.println(message.sensor);
+    Serial.print(message.sensor);
     Serial.print(" = ");
     Serial.println(message.data);
   }
@@ -2405,15 +2403,15 @@ char *getSensorString(int sensorID)
     sprintf(tempString, "FlSw: %d", (int)sensorValues.FlowSwitch);
     break;
   case CHILD_ID::dC_1:
-    dtostrf(sensorValues.dC1, 4, 2, vBuffer);
+    dtostrf(sensorValues.dC1*100.0, 4, 2, vBuffer);
     sprintf(tempString, "dC1: %s", vBuffer);
     break;
   case CHILD_ID::dC_2:
-    dtostrf(sensorValues.dC2, 4, 2, vBuffer);
+    dtostrf(sensorValues.dC2*100.0, 4, 2, vBuffer);
     sprintf(tempString, "dC2: %s", vBuffer);
     break;
   case CHILD_ID::dC_3:
-    dtostrf(sensorValues.dC3, 4, 2, vBuffer);
+    dtostrf(sensorValues.dC3*100.0, 4, 2, vBuffer);
     sprintf(tempString, "dC3: %s", vBuffer);
     break;
   // case CHILD_ID::SSR_Armed:
@@ -2901,9 +2899,9 @@ float getThermistor(const int pinVar)
 {
   float thermistorResistance = voltageDivider(pinVar, 981.0);
   // https://www.thinksrs.com/downloads/programs/therm%20calc/ntccalibrator/ntccalculator.html
-  const float A = 1.680995265e-3;
-  const float B = 2.392149905e-4;
-  const float C = 1.594237047e-7;
+  const float A = 1.763991699e-3;
+  const float B = 5.166809723e-4;
+  const float C = -52.81082951e-7;
 
   float logR = log(thermistorResistance);
   float Kelvin = 1.0 / (A + B * logR + C * logR * logR * logR);
