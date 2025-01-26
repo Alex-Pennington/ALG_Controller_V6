@@ -252,7 +252,7 @@ MyMessage msgRelay[NUM_RELAYS] = {
 #define SCREEN_ADDRESS 0x3C ///< See datasheet for Address; 0x3D for 128x64, 0x3C for 128x32
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-#define VERSION "0.6.0.2"
+#define VERSION "0.6.1.0"
 #define SENDDELAY 50
 #define CELSIUS_TO_FAHRENHEIT_FACTOR 1.8
 #define CELSIUS_TO_FAHRENHEIT_OFFSET 32.0
