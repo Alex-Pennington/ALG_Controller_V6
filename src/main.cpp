@@ -783,6 +783,7 @@ void setup()
   if (!checkEEPROMCRC())
   {
     sendInfo("EPROM ERROR");
+    Serial.println("EEPRIM ERROR");
     display.clearDisplay();
     displayLine("EPROM",0);
     displayLine("ERROR",1);
@@ -1730,8 +1731,11 @@ long getBandgap(void)
 }
 void sendInfo(String payload)
 {
+  _process();
   msgINFO.set(payload.c_str());
   send(msgINFO);
+  _process();
+  wait(SENDDELAY);
 }
 void DS18B20()
 {
@@ -2464,34 +2468,34 @@ float getSensorFloat(int sensorID)
 bool checkEEPROMCRC()
 {
   CRC32 crc;
-  for (int i = 0; i < EEPROM_SIZE - 4; i++)
+  for (int i = 0; i < EEPROM_SIZE - 6; i++)
   {
     crc.update(EEPROM.read(i));
   }
-  uint32_t storedCRC;
-  EEPROM.get(EEPROM_SIZE - 4, storedCRC);
-  // Serial.print("Check: ");
-  // Serial.print("stored CRC: ");
-  // Serial.println(storedCRC);
   uint32_t finalCRC = crc.finalize();
-  // Serial.print("final CRC: ");
-  // Serial.println(finalCRC);
+  uint32_t storedCRC;
+  EEPROM.get(EEPROM_SIZE - 6, storedCRC);
+  Serial.print("Check: ");
+  Serial.print("stored CRC: ");
+  Serial.println(storedCRC);
+  Serial.print("final CRC: ");
+  Serial.println(finalCRC);
   return storedCRC == finalCRC;
 }
 void updateEEPROMCRC()
 {
   CRC32 crc;
-  for (int i = 0; i < EEPROM_SIZE - 4; i++)
+  for (int i = 0; i < EEPROM_SIZE - 6; i++)
   {
     crc.update(EEPROM.read(i));
   }
   uint32_t newCRC = crc.finalize();
-  // Serial.print("Update: ");
-  // Serial.print("New CRC: ");
-  // Serial.println(newCRC);
-  EEPROM.put(EEPROM_SIZE - 4, newCRC);
+  Serial.print("Update: ");
+  Serial.print("New CRC: ");
+  Serial.println(newCRC);
+  EEPROM.put(EEPROM_SIZE - 6, newCRC);
   uint32_t storedCRC;
-  EEPROM.get(EEPROM_SIZE - 4, storedCRC);
-  // Serial.print("Stored CRC: ");
-  // Serial.println(storedCRC);
+  EEPROM.get(EEPROM_SIZE - 6, storedCRC);
+  Serial.print("Stored CRC: ");
+  Serial.println(storedCRC);
 }
