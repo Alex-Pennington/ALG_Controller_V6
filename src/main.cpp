@@ -2170,13 +2170,6 @@ char *getSensorString(int sensorID)
 {
   static char tempString[20] = "";
 
-char vBuffer[15];
-  // dtostrf(voltage,4,2, vBuffer);
- 
-  // char buffer[80];    
-  // sprintf(buffer,"{\"psi\": \"%d\",\"voltage\": \"%s\",\"analogRead\": \"%d\",\"loop\": \"%d\"}", pressurePSI, vBuffer, pressureValue, loopCounter);
-  // Serial.println(buffer);
-
   char vBuffer[15];
   switch (sensorID)
   {
