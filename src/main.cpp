@@ -417,8 +417,8 @@ struct SensorValues
   int OLED_line1_SENSORID = 0;
   int OLED_line2_SENSORID = 0;
   int PID1_SENSORID_VAR = 0;
-  int PID2_SENSORID_VAR = 0;
-  int PID3_SENSORID_VAR = 0;
+  int PID2_SENSORID_VAR = 1;
+  int PID3_SENSORID_VAR = 71;
   int OLED_line3_SENSORID = 0;
   int OLED_line4_SENSORID = 0;
   int OLED_line5_SENSORID = 0;
@@ -533,6 +533,7 @@ float getSensorFloat(int sensorID);
 char *getSensorString(int sensorID);
 bool checkEEPROMCRC();
 void updateEEPROMCRC();
+void sanityCheckEEPROM();
 
 enum EEPROMAddresses
 {
@@ -792,6 +793,7 @@ void setup()
     FactoryResetEEPROM();
   }
   getEEPROM();
+  sanityCheckEEPROM();
   LoadCell.begin(HX711_dout, HX711_sck);
   LoadCell.set_scale(calValues.scaleCal);
   LoadCell.set_offset(calValues.zeroOffsetScale);
@@ -2552,4 +2554,231 @@ void updateEEPROMCRC()
   EEPROM.get(EEPROM_SIZE - 4, storedCRC);
   Serial.print("  Stored CRC: ");
   Serial.println(storedCRC);
+}
+
+void sanityCheckEEPROM() {
+  int tempINT;
+  float tempFLOAT;
+  double tempDOUBLE;
+  byte tempBYTE;
+  bool tempBOOL;
+
+  Serial.println("Sanity Check EEPROM");
+
+  if (EEPROM.get(EEPROMAddresses::ZERO_OFFSET_SCALE, tempFLOAT) != calValues.zeroOffsetScale) {
+    Serial.print("Zero Offset Scale: ");
+    Serial.println(tempFLOAT);
+  }
+  if (EEPROM.get(EEPROMAddresses::PRESSURE1_OFFSET, tempINT) != calValues.pressure1Offset) {
+    Serial.print("Pressure1 Offset: ");
+    Serial.println(tempINT);
+  }
+  if (EEPROM.get(EEPROMAddresses::SCALE_CAL, tempFLOAT) != calValues.scaleCal) {
+    Serial.print("Scale Cal: ");
+    Serial.println(tempFLOAT);
+  }
+  if (EEPROM.get(EEPROMAddresses::PRESSURE1_CAL, tempFLOAT) != calValues.pressure1Cal) {
+    Serial.print("Pressure1 Cal: ");
+    Serial.println(tempFLOAT);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID1_SETPOINT, tempDOUBLE) != pid1.setpoint) {
+    Serial.print("PID1 Setpoint: ");
+    Serial.println(tempDOUBLE);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID1_KP, tempDOUBLE) != pid1.kp) {
+    Serial.print("PID1 KP: ");
+    Serial.println(tempDOUBLE);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID1_KI, tempDOUBLE) != pid1.ki) {
+    Serial.print("PID1 KI: ");
+    Serial.println(tempDOUBLE);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID1_KD, tempDOUBLE) != pid1.kd) {
+    Serial.print("PID1 KD: ");
+    Serial.println(tempDOUBLE);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID1_AGG_KP, tempDOUBLE) != pid1.aggKp) {
+    Serial.print("PID1 Agg KP: ");
+    Serial.println(tempDOUBLE);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID1_AGG_KI, tempDOUBLE) != pid1.aggKi) {
+    Serial.print("PID1 Agg KI: ");
+    Serial.println(tempDOUBLE);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID1_AGG_KD, tempDOUBLE) != pid1.aggKd) {
+    Serial.print("PID1 Agg KD: ");
+    Serial.println(tempDOUBLE);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID2_SETPOINT, tempDOUBLE) != pid2.setpoint) {
+    Serial.print("PID2 Setpoint: ");
+    Serial.println(tempDOUBLE);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID2_KP, tempDOUBLE) != pid2.kp) {
+    Serial.print("PID2 KP: ");
+    Serial.println(tempDOUBLE);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID2_KI, tempDOUBLE) != pid2.ki) {
+    Serial.print("PID2 KI: ");
+    Serial.println(tempDOUBLE);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID2_KD, tempDOUBLE) != pid2.kd) {
+    Serial.print("PID2 KD: ");
+    Serial.println(tempDOUBLE);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID2_AGG_KP, tempDOUBLE) != pid2.aggKp) {
+    Serial.print("PID2 Agg KP: ");
+    Serial.println(tempDOUBLE);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID2_AGG_KI, tempDOUBLE) != pid2.aggKi) {
+    Serial.print("PID2 Agg KI: ");
+    Serial.println(tempDOUBLE);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID2_AGG_KD, tempDOUBLE) != pid2.aggKd) {
+    Serial.print("PID2 Agg KD: ");
+    Serial.println(tempDOUBLE);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID1_AGG_SP, tempBYTE) != pid1.aggSP) {
+    Serial.print("PID1 Agg SP: ");
+    Serial.println(tempBYTE);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID2_AGG_SP, tempBYTE) != pid2.aggSP) {
+    Serial.print("PID2 Agg SP: ");
+    Serial.println(tempBYTE);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID3_SETPOINT, tempDOUBLE) != pid3.setpoint) {
+    Serial.print("PID3 Setpoint: ");
+    Serial.println(tempDOUBLE);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID3_KP, tempDOUBLE) != pid3.kp) {
+    Serial.print("PID3 KP: ");
+    Serial.println(tempDOUBLE);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID3_KI, tempDOUBLE) != pid3.ki) {
+    Serial.print("PID3 KI: ");
+    Serial.println(tempDOUBLE);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID3_KD, tempDOUBLE) != pid3.kd) {
+    Serial.print("PID3 KD: ");
+    Serial.println(tempDOUBLE);
+  }
+  if (EEPROM.get(EEPROMAddresses::EMON_CAL, tempFLOAT) != calValues.emonCurrCal) {
+    Serial.print("Emon Cal: ");
+    Serial.println(tempFLOAT);
+  }
+  if (EEPROM.get(EEPROMAddresses::SSR_FAIL_THRESHOLD, tempBYTE) != calValues.ssrFailThreshold) {
+    Serial.print("SSR Fail Threshold: ");
+    Serial.println(tempBYTE);
+  }
+  if (EEPROM.get(EEPROMAddresses::CURR_OFFSET, tempDOUBLE) != calValues.emonCurrOffset) {
+    Serial.print("Current Offset: ");
+    Serial.println(tempDOUBLE);
+  }
+  if (EEPROM.get(EEPROMAddresses::SSR_ARMED, tempBOOL) != sensorValues.ssrArmed) {
+    Serial.print("SSR Armed: ");
+    Serial.println(tempBOOL);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID1_MODE, tempBOOL) != pid1.mode) {
+    Serial.print("PID1 Mode: ");
+    Serial.println(tempBOOL);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID2_MODE, tempBOOL) != pid2.mode) {
+    Serial.print("PID2 Mode: ");
+    Serial.println(tempBOOL);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID3_MODE, tempBOOL) != pid3.mode) {
+    Serial.print("PID3 Mode: ");
+    Serial.println(tempBOOL);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID2_ADAPTIVE_MODE, tempBOOL) != pid2.adaptiveMode) {
+    Serial.print("PID2 Adaptive Mode: ");
+    Serial.println(tempBOOL);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID1_ADAPTIVE_MODE, tempBOOL) != pid1.adaptiveMode) {
+    Serial.print("PID1 Adaptive Mode: ");
+    Serial.println(tempBOOL);
+  }
+  if (EEPROM.get(EEPROMAddresses::S_DEBUG, tempBOOL) != configValues.sDebug) {
+    Serial.print("S Debug: ");
+    Serial.println(tempBOOL);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID1_ALARM_THRESHOLD, tempINT) != pid1.alarmThreshold) {
+    Serial.print("PID1 Alarm Threshold: ");
+    Serial.println(tempINT);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID2_ALARM_THRESHOLD, tempINT) != pid2.alarmThreshold) {
+    Serial.print("PID2 Alarm Threshold: ");
+    Serial.println(tempINT);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID3_ALARM_THRESHOLD, tempINT) != pid3.alarmThreshold) {
+    Serial.print("PID3 Alarm Threshold: ");
+    Serial.println(tempINT);
+  }
+  if (EEPROM.get(EEPROMAddresses::PRESSURE2_OFFSET, tempINT) != calValues.pressure2Offset) {
+    Serial.print("Pressure2 Offset: ");
+    Serial.println(tempINT);
+  }
+  if (EEPROM.get(EEPROMAddresses::PRESSURE2_CAL, tempFLOAT) != calValues.pressure2Cal) {
+    Serial.print("Pressure2 Cal: ");
+    Serial.println(tempFLOAT);
+  }
+  if (EEPROM.get(EEPROMAddresses::PRESSURE3_OFFSET, tempINT) != calValues.pressure3Offset) {
+    Serial.print("Pressure3 Offset: ");
+    Serial.println(tempINT);
+  }
+  if (EEPROM.get(EEPROMAddresses::PRESSURE3_CAL, tempFLOAT) != calValues.pressure3Cal) {
+    Serial.print("Pressure3 Cal: ");
+    Serial.println(tempFLOAT);
+  }
+  if (EEPROM.get(EEPROMAddresses::PRESSURE4_OFFSET, tempINT) != calValues.pressure4Offset) {
+    Serial.print("Pressure4 Offset: ");
+    Serial.println(tempINT);
+  }
+  if (EEPROM.get(EEPROMAddresses::PRESSURE4_CAL, tempFLOAT) != calValues.pressure4Cal) {
+    Serial.print("Pressure4 Cal: ");
+    Serial.println(tempFLOAT);
+  }
+  if (EEPROM.get(EEPROMAddresses::VCC_CURRENT_OFFSET, tempINT) != calValues.VccCurrentOffset) {
+    Serial.print("Vcc Current Offset: ");
+    Serial.println(tempINT);
+  }
+  if (EEPROM.get(EEPROMAddresses::VCC_CURRENT_MULTIPLIER, tempFLOAT) != calValues.VccCurrentMultiplier) {
+    Serial.print("Vcc Current Multiplier: ");
+    Serial.println(tempFLOAT);
+  }
+  if (EEPROM.get(EEPROMAddresses::OLED_line1_SENSORID_ADDR, tempINT) != sensorValues.OLED_line1_SENSORID) {
+    Serial.print("OLED Line1 SensorID: ");
+    Serial.println(tempINT);
+  }
+  if (EEPROM.get(EEPROMAddresses::OLED_line2_SENSORID_ADDR, tempINT) != sensorValues.OLED_line2_SENSORID) {
+    Serial.print("OLED Line2 SensorID: ");
+    Serial.println(tempINT);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID1_SENSORID_ADDR, tempINT) != sensorValues.PID1_SENSORID_VAR) {
+    Serial.print("PID1 SensorID: ");
+    Serial.println(tempINT);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID2_SENSORID_ADDR, tempINT) != sensorValues.PID2_SENSORID_VAR) {
+    Serial.print("PID2 SensorID: ");
+    Serial.println(tempINT);
+  }
+  if (EEPROM.get(EEPROMAddresses::PID3_SENSORID_ADDR, tempINT) != sensorValues.PID3_SENSORID_VAR) {
+    Serial.print("PID3 SensorID: ");
+    Serial.println(tempINT);
+  }
+  if (EEPROM.get(EEPROMAddresses::OLED_line3_SENSORID_ADDR, tempINT) != sensorValues.OLED_line3_SENSORID) {
+    Serial.print("OLED Line3 SensorID: ");
+    Serial.println(tempINT);
+  }
+  if (EEPROM.get(EEPROMAddresses::OLED_line4_SENSORID_ADDR, tempINT) != sensorValues.OLED_line4_SENSORID) {
+    Serial.print("OLED Line4 SensorID: ");
+    Serial.println(tempINT);
+  }
+  if (EEPROM.get(EEPROMAddresses::OLED_line5_SENSORID_ADDR, tempINT) != sensorValues.OLED_line5_SENSORID) {
+    Serial.print("OLED Line5 SensorID: ");
+    Serial.println(tempINT);
+  }
+  if (EEPROM.get(EEPROMAddresses::OLED_line6_SENSORID_ADDR, tempINT) != sensorValues.OLED_line6_SENSORID) {
+    Serial.print("OLED Line6 SensorID: ");
+    Serial.println(tempINT);
+  }
 }
