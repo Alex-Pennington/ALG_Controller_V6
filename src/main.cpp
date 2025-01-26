@@ -377,8 +377,8 @@ unsigned long oldtimeScale = 0;
 extern unsigned int __heap_start;
 extern void *__brkval;
 bool firstrunSensorLoop = false;
-#define SSRARMED_ON HIGH //Note to Copilot: Do Not Modify this value
-#define ELEMENT_ON LOW //Note to Copilot: Do Not Modify this value
+#define SSRARMED_ON HIGH // Note to Copilot: Do Not Modify this value
+#define ELEMENT_ON LOW   // Note to Copilot: Do Not Modify this value
 
 // Array to hold all temperature sensor values
 struct SensorValues
@@ -518,6 +518,8 @@ void DS18B20();
 float readPressure(int pin, int offset, float cal, float lastValue);
 void displayLine(const char *line);
 void displayLine2(const char *line);
+void displayLine3(const char *line);
+void displayLine4(const char *line);
 int freeMemory();
 void emon();
 void switchesLoop();
@@ -831,16 +833,6 @@ void loop()
   {
     getScale();
 
-    display.clearDisplay();
-    static char buffer[20];
-    strncpy(buffer, getSensorString(sensorValues.OLED_line1_SENSORID), sizeof(buffer) - 1);
-    buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
-    displayLine(buffer);
-    strncpy(buffer, getSensorString(sensorValues.OLED_line2_SENSORID), sizeof(buffer) - 1);
-    buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
-    displayLine2(buffer);
-    display.display();
-
     msgScale.set(sensorValues.Scale, 2);
     send(msgScale);
     wait(SENDDELAY);
@@ -947,22 +939,21 @@ void loop()
     wait(SENDDELAY);
     _process();
 
-    // send(msgOLED_line1.set(sensorValues.OLED_line1_SENSORID));
-    // wait(SENDDELAY);
-    // _process();
-    // send(msgOLED_line2.set(sensorValues.OLED_line2_SENSORID));
-    // wait(SENDDELAY);
-    // _process();
-    // send(MyMessage(CHILD_ID::PID1_SENSORID, V_LIGHT_LEVEL).set(sensorValues.PID1_SENSORID_VAR));
-    // wait(SENDDELAY);
-    // _process();
-    // send(MyMessage(CHILD_ID::PID2_SENSORID, V_LIGHT_LEVEL).set(sensorValues.PID2_SENSORID_VAR));
-    // wait(SENDDELAY);
-    // _process();
-    // send(MyMessage(CHILD_ID::PID3_SENSORID, V_LIGHT_LEVEL).set(sensorValues.PID3_SENSORID_VAR));
-    // wait(SENDDELAY);
-    // _process();
-
+    display.clearDisplay();
+    static char buffer[20];
+    strncpy(buffer, getSensorString(sensorValues.OLED_line1_SENSORID), sizeof(buffer) - 1);
+    buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
+    displayLine(buffer);
+    strncpy(buffer, getSensorString(sensorValues.OLED_line2_SENSORID), sizeof(buffer) - 1);
+    buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
+    displayLine2(buffer);
+    strncpy(buffer, getSensorString(sensorValues.OLED_line1_SENSORID), sizeof(buffer) - 1);
+    buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
+    displayLine3(buffer);
+    strncpy(buffer, getSensorString(sensorValues.OLED_line2_SENSORID), sizeof(buffer) - 1);
+    buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
+    displayLine4(buffer);
+    display.display();
     SensorLoop_timer = millis();
     Serial.print(millis() - sensorLoopTime);
     Serial.println(" ms");
@@ -1764,17 +1755,32 @@ void DS18B20()
   ds.reset_search();
   return;
 }
+#define LINE_HEIGHT 16
 void displayLine(const char *line)
 {
   display.setCursor(0, 0);
-  display.setTextSize(3); // Draw 2X-scale text
+  display.setTextSize(2); // Draw 2X-scale text
   display.setTextColor(SSD1306_WHITE);
   display.print(line);
 }
 void displayLine2(const char *line)
 {
-  display.setCursor(0, 30);
-  display.setTextSize(3); // Draw 2X-scale text
+  display.setCursor(0, LINE_HEIGHT);
+  display.setTextSize(2); // Draw 2X-scale text
+  display.setTextColor(SSD1306_WHITE);
+  display.print(line);
+}
+void displayLine3(const char *line)
+{
+  display.setCursor(0, LINE_HEIGHT * 2);
+  display.setTextSize(2); // Draw 2X-scale text
+  display.setTextColor(SSD1306_WHITE);
+  display.print(line);
+}
+void displayLine4(const char *line)
+{
+  display.setCursor(0, LINE_HEIGHT * 3);
+  display.setTextSize(2); // Draw 2X-scale text
   display.setTextColor(SSD1306_WHITE);
   display.print(line);
 }
@@ -2174,98 +2180,95 @@ char *getSensorString(int sensorID)
   switch (sensorID)
   {
   case CHILD_ID::T0:
-    dtostrf(sensorValues.T0, 4, 2, vBuffer);
+    dtostrf(sensorValues.T0, 4, 1, vBuffer);
     sprintf(tempString, "T0: %s", vBuffer);
     break;
   case CHILD_ID::T1:
-    dtostrf(sensorValues.T1, 4, 2, vBuffer);
+    dtostrf(sensorValues.T1, 4, 1, vBuffer);
     sprintf(tempString, "T1: %s", vBuffer);
     break;
   case CHILD_ID::T2:
-    dtostrf(sensorValues.T2, 4, 2, vBuffer);
+    dtostrf(sensorValues.T2, 4, 1, vBuffer);
     sprintf(tempString, "T2: %s", vBuffer);
     break;
   case CHILD_ID::T3:
-    dtostrf(sensorValues.T3, 4, 2, vBuffer);
+    dtostrf(sensorValues.T3, 4, 1, vBuffer);
     sprintf(tempString, "T3: %s", vBuffer);
     break;
   case CHILD_ID::T4:
-    dtostrf(sensorValues.T4, 4, 2, vBuffer);
+    dtostrf(sensorValues.T4, 4, 1, vBuffer);
     sprintf(tempString, "T4: %s", vBuffer);
     break;
   case CHILD_ID::T5:
-    dtostrf(sensorValues.T5, 4, 2, vBuffer);
+    dtostrf(sensorValues.T5, 4, 1, vBuffer);
     sprintf(tempString, "T5: %s", vBuffer);
     break;
   case CHILD_ID::Steinhart_SensorID:
-    dtostrf(sensorValues.Steinhart, 4, 2, vBuffer);
+    dtostrf(sensorValues.Steinhart, 4, 1, vBuffer);
     sprintf(tempString, "Steinhart: %s", vBuffer);
     break;
   case CHILD_ID::Scale:
-    dtostrf(sensorValues.Scale, 4, 2, vBuffer);
+    dtostrf(sensorValues.Scale, 4, 1, vBuffer);
     sprintf(tempString, "Scale: %s", vBuffer);
     break;
   case CHILD_ID::ScaleDeltaRate:
-    dtostrf(sensorValues.ScaleRate, 4, 2, vBuffer);
+    dtostrf(sensorValues.ScaleRate, 4, 1, vBuffer);
     sprintf(tempString, "ScaleRate: %s", vBuffer);
     break;
   case CHILD_ID::P1:
-    dtostrf(sensorValues.Pressure1, 4, 2, vBuffer);
+    dtostrf(sensorValues.Pressure1, 4, 1, vBuffer);
     sprintf(tempString, "P1: %s", vBuffer);
     break;
   case CHILD_ID::P2:
-    dtostrf(sensorValues.Pressure2, 4, 2, vBuffer);
+    dtostrf(sensorValues.Pressure2, 4, 1, vBuffer);
     sprintf(tempString, "P2: %s", vBuffer);
     break;
   case CHILD_ID::P3:
-    dtostrf(sensorValues.Pressure3, 4, 2, vBuffer);
+    dtostrf(sensorValues.Pressure3, 4, 1, vBuffer);
     sprintf(tempString, "P3: %s", vBuffer);
     break;
   case CHILD_ID::P4:
-    dtostrf(sensorValues.Pressure4, 4, 2, vBuffer);
+    dtostrf(sensorValues.Pressure4, 4, 1, vBuffer);
     sprintf(tempString, "P4: %s", vBuffer);
     break;
   case CHILD_ID::VccVoltage:
-    dtostrf(sensorValues.VccVoltage, 4, 2, vBuffer);
-    sprintf(tempString, "VccVoltage: %s", vBuffer);
+    dtostrf(sensorValues.VccVoltage, 4, 1, vBuffer);
+    sprintf(tempString, "VV: %s", vBuffer);
     break;
   case CHILD_ID::VccCurrent:
-    dtostrf(sensorValues.VccCurrent, 4, 2, vBuffer);
-    sprintf(tempString, "VccCurrent: %s", vBuffer);
+    dtostrf(sensorValues.VccCurrent, 4, 1, vBuffer);
+    sprintf(tempString, "VC: %s", vBuffer);
     break;
   case CHILD_ID::MainsCurrent:
-    dtostrf(sensorValues.MainsCurrent, 4, 2, vBuffer);
-    sprintf(tempString, "MainsCurrent: %s", vBuffer);
-    break;
-  case CHILD_ID::SSRFail_Alarm:
-    sprintf(tempString, "SSRFail_Alarm: %d", (int)sensorValues.SSRFail_Alarm);
+    dtostrf(sensorValues.MainsCurrent, 4, 1, vBuffer);
+    sprintf(tempString, "MC: %s", vBuffer);
     break;
   case CHILD_ID::relay1:
-    sprintf(tempString, "relay1: %d", (int)sensorValues.relay1);
+    sprintf(tempString, "r1: %d", (int)sensorValues.relay1);
     break;
   case CHILD_ID::relay2:
-    sprintf(tempString, "relay2: %d", (int)sensorValues.relay2);
+    sprintf(tempString, "r2: %d", (int)sensorValues.relay2);
     break;
   case CHILD_ID::relay3:
-    sprintf(tempString, "relay3: %d", (int)sensorValues.relay3);
+    sprintf(tempString, "r3: %d", (int)sensorValues.relay3);
     break;
   case CHILD_ID::relay4:
-    sprintf(tempString, "relay4: %d", (int)sensorValues.relay4);
+    sprintf(tempString, "r4: %d", (int)sensorValues.relay4);
     break;
   case CHILD_ID::relay5:
-    sprintf(tempString, "relay5: %d", (int)sensorValues.relay5);
+    sprintf(tempString, "r5: %d", (int)sensorValues.relay5);
     break;
   case CHILD_ID::relay6:
-    sprintf(tempString, "relay6: %d", (int)sensorValues.relay6);
+    sprintf(tempString, "r6: %d", (int)sensorValues.relay6);
     break;
   case CHILD_ID::relay7:
-    sprintf(tempString, "relay7: %d", (int)sensorValues.relay7);
+    sprintf(tempString, "r7: %d", (int)sensorValues.relay7);
     break;
   case CHILD_ID::relay8:
-    sprintf(tempString, "relay8: %d", (int)sensorValues.relay8);
+    sprintf(tempString, "r8: %d", (int)sensorValues.relay8);
     break;
   case CHILD_ID::RefrigerantPumpHighPressureSwitch:
-    sprintf(tempString, "RSw: %d", sensorValues.RefrigerantPumpHighPressureSwitch ? 1 : 0);
+    sprintf(tempString, "RSw: %d", sensorValues.RefrigerantPumpHighPressureSwitch);
     break;
   case CHILD_ID::FlowSwitch:
     sprintf(tempString, "FlSw: %d", (int)sensorValues.FlowSwitch);
@@ -2282,30 +2285,30 @@ char *getSensorString(int sensorID)
     dtostrf(sensorValues.dC3, 4, 2, vBuffer);
     sprintf(tempString, "dC3: %s", vBuffer);
     break;
-  case CHILD_ID::SSR_Armed:
-    sprintf(tempString, "ssrArmed: %d", (int)sensorValues.ssrArmed);
-    break;
+  // case CHILD_ID::SSR_Armed:
+  //   sprintf(tempString, "ssrArmed: %d", (int)sensorValues.ssrArmed);
+  //   break;
   // case CHILD_ID::FreeMemory:
   //   sprintf(tempString, "FreeMem: %d", freeMemory());
   //   break;
   case CHILD_ID::T6:
-    dtostrf(ds18b20Values[0].F, 4, 2, vBuffer);
+    dtostrf(ds18b20Values[0].F, 4, 1, vBuffer);
     sprintf(tempString, "T6: %s", vBuffer);
     break;
   case CHILD_ID::T7:
-    dtostrf(ds18b20Values[1].F, 4, 2, vBuffer);
+    dtostrf(ds18b20Values[1].F, 4, 1, vBuffer);
     sprintf(tempString, "T7: %s", vBuffer);
     break;
   case CHILD_ID::T8:
-    dtostrf(ds18b20Values[2].F, 4, 2, vBuffer);
+    dtostrf(ds18b20Values[2].F, 4, 1, vBuffer);
     sprintf(tempString, "T8: %s", vBuffer);
     break;
   case CHILD_ID::T9:
-    dtostrf(ds18b20Values[3].F, 4, 2, vBuffer);
+    dtostrf(ds18b20Values[3].F, 4, 1, vBuffer);
     sprintf(tempString, "T9: %s", vBuffer);
     break;
   case CHILD_ID::T10:
-    dtostrf(ds18b20Values[4].F, 4, 2, vBuffer);
+    dtostrf(ds18b20Values[4].F, 4, 1, vBuffer);
     sprintf(tempString, "T10: %s", vBuffer);
     break;
   default:
