@@ -614,7 +614,7 @@ void presentation()
   wait(SENDDELAY);
   present(CHILD_ID::T9, S_TEMP, "D9");
   wait(SENDDELAY);
-  present(CHILD_ID::Steinhart_SensorID, S_TEMP, "S1");
+  present(CHILD_ID::Steinhart_SensorID, S_TEMP, "St1");
   wait(SENDDELAY);
   present(CHILD_ID::THMS1, S_TEMP, "Th1");
   wait(SENDDELAY);
@@ -746,6 +746,10 @@ void presentation()
   present(CHILD_ID::PID2_SENSORID, S_LIGHT_LEVEL, "P2ISv");
   wait(SENDDELAY);
   present(CHILD_ID::PID3_SENSORID, S_LIGHT_LEVEL, "P3ISv");
+  wait(SENDDELAY);
+  present(CHILD_ID::OLED_line3, S_LIGHT_LEVEL, "OL3");
+  wait(SENDDELAY);
+  present(CHILD_ID::OLED_line4, S_LIGHT_LEVEL, "OL4");
   wait(SENDDELAY);
 }
 
