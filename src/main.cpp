@@ -461,8 +461,6 @@ ExponentialFilter<float> scaleWeightFiltered(10, 0);
 #define Switch5_DOWN_Pin 34
 #define FlowSwitchPin 33
 #define RefrigerantSwitchPin 32
-#define Thermistor1PIN A2
-#define Thermistor2PIN A1
 
 /*Connector Pinouts
 Pressure(3)  1 5V, 2 GND, 3 SIG
@@ -538,7 +536,6 @@ char *getSensorString(int sensorID);
 bool checkEEPROMCRC();
 void updateEEPROMCRC();
 void sanityCheckEEPROM();
-float getThermistor(int pin);
 
 enum EEPROMAddresses
 {
@@ -802,8 +799,8 @@ void setup()
   LoadCell.set_offset(calValues.zeroOffsetScale);
   LoadCell.set_gain();
   scaleWeightFiltered.SetWeight(configValues.scaleFilterWeight);
-  pinMode(Thermistor1PIN, INPUT);
-  pinMode(Thermistor2PIN, INPUT);
+  // pinMode(Thermistor1PIN, INPUT);
+  // pinMode(Thermistor2PIN, INPUT);
   pinMode(SSRArmed_PIN, OUTPUT);
   digitalWrite(SSRArmed_PIN, !SSRARMED_ON);
   pinMode(ElementPowerPin, OUTPUT);
@@ -927,13 +924,6 @@ void loop()
     sensorValues.Steinhart = Steinhart();
     send(msgSteinhart.set(sensorValues.Steinhart, 2));
     _process();
-    sensorValues.THMS1 = getThermistor(Thermistor1PIN);
-    send(msgTHMS1.set(sensorValues.THMS1, 2));
-    _process();
-    sensorValues.THMS2 = getThermistor(Thermistor2PIN);
-    send(msgTHMS2.set(sensorValues.THMS2, 2));
-    _process();
-
 
     DutyCycleLoop();
 
@@ -1856,6 +1846,8 @@ void receive(const MyMessage &message)
     Serial.print(message.sender);
     Serial.print("/");
     Serial.println(message.sensor);
+    Serial.print(" = ");
+    Serial.println(message.fValue,2);
   }
 
   switch (message.sensor)
@@ -2573,14 +2565,7 @@ void updateEEPROMCRC()
   Serial.print("  Stored CRC: ");
   Serial.println(storedCRC);
 }
-<<<<<<< HEAD
 void sanityCheckEEPROM() {
-  initDefaultValues();
-=======
-void sanityCheckEEPROM()
-{
-
->>>>>>> 7952e8a75134946f21747a08a79d564691844ded
   int tempINT;
   float tempFLOAT;
   double tempDOUBLE;
@@ -2674,13 +2659,11 @@ void sanityCheckEEPROM()
     Serial.print("PID2 Agg KI: ");
     Serial.println(tempDOUBLE);
   }
-  if (EEPROM.get(EEPROMAddresses::PID2_AGG_KD, tempDOUBLE) != pid2.aggKd)
-  {
+  if (EEPROM.get(EEPROMAddresses::PID2_AGG_KD, tempDOUBLE) != pid2.aggKd) {
     Serial.print("PID2 Agg KD: ");
     Serial.println(tempDOUBLE);
   }
-  if (EEPROM.get(EEPROMAddresses::PID1_AGG_SP, tempBYTE) != pid1.aggSP)
-  {
+  if (EEPROM.get(EEPROMAddresses::PID1_AGG_SP, tempBYTE) != pid1.aggSP) {
     Serial.print("PID1 Agg SP: ");
     Serial.println(tempBYTE);
   }
@@ -2734,13 +2717,11 @@ void sanityCheckEEPROM()
     Serial.print("PID1 Mode: ");
     Serial.println(tempBOOL);
   }
-  if (EEPROM.get(EEPROMAddresses::PID2_MODE, tempBOOL) != pid2.mode)
-  {
+  if (EEPROM.get(EEPROMAddresses::PID2_MODE, tempBOOL) != pid2.mode) {
     Serial.print("PID2 Mode: ");
     Serial.println(tempBOOL);
   }
-  if (EEPROM.get(EEPROMAddresses::PID3_MODE, tempBOOL) != pid3.mode)
-  {
+  if (EEPROM.get(EEPROMAddresses::PID3_MODE, tempBOOL) != pid3.mode) {
     Serial.print("PID3 Mode: ");
     Serial.println(tempBOOL);
   }
@@ -2789,13 +2770,11 @@ void sanityCheckEEPROM()
     Serial.print("Pressure3 Offset: ");
     Serial.println(tempINT);
   }
-  if (EEPROM.get(EEPROMAddresses::PRESSURE3_CAL, tempFLOAT) != calValues.pressure3Cal)
-  {
+  if (EEPROM.get(EEPROMAddresses::PRESSURE3_CAL, tempFLOAT) != calValues.pressure3Cal) {
     Serial.print("Pressure3 Cal: ");
     Serial.println(tempFLOAT);
   }
-  if (EEPROM.get(EEPROMAddresses::PRESSURE4_OFFSET, tempINT) != calValues.pressure4Offset)
-  {
+  if (EEPROM.get(EEPROMAddresses::PRESSURE4_OFFSET, tempINT) != calValues.pressure4Offset) {
     Serial.print("Pressure4 Offset: ");
     Serial.println(tempINT);
   }
