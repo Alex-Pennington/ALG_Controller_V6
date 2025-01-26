@@ -459,6 +459,9 @@ ExponentialFilter<float> scaleWeightFiltered(10, 0);
 #define Switch5_DOWN_Pin 34
 #define FlowSwitchPin 33
 #define RefrigerantSwitchPin 32
+#define Thermistor1PIN A2 
+#define Thermistor2PIN A1 
+
 
 /*Connector Pinouts
 Pressure(3)  1 5V, 2 GND, 3 SIG
@@ -799,8 +802,8 @@ void setup()
   LoadCell.set_offset(calValues.zeroOffsetScale);
   LoadCell.set_gain();
   scaleWeightFiltered.SetWeight(configValues.scaleFilterWeight);
-  // pinMode(Thermistor1PIN, INPUT);
-  // pinMode(Thermistor2PIN, INPUT);
+  pinMode(Thermistor1PIN, INPUT);
+  pinMode(Thermistor2PIN, INPUT);
   pinMode(SSRArmed_PIN, OUTPUT);
   digitalWrite(SSRArmed_PIN, !SSRARMED_ON);
   pinMode(ElementPowerPin, OUTPUT);
@@ -2555,8 +2558,8 @@ void updateEEPROMCRC()
   Serial.print("  Stored CRC: ");
   Serial.println(storedCRC);
 }
-
 void sanityCheckEEPROM() {
+
   int tempINT;
   float tempFLOAT;
   double tempDOUBLE;
@@ -2781,4 +2784,23 @@ void sanityCheckEEPROM() {
     Serial.print("OLED Line6 SensorID: ");
     Serial.println(tempINT);
   }
+}
+
+float getThermistor(const int pinVar) {
+  float thermistorResistance = voltageDivider(pinVar, 981.0);
+  //https://www.thinksrs.com/downloads/programs/therm%20calc/ntccalibrator/ntccalculator.html
+  const float A = 1.680995265e-3;
+  const float B = 2.392149905e-4;
+  const float C = 1.594237047e-7;
+
+  float logR = log(thermistorResistance);
+  float Kelvin = 1.0 / (A + B * logR + C * logR * logR * logR);
+  float tempF = (Kelvin - 273.15) * CELSIUS_TO_FAHRENHEIT_FACTOR + CELSIUS_TO_FAHRENHEIT_OFFSET;
+  Serial.print("Thermistor ");
+  Serial.print(pinVar);
+  Serial.print(" Resistance: ");
+  Serial.print(thermistorResistance);
+  Serial.print(" Temp: ");
+  Serial.println(tempF);
+  return tempF;
 }
