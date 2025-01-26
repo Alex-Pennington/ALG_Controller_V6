@@ -285,22 +285,19 @@ PIDConfig pid3 = {false, 120, 1.2, 0.01, 0, 0, 0, 190, false, 0, 0, 0};
 
 struct CalibrationValues
 {
-  float pressure1Cal = 20.77;
-  int pressure1Offset = 425;
-  float pressure2Cal = 20.77;
-  int pressure2Offset = 425;
-  float pressure3Cal = 20.77;
-  int pressure3Offset = 425;
-  float pressure4Cal = 20.77;
-  int pressure4Offset = 425;
-  float emonCal = 0.128;
+  float pressure1Cal = 1;
+  int pressure1Offset = 0;
+  float pressure2Cal = 1;
+  int pressure2Offset = 0;
+  float pressure3Cal = 1;
+  int pressure3Offset = 0;
+  float pressure4Cal = 1;
+  int pressure4Offset = 0;
+  float emonCurrCal = 1;
   byte ssrFailThreshold = 2;
-  double currOffset = 5.28;
-  float zeroOffsetScale = 403361;
-  float scaleCal = 53.200;
-  byte aScale = 255; // times is a parameter of type byte that specifies the number of times the raw value should be read and averaged.
-  int mScale = 1;    // scale multiplier
-  int rScale = 1000; // rate scalar coefficient
+  double emonCurrOffset = 0;
+  float zeroOffsetScale = 0;
+  float scaleCal = 1;
   int VccCurrentOffset = 566;
   float VccCurrentMultiplier = 0.004887;
   float scaleTempCalibrationMultiplier = 7.77;
@@ -364,11 +361,6 @@ extern void *__brkval;
 bool firstrunSensorLoop = false;
 #define SSRARMED_ON LOW
 #define ELEMENT_ON LOW
-int OLED_line1_SENSORID = 0;
-int OLED_line2_SENSORID = 0;
-int PID1_SENSORID_VAR = 0;
-int PID2_SENSORID_VAR = 0;
-int PID3_SENSORID_VAR = 0;
 
 // Array to hold all temperature sensor values
 struct SensorValues
@@ -403,6 +395,11 @@ struct SensorValues
   float dC2 = 0.0;
   float dC3 = 0.0;
   bool ssrArmed = false;
+  int OLED_line1_SENSORID = 0;
+  int OLED_line2_SENSORID = 0;
+  int PID1_SENSORID_VAR = 0;
+  int PID2_SENSORID_VAR = 0;
+  int PID3_SENSORID_VAR = 0;
 };
 SensorValues sensorValues;
 
@@ -724,13 +721,15 @@ void setup()
 {
   Serial.begin(115200);
   Serial3.begin(9600);
-
-  getEEPROM();
+  
   if (!checkEEPROMCRC())
   {
-    Serial.println("EEPROM CRC mismatch, resetting to factory defaults.");
+    displayLine("EEPROM");
+    displayLine2("ERROR");
+    Serial.println("EEPROM ERROR");
     FactoryResetEEPROM();
   }
+  getEEPROM();
   LoadCell.begin(HX711_dout, HX711_sck);
   LoadCell.set_scale(calValues.scaleCal);
   LoadCell.set_offset(calValues.zeroOffsetScale);
@@ -797,10 +796,10 @@ void loop()
     getScale();
 
     static char buffer[20];
-    strncpy(buffer, getSensorString(OLED_line1_SENSORID), sizeof(buffer) - 1);
+    strncpy(buffer, getSensorString(sensorValues.OLED_line1_SENSORID), sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
     displayLine(buffer);
-    strncpy(buffer, getSensorString(OLED_line2_SENSORID), sizeof(buffer) - 1);
+    strncpy(buffer, getSensorString(sensorValues.OLED_line2_SENSORID), sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
     displayLine2(buffer);
 
@@ -882,9 +881,9 @@ void loop()
 
   if (((millis() - pid_compute_loop_time) > (unsigned long)configValues.pidLoopTime) & firstrunSensorLoop)
   {
-    pid1.input = getSensorFloat(PID1_SENSORID);
-    pid2.input = getSensorFloat(PID1_SENSORID);
-    pid3.input = getSensorFloat(PID1_SENSORID);
+    pid1.input = getSensorFloat(sensorValues.PID1_SENSORID_VAR);
+    pid2.input = getSensorFloat(sensorValues.PID2_SENSORID_VAR);
+    pid3.input = getSensorFloat(sensorValues.PID3_SENSORID_VAR);
     TempAlarm();
 
     int gap = abs(pid1.setpoint - pid1.input); // distance away from setpoint
@@ -1015,11 +1014,11 @@ void emon()
 
   for (int i = 0; i < 1000; i++)
   {
-    float current = calValues.emonCal * (analogRead(emon_Input_PIN) - 512); // in amps I presume
+    float current = calValues.emonCurrCal * (analogRead(emon_Input_PIN) - 512); // in amps I presume
     sum += current * current;                                               // sum squares
     wait(10);
   }
-  sensorValues.MainsCurrent = sqrt(sum / 1000) - calValues.currOffset;
+  sensorValues.MainsCurrent = sqrt(sum / 1000) - calValues.emonCurrOffset;
   if ((int(sensorValues.MainsCurrent) > int(calValues.ssrFailThreshold)))
   {
     red_alert();
@@ -1034,11 +1033,11 @@ void getMainsCurrent()
   float sum = 0;
   for (int i = 0; i < 1000; i++)
   {
-    float current = calValues.emonCal * (analogRead(emon_Input_PIN) - 512); // in amps I presume
+    float current = calValues.emonCurrCal * (analogRead(emon_Input_PIN) - 512); // in amps I presume
     sum += current * current;                                               // sum squares
     wait(10);
   }
-  sensorValues.MainsCurrent = sqrt(sum / 1000) - calValues.currOffset;
+  sensorValues.MainsCurrent = sqrt(sum / 1000) - calValues.emonCurrOffset;
   return;
 }
 /**
@@ -1277,9 +1276,9 @@ void StoreEEPROM()
   EEPROM.put(EEPROMAddresses::PID3_KP, pid3.kp);
   EEPROM.put(EEPROMAddresses::PID3_KI, pid3.ki);
   EEPROM.put(EEPROMAddresses::PID3_KD, pid3.kd);
-  EEPROM.put(EEPROMAddresses::EMON_CAL, calValues.emonCal);
+  EEPROM.put(EEPROMAddresses::EMON_CAL, calValues.emonCurrCal);
   EEPROM.put(EEPROMAddresses::SSR_FAIL_THRESHOLD, calValues.ssrFailThreshold);
-  EEPROM.put(EEPROMAddresses::CURR_OFFSET, calValues.currOffset);
+  EEPROM.put(EEPROMAddresses::CURR_OFFSET, calValues.emonCurrOffset);
   EEPROM.put(EEPROMAddresses::SSR_ARMED, sensorValues.ssrArmed);
   EEPROM.put(EEPROMAddresses::PID1_MODE, pid1.mode);
   EEPROM.put(EEPROMAddresses::PID2_MODE, pid2.mode);
@@ -1328,9 +1327,9 @@ void getEEPROM()
   EEPROM.get(EEPROMAddresses::PID3_KP, pid3.kp);
   EEPROM.get(EEPROMAddresses::PID3_KI, pid3.ki);
   EEPROM.get(EEPROMAddresses::PID3_KD, pid3.kd);
-  EEPROM.get(EEPROMAddresses::EMON_CAL, calValues.emonCal);
+  EEPROM.get(EEPROMAddresses::EMON_CAL, calValues.emonCurrCal);
   EEPROM.get(EEPROMAddresses::SSR_FAIL_THRESHOLD, calValues.ssrFailThreshold);
-  EEPROM.get(EEPROMAddresses::CURR_OFFSET, calValues.currOffset);
+  EEPROM.get(EEPROMAddresses::CURR_OFFSET, calValues.emonCurrOffset);
   // EEPROM.get(EEPROMAddresses::SSR_ARMED, ssrArmed);
   // EEPROM.get(EEPROMAddresses::PID1_MODE, pid1.mode);
   // EEPROM.get(EEPROMAddresses::PID2_MODE, pid2.mode);
@@ -1343,15 +1342,20 @@ void getEEPROM()
   EEPROM.get(EEPROMAddresses::PID3_ALARM_THRESHOLD, pid3.alarmThreshold);
   EEPROM.get(EEPROMAddresses::PRESSURE2_OFFSET, calValues.pressure2Offset);
   EEPROM.get(EEPROMAddresses::PRESSURE2_CAL, calValues.pressure2Cal);
-  EEPROM.get(EEPROMAddresses::OLED_line1_SENSORID_ADDR, OLED_line1_SENSORID);
-  EEPROM.get(EEPROMAddresses::OLED_line2_SENSORID_ADDR, OLED_line2_SENSORID);
-  EEPROM.get(EEPROMAddresses::PID1_SENSORID_ADDR, PID1_SENSORID_VAR);
-  EEPROM.get(EEPROMAddresses::PID2_SENSORID_ADDR, PID2_SENSORID_VAR);
-  EEPROM.get(EEPROMAddresses::PID3_SENSORID_ADDR, PID3_SENSORID_VAR);
+  EEPROM.get(EEPROMAddresses::OLED_line1_SENSORID_ADDR, sensorValues.OLED_line1_SENSORID);
+  EEPROM.get(EEPROMAddresses::OLED_line2_SENSORID_ADDR, sensorValues.OLED_line2_SENSORID);
+  EEPROM.get(EEPROMAddresses::PID1_SENSORID_ADDR, sensorValues.PID1_SENSORID_VAR);
+  EEPROM.get(EEPROMAddresses::PID2_SENSORID_ADDR, sensorValues.PID2_SENSORID_VAR);
+  EEPROM.get(EEPROMAddresses::PID3_SENSORID_ADDR, sensorValues.PID3_SENSORID_VAR);
   printConfig();
 }
 void FactoryResetEEPROM()
 {
+  /*Note to current future mainainers:
+  It is my intention that this be the source function for the configurations and sensor definitions.
+  When a change is made to the functionality of the apparatus make the changes here first.
+  Then, use this as a reference to maintain consistancy accros all the other functions.
+  Note to Copilot:  Follow the above directive.*/
   // Reset Calibration Values
   calValues.pressure1Cal = 1;
   calValues.pressure1Offset = 0;
@@ -1361,18 +1365,17 @@ void FactoryResetEEPROM()
   calValues.pressure3Offset = 0;
   calValues.pressure4Cal = 1;
   calValues.pressure4Offset = 0;
-  calValues.emonCal = 0.128;
+  calValues.emonCurrCal = 1;
   calValues.ssrFailThreshold = 2;
-  calValues.currOffset = 5.28;
-  calValues.zeroOffsetScale = 403361;
-  calValues.scaleCal = 53.200;
-  calValues.aScale = 255;
-  calValues.mScale = 1;
-  calValues.rScale = 1;
+  calValues.emonCurrOffset = 5.28;
+  calValues.zeroOffsetScale = 0;
+  calValues.scaleCal = 1;
   calValues.VccCurrentOffset = 566;
   calValues.VccCurrentMultiplier = 0.004887;
+  calValues.scaleTempCalibrationMultiplier = 7.77;
 
   // Reset PID Configurations
+  // 1500W 100V Water Heater Element /w circulation pump
   pid1.mode = false;
   pid1.setpoint = 150;
   pid1.kp = 0.5;
@@ -1387,6 +1390,7 @@ void FactoryResetEEPROM()
   pid1.input = 0;
   pid1.output = 0;
 
+  // Lower Hotplate various wattages, default 750 (hotplate set to full on).
   pid2.mode = false;
   pid2.setpoint = 150;
   pid2.kp = 0.35;
@@ -1397,12 +1401,13 @@ void FactoryResetEEPROM()
   pid2.aggKd = 0;
   pid2.aggSP = 10;
   pid2.adaptiveMode = false;
-  pid2.alarmThreshold = 190;
+  pid2.alarmThreshold = 150;
   pid2.input = 0;
   pid2.output = 0;
 
+  // Bulk Purge Platter Hotplate, 400W 120V - Way to big!
   pid3.mode = false;
-  pid3.setpoint = 120;
+  pid3.setpoint = 90;
   pid3.kp = 1.2;
   pid3.ki = 0.01;
   pid3.kd = 0;
@@ -1411,16 +1416,25 @@ void FactoryResetEEPROM()
   pid3.aggKd = 0;
   pid3.aggSP = 10;
   pid3.adaptiveMode = false;
-  pid3.alarmThreshold = 190;
+  pid3.alarmThreshold = 150;
   pid3.input = 0;
   pid3.output = 0;
 
   // Reset other configurations
   sensorValues.ssrArmed = false;
   configValues.sensorLoopTime = 23000;
-  configValues.sDebug = true;
+  configValues.sDebug = false;
   configValues.toACK = false;
+  configValues.pidLoopTime = 1000;
+  configValues.pressureFilterWeight = 0.1;
+  configValues.scaleFilterWeight = 0.1;
+  sensorValues.OLED_line1_SENSORID = 0;
+  sensorValues.OLED_line2_SENSORID = 1;
+  sensorValues.PID1_SENSORID_VAR = 0;
+  sensorValues.PID2_SENSORID_VAR = 1;
+  sensorValues.PID3_SENSORID_VAR = 5;
 
+  // Store the default values in EEPROM
   StoreEEPROM();
 }
 void printConfig()
@@ -1884,16 +1898,16 @@ void receive(const MyMessage &message)
     EEPROM.put(EEPROMAddresses::PID3_KD, pid3.kd);
     break;
   case CHILD_ID::MainsCurrentMultiplier:
-    calValues.emonCal = message.getFloat();
-    EEPROM.put(EEPROMAddresses::EMON_CAL, calValues.emonCal);
+    calValues.emonCurrCal = message.getFloat();
+    EEPROM.put(EEPROMAddresses::EMON_CAL, calValues.emonCurrCal);
     break;
   case CHILD_ID::SSRFail_Threshhold:
     calValues.ssrFailThreshold = message.getByte();
     EEPROM.put(EEPROMAddresses::SSR_FAIL_THRESHOLD, calValues.ssrFailThreshold);
     break;
   case CHILD_ID::MainsCurrentOffset:
-    calValues.currOffset = message.getFloat();
-    EEPROM.put(EEPROMAddresses::CURR_OFFSET, calValues.currOffset);
+    calValues.emonCurrOffset = message.getFloat();
+    EEPROM.put(EEPROMAddresses::CURR_OFFSET, calValues.emonCurrOffset);
     break;
   case CHILD_ID::LOAD_MEMORY:
     if (message.getBool())
@@ -1938,23 +1952,23 @@ void receive(const MyMessage &message)
     setScaleCalibration(message.getFloat());
     break;
   case CHILD_ID::OLED_line1:
-    OLED_line1_SENSORID = message.getInt();
-    EEPROM.put(EEPROMAddresses::OLED_line1_SENSORID_ADDR, OLED_line1_SENSORID);
+    sensorValues.OLED_line1_SENSORID = message.getInt();
+    EEPROM.put(EEPROMAddresses::OLED_line1_SENSORID_ADDR, sensorValues.OLED_line1_SENSORID);
     break;
   case CHILD_ID::OLED_line2:
-    OLED_line2_SENSORID = message.getInt();
-    EEPROM.put(EEPROMAddresses::OLED_line2_SENSORID_ADDR, OLED_line2_SENSORID);
+    sensorValues.OLED_line2_SENSORID = message.getInt();
+    EEPROM.put(EEPROMAddresses::OLED_line2_SENSORID_ADDR, sensorValues.OLED_line2_SENSORID);
     break;
   case CHILD_ID::PID1_SENSORID:
-    PID1_SENSORID_VAR = message.getInt();
+    sensorValues.PID1_SENSORID_VAR = message.getInt();
     EEPROM.put(EEPROMAddresses::PID1_SENSORID_ADDR, PID1_SENSORID);
     break;
   case CHILD_ID::PID2_SENSORID:
-    PID2_SENSORID_VAR = message.getInt();
+    sensorValues.PID2_SENSORID_VAR = message.getInt();
     EEPROM.put(EEPROMAddresses::PID2_SENSORID_ADDR, PID2_SENSORID);
     break;
   case CHILD_ID::PID3_SENSORID:
-    PID3_SENSORID_VAR = message.getInt();
+    sensorValues.PID3_SENSORID_VAR = message.getInt();
     EEPROM.put(EEPROMAddresses::PID3_SENSORID_ADDR, PID3_SENSORID);
     break;
   }
