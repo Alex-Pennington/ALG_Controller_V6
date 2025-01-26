@@ -152,6 +152,8 @@ enum CHILD_ID
   T10 = 104,
   OLED_line3 = 105,
   OLED_line4 = 106,
+  OLED_line5 = 107,
+  OLED_line6 = 108,
 
 };
 
@@ -419,6 +421,8 @@ struct SensorValues
   int PID3_SENSORID_VAR = 0;
   int OLED_line3_SENSORID = 0;
   int OLED_line4_SENSORID = 0;
+  int OLED_line5_SENSORID = 0;
+  int OLED_line6_SENSORID = 0;
 };
 SensorValues sensorValues;
 
@@ -512,10 +516,7 @@ void sendInfo(String);
 void DS18B20();
 // float getThermistor(int);
 float readPressure(int pin, int offset, float cal, float lastValue);
-void displayLine(const char *line);
-void displayLine2(const char *line);
-void displayLine3(const char *line);
-void displayLine4(const char *line);
+void displayLine(const char *line, int row);
 int freeMemory();
 void emon();
 void switchesLoop();
@@ -586,7 +587,9 @@ enum EEPROMAddresses
   PID2_SENSORID_ADDR = 148,       // int, 2 bytes
   PID3_SENSORID_ADDR = 150,        // int, 2 bytes
   OLED_line3_SENSORID_ADDR = 152, // int, 2 bytes
-  OLED_line4_SENSORID_ADDR = 154 // int, 2 bytes
+  OLED_line4_SENSORID_ADDR = 154, // int, 2 bytes
+  OLED_line5_SENSORID_ADDR = 156, // int, 2 bytes
+  OLED_line6_SENSORID_ADDR = 158, // int, 2 bytes
 };
 
 void presentation()
@@ -751,6 +754,10 @@ void presentation()
   wait(SENDDELAY);
   present(CHILD_ID::OLED_line4, S_LIGHT_LEVEL, "OL4");
   wait(SENDDELAY);
+  present(CHILD_ID::OLED_line5, S_LIGHT_LEVEL, "OL5");
+  wait(SENDDELAY);
+  present(CHILD_ID::OLED_line6, S_LIGHT_LEVEL, "OL6");
+  wait(SENDDELAY);
 }
 
 void setup()
@@ -770,7 +777,7 @@ void setup()
   {
     sendInfo("E");
     display.clearDisplay();
-    displayLine("E");
+    displayLine("E",0);
     display.display();
     // FactoryResetEEPROM();
   }
@@ -817,7 +824,7 @@ void setup()
   }
 
   display.clearDisplay();
-  displayLine("Booting...");
+  displayLine("Booting...",1);
   display.display();
   sendInfo("Operational");
   play_one_up();
@@ -944,16 +951,22 @@ void loop()
     static char buffer[20];
     strncpy(buffer, getSensorString(sensorValues.OLED_line1_SENSORID), sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
-    displayLine(buffer);
+    displayLine(buffer, 0);
     strncpy(buffer, getSensorString(sensorValues.OLED_line2_SENSORID), sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
-    displayLine2(buffer);
-    strncpy(buffer, getSensorString(sensorValues.OLED_line1_SENSORID), sizeof(buffer) - 1);
+    displayLine(buffer,1);
+    strncpy(buffer, getSensorString(sensorValues.OLED_line3_SENSORID), sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
-    displayLine3(buffer);
-    strncpy(buffer, getSensorString(sensorValues.OLED_line2_SENSORID), sizeof(buffer) - 1);
+    displayLine(buffer,2);
+    strncpy(buffer, getSensorString(sensorValues.OLED_line4_SENSORID), sizeof(buffer) - 1);
     buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
-    displayLine4(buffer);
+    displayLine(buffer,3);
+    strncpy(buffer, getSensorString(sensorValues.OLED_line5_SENSORID), sizeof(buffer) - 1);
+    buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
+    displayLine(buffer,4);
+    strncpy(buffer, getSensorString(sensorValues.OLED_line6_SENSORID), sizeof(buffer) - 1);
+    buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
+    displayLine(buffer,5);
     display.display();
     SensorLoop_timer = millis();
     Serial.print(millis() - sensorLoopTime);
@@ -1379,6 +1392,8 @@ void StoreEEPROM()
   EEPROM.put(EEPROMAddresses::PID1_SENSORID_ADDR, sensorValues.PID1_SENSORID_VAR);
   EEPROM.put(EEPROMAddresses::PID2_SENSORID_ADDR, sensorValues.PID2_SENSORID_VAR);
   EEPROM.put(EEPROMAddresses::PID3_SENSORID_ADDR, sensorValues.PID3_SENSORID_VAR);
+  EEPROM.put(EEPROMAddresses::OLED_line5_SENSORID_ADDR, sensorValues.OLED_line5_SENSORID);
+  EEPROM.put(EEPROMAddresses::OLED_line6_SENSORID_ADDR, sensorValues.OLED_line6_SENSORID);
 
 
   printConfig();
@@ -1438,6 +1453,8 @@ void getEEPROM()
   EEPROM.get(EEPROMAddresses::PID1_SENSORID_ADDR, sensorValues.PID1_SENSORID_VAR);
   EEPROM.get(EEPROMAddresses::PID2_SENSORID_ADDR, sensorValues.PID2_SENSORID_VAR);
   EEPROM.get(EEPROMAddresses::PID3_SENSORID_ADDR, sensorValues.PID3_SENSORID_VAR);
+  EEPROM.get(EEPROMAddresses::OLED_line5_SENSORID_ADDR, sensorValues.OLED_line5_SENSORID);
+  EEPROM.get(EEPROMAddresses::OLED_line6_SENSORID_ADDR, sensorValues.OLED_line6_SENSORID);
   printConfig();
 }
 void FactoryResetEEPROM()
@@ -1769,30 +1786,9 @@ void DS18B20()
   return;
 }
 #define LINE_HEIGHT 10
-void displayLine(const char *line)
+void displayLine(const char *line, int row)
 {
-  display.setCursor(0, 0);
-  display.setTextSize(1); // Draw 2X-scale text
-  display.setTextColor(SSD1306_WHITE);
-  display.print(line);
-}
-void displayLine2(const char *line)
-{
-  display.setCursor(0, LINE_HEIGHT);
-  display.setTextSize(1); // Draw 2X-scale text
-  display.setTextColor(SSD1306_WHITE);
-  display.print(line);
-}
-void displayLine3(const char *line)
-{
-  display.setCursor(0, LINE_HEIGHT * 2);
-  display.setTextSize(1); // Draw 2X-scale text
-  display.setTextColor(SSD1306_WHITE);
-  display.print(line);
-}
-void displayLine4(const char *line)
-{
-  display.setCursor(0, LINE_HEIGHT * 3);
+  display.setCursor(0, LINE_HEIGHT * row);
   display.setTextSize(1); // Draw 2X-scale text
   display.setTextColor(SSD1306_WHITE);
   display.print(line);
@@ -2086,6 +2082,14 @@ void receive(const MyMessage &message)
   case CHILD_ID::OLED_line4:
     sensorValues.OLED_line4_SENSORID = message.getInt();
     EEPROM.put(EEPROMAddresses::OLED_line4_SENSORID_ADDR, sensorValues.OLED_line4_SENSORID);
+    break;
+  case CHILD_ID::OLED_line5:
+    sensorValues.OLED_line5_SENSORID = message.getInt();
+    EEPROM.put(EEPROMAddresses::OLED_line5_SENSORID_ADDR, sensorValues.OLED_line5_SENSORID);
+    break;
+  case CHILD_ID::OLED_line6:
+    sensorValues.OLED_line6_SENSORID = message.getInt();
+    EEPROM.put(EEPROMAddresses::OLED_line6_SENSORID_ADDR, sensorValues.OLED_line6_SENSORID);
     break;
   }
 
