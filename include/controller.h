@@ -43,6 +43,7 @@ void play_fireball()   {
 }
 
 void red_alert() {
+  Serial.println("Red Alert!");
   for (int i = 500; i < 750; i++) {
     tone(speakerPin, i);
     delay(3);

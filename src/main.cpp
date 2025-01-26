@@ -671,6 +671,12 @@ void presentation()
   wait(SENDDELAY);
   present(CHILD_ID::PIDkD0_1, S_LIGHT_LEVEL, "kD1");
   wait(SENDDELAY);
+  present(CHILD_ID::PIDThreshold_1, S_LIGHT_LEVEL, "P1T");
+  wait(SENDDELAY);
+  present(CHILD_ID::PIDThreshold_2, S_LIGHT_LEVEL, "P2T");
+  wait(SENDDELAY);
+  present(CHILD_ID::PIDThreshold_3, S_LIGHT_LEVEL, "P3T");
+  wait(SENDDELAY);
   present(CHILD_ID::dC_2, S_DIMMER, "dC2");
   wait(SENDDELAY);
   present(CHILD_ID::PIDMODE_2, S_BINARY, "PM2");
@@ -773,13 +779,16 @@ void setup()
     while (true)
       ; // Halt execution if display initialization fails
   }
+
   if (!checkEEPROMCRC())
   {
-    sendInfo("E");
+    sendInfo("EPROM ERROR");
     display.clearDisplay();
-    displayLine("E",0);
+    displayLine("EPROM",0);
+    displayLine("ERROR",1);
     display.display();
-    // FactoryResetEEPROM();
+    delay(30000);
+    FactoryResetEEPROM();
   }
   getEEPROM();
   LoadCell.begin(HX711_dout, HX711_sck);
@@ -975,9 +984,9 @@ void loop()
 
   if (((millis() - pid_compute_loop_time) > (unsigned long)configValues.pidLoopTime) & firstrunSensorLoop)
   {
-    pid1.input = getSensorFloat(sensorValues.PID1_SENSORID_VAR);
-    pid2.input = getSensorFloat(sensorValues.PID2_SENSORID_VAR);
-    pid3.input = getSensorFloat(sensorValues.PID3_SENSORID_VAR);
+    pid1.input = (double)getSensorFloat(sensorValues.PID1_SENSORID_VAR);
+    pid2.input = (double)getSensorFloat(sensorValues.PID2_SENSORID_VAR);
+    pid3.input = (double)getSensorFloat(sensorValues.PID3_SENSORID_VAR);
     TempAlarm();
 
     int gap = abs(pid1.setpoint - pid1.input); // distance away from setpoint
@@ -1061,6 +1070,9 @@ void getVccCurrent()
 void TempAlarm()
 {
   // Temp Alarm
+  Serial.println(pid1.input,2);
+  Serial.println(pid2.input,2);
+  Serial.println(pid3.input,2);
   if ((pid1.alarmThreshold < pid1.input) || (pid1.input < 1.0))
   {
     sendInfo("PID1!");
@@ -1075,7 +1087,7 @@ void TempAlarm()
     red_alert();
     AllStop();
   }
-  if ((pid3.alarmThreshold < pid3.input) || (pid3.input < 1))
+  if ((pid3.alarmThreshold < pid3.input) || (pid3.input < 1.0))
   {
     sendInfo("PID3!");
     // Serial.println("PID3!");
@@ -1540,9 +1552,11 @@ void FactoryResetEEPROM()
   sensorValues.OLED_line2_SENSORID = 1;
   sensorValues.OLED_line3_SENSORID = 0;
   sensorValues.OLED_line4_SENSORID = 1;
+  sensorValues.OLED_line5_SENSORID = 1;
+  sensorValues.OLED_line6_SENSORID = 1;
   sensorValues.PID1_SENSORID_VAR = 0;
   sensorValues.PID2_SENSORID_VAR = 1;
-  sensorValues.PID3_SENSORID_VAR = 5;
+  sensorValues.PID3_SENSORID_VAR = 71;
 
   // Store the default values in EEPROM
   StoreEEPROM();
@@ -2065,15 +2079,15 @@ void receive(const MyMessage &message)
     break;
   case CHILD_ID::PID1_SENSORID:
     sensorValues.PID1_SENSORID_VAR = message.getInt();
-    EEPROM.put(EEPROMAddresses::PID1_SENSORID_ADDR, PID1_SENSORID);
+    EEPROM.put(EEPROMAddresses::PID1_SENSORID_ADDR, PID1_SENSORID_ADDR);
     break;
   case CHILD_ID::PID2_SENSORID:
     sensorValues.PID2_SENSORID_VAR = message.getInt();
-    EEPROM.put(EEPROMAddresses::PID2_SENSORID_ADDR, PID2_SENSORID);
+    EEPROM.put(EEPROMAddresses::PID2_SENSORID_ADDR, PID2_SENSORID_ADDR);
     break;
   case CHILD_ID::PID3_SENSORID:
     sensorValues.PID3_SENSORID_VAR = message.getInt();
-    EEPROM.put(EEPROMAddresses::PID3_SENSORID_ADDR, PID3_SENSORID);
+    EEPROM.put(EEPROMAddresses::PID3_SENSORID_ADDR, PID3_SENSORID_ADDR);
     break;
   case CHILD_ID::OLED_line3:
     sensorValues.OLED_line3_SENSORID = message.getInt();
@@ -2102,6 +2116,7 @@ void receive(const MyMessage &message)
       sendRelayStates();
     }
   }
+  updateEEPROMCRC();
 }
 void queryRelayStates()
 {
@@ -2349,6 +2364,9 @@ float getSensorFloat(int sensorID)
 
   switch (sensorID)
   {
+  case CHILD_ID::T0:
+    tempFloat = sensorValues.T0;
+    break;
   case CHILD_ID::T1:
     tempFloat = sensorValues.T1;
     break;
