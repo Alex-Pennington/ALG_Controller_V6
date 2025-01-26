@@ -1825,7 +1825,7 @@ int freeMemory()
 void receive(const MyMessage &message)
 {
   int msgcmd = mGetCommand(message);
-  if (configValues.sDebug)
+  if (configValues.sDebug || 1 == 1)
   {
     if (message.isAck())
     {
