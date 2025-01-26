@@ -1070,9 +1070,6 @@ void getVccCurrent()
 void TempAlarm()
 {
   // Temp Alarm
-  Serial.println(pid1.input,2);
-  Serial.println(pid2.input,2);
-  Serial.println(pid3.input,2);
   if ((pid1.alarmThreshold < pid1.input) || (pid1.input < 1.0))
   {
     sendInfo("PID1!");
