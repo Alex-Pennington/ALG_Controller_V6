@@ -537,7 +537,7 @@ void sanityCheckEEPROM();
 
 enum EEPROMAddresses
 {
-  ZERO_OFFSET_SCALE = 0,          // float, 4 bytes
+  // 0,
   PRESSURE1_OFFSET = 4,           // int, 4 bytes
   SCALE_CAL = 8,                  // float, 4 bytes
   PRESSURE1_CAL = 12,             // float, 4 bytes
@@ -591,6 +591,7 @@ enum EEPROMAddresses
   OLED_line4_SENSORID_ADDR = 156, // int, 2 bytes
   OLED_line5_SENSORID_ADDR = 158, // int, 2 bytes
   OLED_line6_SENSORID_ADDR = 160, // int, 2 bytes
+  ZERO_OFFSET_SCALE = 162,          // float, 4 bytes
 };
 
 void presentation()
@@ -780,20 +781,17 @@ void setup()
     while (true)
       ; // Halt execution if display initialization fails
   }
-
   if (!checkEEPROMCRC())
   {
     sendInfo("EPROM ERROR");
-    Serial.println("EEPRIM ERROR");
     display.clearDisplay();
     displayLine("EPROM", 0);
     displayLine("ERROR", 1);
     display.display();
-    delay(30000);
+    //wait(30000);
     FactoryResetEEPROM();
   }
   getEEPROM();
-  sanityCheckEEPROM();
   LoadCell.begin(HX711_dout, HX711_sck);
   LoadCell.set_scale(calValues.scaleCal);
   LoadCell.set_offset(calValues.zeroOffsetScale);
@@ -1468,8 +1466,8 @@ void getEEPROM()
   EEPROM.get(EEPROMAddresses::OLED_line6_SENSORID_ADDR, sensorValues.OLED_line6_SENSORID);
   printConfig();
 }
-void FactoryResetEEPROM()
-{
+void initDefaultValues() {
+  
   /*Note to current future mainainers:
   It is my intention that this be the source function for the configurations and sensor definitions.
   When a change is made to the functionality of the apparatus make the changes here first.
@@ -1556,8 +1554,9 @@ void FactoryResetEEPROM()
   sensorValues.PID1_SENSORID_VAR = 0;
   sensorValues.PID2_SENSORID_VAR = 1;
   sensorValues.PID3_SENSORID_VAR = 71;
-
-  // Store the default values in EEPROM
+}
+void FactoryResetEEPROM() {
+  initDefaultValues();
   StoreEEPROM();
 }
 void printConfig()
@@ -1737,6 +1736,7 @@ void sendInfo(String payload)
   send(msgINFO);
   _process();
   wait(SENDDELAY);
+  Serial.println(payload);
 }
 void DS18B20()
 {
@@ -2553,8 +2553,8 @@ void updateEEPROMCRC()
   Serial.print("  Stored CRC: ");
   Serial.println(storedCRC);
 }
-
 void sanityCheckEEPROM() {
+  initDefaultValues();
   int tempINT;
   float tempFLOAT;
   double tempDOUBLE;
@@ -2779,4 +2779,5 @@ void sanityCheckEEPROM() {
     Serial.print("OLED Line6 SensorID: ");
     Serial.println(tempINT);
   }
+  Serial.println("End Sanity Check EEPROM");
 }
