@@ -21,6 +21,7 @@
 #include <Adafruit_SSD1306.h>
 #include "MegunoLink.h"
 #include "Filter.h"
+#include <CRC32.h>
 
 // Enable and select radio type attached
 #define MY_NODE_ID 201
@@ -244,6 +245,8 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 #define CELSIUS_TO_FAHRENHEIT_FACTOR 1.8
 #define CELSIUS_TO_FAHRENHEIT_OFFSET 32.0
 
+#define EEPROM_SIZE 4096 // Adjust this size according to your EEPROM size *MEGA 4096*
+
 //Structs
 
 struct DS18B20Values {
@@ -356,9 +359,9 @@ bool firstrunSensorLoop = false;
 #define ELEMENT_ON LOW
 int OLED_line1_SENSORID = 0;
 int OLED_line2_SENSORID = 0;
-int PID1_SENSORID = 0;
-int PID2_SENSORID = 0;
-int PID3_SENSORID = 0;
+int PID1_SENSORID_VAR = 0;
+int PID2_SENSORID_VAR = 0;
+int PID3_SENSORID_VAR = 0;
 
 
 // Array to hold all temperature sensor values
@@ -501,10 +504,13 @@ void getScale();
 void getVccCurrent();
 void queryRelayStates();
 void sendRelayStates();
-void sendAllStates();
 void setScaleCalibration(float knownWeight);
 float voltageDivider(int pin, float dividerResistor);
 void getMainsCurrent();
+float getSensorFloat(int sensorID);
+char* getSensorString(int sensorID);
+bool checkEEPROMCRC();
+void updateEEPROMCRC();
 
 enum EEPROMAddresses {
   ZERO_OFFSET_SCALE = 0,       // float, 4 bytes
@@ -648,6 +654,10 @@ void setup() {
   Serial3.begin(9600);
 
   getEEPROM();
+  if (!checkEEPROMCRC()) {
+    Serial.println("EEPROM CRC mismatch, resetting to factory defaults.");
+    FactoryResetEEPROM();
+  }
   LoadCell.begin(HX711_dout, HX711_sck);
   LoadCell.set_scale(calValues.scaleCal);
   LoadCell.set_offset(calValues.zeroOffsetScale);
@@ -1146,6 +1156,7 @@ void StoreEEPROM() {
   EEPROM.put(EEPROMAddresses::PRESSURE2_CAL, calValues.pressure2Cal);
 
   printConfig();
+  updateEEPROMCRC();
 }
 void getEEPROM() {
   EEPROM.get(EEPROMAddresses::PRESSURE3_CAL, calValues.pressure3Cal);
@@ -1195,9 +1206,9 @@ void getEEPROM() {
   EEPROM.get(EEPROMAddresses::PRESSURE2_CAL, calValues.pressure2Cal);
   EEPROM.get(EEPROMAddresses::OLED_line1_SENSORID_ADDR, OLED_line1_SENSORID);
   EEPROM.get(EEPROMAddresses::OLED_line2_SENSORID_ADDR, OLED_line2_SENSORID);
-  EEPROM.get(EEPROMAddresses::PID1_SENSORID_ADDR, PID1_SENSORID);
-  EEPROM.get(EEPROMAddresses::PID2_SENSORID_ADDR, PID2_SENSORID);
-  EEPROM.get(EEPROMAddresses::PID3_SENSORID_ADDR, PID3_SENSORID);
+  EEPROM.get(EEPROMAddresses::PID1_SENSORID_ADDR, PID1_SENSORID_VAR);
+  EEPROM.get(EEPROMAddresses::PID2_SENSORID_ADDR, PID2_SENSORID_VAR);
+  EEPROM.get(EEPROMAddresses::PID3_SENSORID_ADDR, PID3_SENSORID_VAR);
   printConfig();
 }
 void FactoryResetEEPROM() {
@@ -1765,15 +1776,15 @@ void receive(const MyMessage & message)  {
       EEPROM.put(EEPROMAddresses::OLED_line2_SENSORID_ADDR, OLED_line2_SENSORID);
       break;
     case CHILD_ID::PID1_SENSORID:
-      PID1_SENSORID = message.getInt();
+      PID1_SENSORID_VAR = message.getInt();
       EEPROM.put(EEPROMAddresses::PID1_SENSORID_ADDR, PID1_SENSORID);
       break;
     case CHILD_ID::PID2_SENSORID:
-      PID2_SENSORID = message.getInt();
+      PID2_SENSORID_VAR = message.getInt();
       EEPROM.put(EEPROMAddresses::PID2_SENSORID_ADDR, PID2_SENSORID);
       break;
     case CHILD_ID::PID3_SENSORID:
-      PID3_SENSORID = message.getInt();
+      PID3_SENSORID_VAR = message.getInt();
       EEPROM.put(EEPROMAddresses::PID3_SENSORID_ADDR, PID3_SENSORID);
       break;
   }
@@ -2059,4 +2070,23 @@ float getSensorFloat(int sensorID) {
   }
 
   return tempFloat;
+}
+
+bool checkEEPROMCRC() {
+  CRC32 crc;
+  for (int i = 0; i < EEPROM_SIZE - 4; i++) {
+    crc.update(EEPROM.read(i));
+  }
+  uint32_t storedCRC;
+  EEPROM.get(EEPROM_SIZE - 4, storedCRC);
+  return storedCRC == crc.finalize();
+}
+
+void updateEEPROMCRC() {
+  CRC32 crc;
+  for (int i = 0; i < EEPROM_SIZE - 4; i++) {
+    crc.update(EEPROM.read(i));
+  }
+  uint32_t newCRC = crc.finalize();
+  EEPROM.put(EEPROM_SIZE - 4, newCRC);
 }
