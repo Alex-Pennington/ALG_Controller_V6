@@ -1768,32 +1768,32 @@ void DS18B20()
   ds.reset_search();
   return;
 }
-#define LINE_HEIGHT 16
+#define LINE_HEIGHT 10
 void displayLine(const char *line)
 {
   display.setCursor(0, 0);
-  display.setTextSize(2); // Draw 2X-scale text
+  display.setTextSize(1); // Draw 2X-scale text
   display.setTextColor(SSD1306_WHITE);
   display.print(line);
 }
 void displayLine2(const char *line)
 {
   display.setCursor(0, LINE_HEIGHT);
-  display.setTextSize(2); // Draw 2X-scale text
+  display.setTextSize(1); // Draw 2X-scale text
   display.setTextColor(SSD1306_WHITE);
   display.print(line);
 }
 void displayLine3(const char *line)
 {
   display.setCursor(0, LINE_HEIGHT * 2);
-  display.setTextSize(2); // Draw 2X-scale text
+  display.setTextSize(1); // Draw 2X-scale text
   display.setTextColor(SSD1306_WHITE);
   display.print(line);
 }
 void displayLine4(const char *line)
 {
   display.setCursor(0, LINE_HEIGHT * 3);
-  display.setTextSize(2); // Draw 2X-scale text
+  display.setTextSize(1); // Draw 2X-scale text
   display.setTextColor(SSD1306_WHITE);
   display.print(line);
 }
