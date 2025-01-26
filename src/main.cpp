@@ -2170,10 +2170,20 @@ char *getSensorString(int sensorID)
 {
   static char tempString[20] = "";
 
+char vBuffer[15];
+  dtostrf(voltage,4,2, vBuffer);
+ 
+  char buffer[80];    
+  sprintf(buffer,"{\"psi\": \"%d\",\"voltage\": \"%s\",\"analogRead\": \"%d\",\"loop\": \"%d\"}", pressurePSI, vBuffer, pressureValue, loopCounter);
+  Serial.println(buffer);
+
   switch (sensorID)
   {
+  case CHILD_ID::T0:
+    sprintf(tempString, "T0: %.2f", sensorValues.T0);
+    break;
   case CHILD_ID::T1:
-    sprintf(tempString, "T1: %.2f", (double)sensorValues.T1);
+    sprintf(tempString, "T1: %.2f", sensorValues.T1);
     break;
   case CHILD_ID::T2:
     sprintf(tempString, "T2: %.2f", (double)sensorValues.T2);
