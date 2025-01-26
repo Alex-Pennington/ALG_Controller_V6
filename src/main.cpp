@@ -53,7 +53,7 @@ enum CHILD_ID
   PIDkI1_1 = 14,
   PIDkD1_1 = 15,
   AdaptiveMode_1 = 16,
-  // EDC_1 = 17,
+  // 17,
   PIDThreshold_1 = 18,
 
   dC_2 = 19,
@@ -67,7 +67,8 @@ enum CHILD_ID
   PIDkI1_2 = 27,
   PIDkD1_2 = 28,
   AdaptiveMode_2 = 29,
-  // EDC_2 = 31,
+  // 30,
+  // 31,
   PIDThreshold_2 = 32,
 
   dC_3 = 33,
@@ -77,7 +78,7 @@ enum CHILD_ID
   PIDkP0_3 = 37,
   PIDkI0_3 = 38,
   PIDkD0_3 = 39,
-  // EDC_3 = 40,
+  // 40,
   PIDThreshold_3 = 41,
 
   Scale = 42,
@@ -115,7 +116,7 @@ enum CHILD_ID
   LOAD_MEMORY = 69,
 
   dTscale = 70,
-  T5 = 71,
+  Steinhart_SensorID = 71,
   runTime = 72,
   switch1 = 73,
   switch2 = 74,
@@ -142,7 +143,14 @@ enum CHILD_ID
   OLED_line2 = 95,
   PID1_SENSORID = 96,
   PID2_SENSORID = 97,
-  PID3_SENSORID = 98
+  PID3_SENSORID = 98,
+  T5 = 99,
+  T6 = 100,
+  T7 = 101,
+  T8 = 102,
+  T9 = 103,
+  T10 = 104,
+  ScaleDeltaRate = 105
 
 };
 
@@ -179,6 +187,12 @@ MyMessage msgTemp2(CHILD_ID::T2, V_TEMP);
 MyMessage msgTemp3(CHILD_ID::T3, V_TEMP);
 MyMessage msgTemp4(CHILD_ID::T4, V_TEMP);
 MyMessage msgTemp5(CHILD_ID::T5, V_TEMP);
+MyMessage msgTemp6(CHILD_ID::T6, V_TEMP);
+MyMessage msgTemp7(CHILD_ID::T7, V_TEMP);
+MyMessage msgTemp8(CHILD_ID::T8, V_TEMP);
+MyMessage msgTemp9(CHILD_ID::T9, V_TEMP);
+MyMessage msgTemp10(CHILD_ID::T10, V_TEMP);
+MyMessage msgSteinhart(CHILD_ID::Steinhart_SensorID, V_TEMP);
 MyMessage msgTHMS1(CHILD_ID::THMS1, V_TEMP);
 MyMessage msgTHMS2(CHILD_ID::THMS2, V_TEMP);
 
@@ -250,10 +264,9 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 struct DS18B20Values
 {
   byte addr[8];
-  float C;
   float F;
 };
-DS18B20Values ds18b20Values[5];
+DS18B20Values ds18b20Values[10];
 
 struct ConfigurationValues
 {
@@ -370,6 +383,11 @@ struct SensorValues
   float T3 = 0.0;
   float T4 = 0.0;
   float T5 = 0.0;
+  float T6 = 0.0;
+  float T7 = 0.0;
+  float T8 = 0.0;
+  float T9 = 0.0;
+  float T10 = 0.0;
   float Steinhart = 0.0;
   float Scale = 0.0;
   float ScaleRate = 0.0;
@@ -582,7 +600,17 @@ void presentation()
   wait(SENDDELAY);
   present(CHILD_ID::T4, S_TEMP, "D5");
   wait(SENDDELAY);
-  present(CHILD_ID::T5, S_TEMP, "S1");
+  present(CHILD_ID::T5, S_TEMP, "D6");
+  wait(SENDDELAY);
+  present(CHILD_ID::T6, S_TEMP, "D7");
+  wait(SENDDELAY);
+  present(CHILD_ID::T7, S_TEMP, "D8");
+  wait(SENDDELAY);
+  present(CHILD_ID::T8, S_TEMP, "D9");
+  wait(SENDDELAY);
+  present(CHILD_ID::T9, S_TEMP, "D10");
+  wait(SENDDELAY);
+  present(CHILD_ID::Steinhart_SensorID, S_TEMP, "S1");
   wait(SENDDELAY);
   present(CHILD_ID::THMS1, S_TEMP, "T1");
   wait(SENDDELAY);
@@ -721,7 +749,7 @@ void setup()
 {
   Serial.begin(115200);
   Serial3.begin(9600);
-  
+
   if (!checkEEPROMCRC())
   {
     displayLine("EEPROM");
@@ -840,16 +868,29 @@ void loop()
     _process();
 
     DS18B20();
+    sensorValues.T1 = ds18b20Values[0].F;
+    sensorValues.T2 = ds18b20Values[1].F;
+    sensorValues.T3 = ds18b20Values[2].F;
+    sensorValues.T4 = ds18b20Values[3].F;
+    sensorValues.T5 = ds18b20Values[4].F;
+    sensorValues.T6 = ds18b20Values[5].F;
+    sensorValues.T7 = ds18b20Values[6].F;
+    sensorValues.T8 = ds18b20Values[7].F;
+    sensorValues.T9 = ds18b20Values[8].F;
+    sensorValues.T10 = ds18b20Values[9].F;
+
     send(MyMessage(CHILD_ID::T0, V_TEMP).set(sensorValues.T1, 2));
     send(MyMessage(CHILD_ID::T1, V_TEMP).set(sensorValues.T2, 2));
     send(MyMessage(CHILD_ID::T2, V_TEMP).set(sensorValues.T3, 2));
     send(MyMessage(CHILD_ID::T3, V_TEMP).set(sensorValues.T4, 2));
     send(MyMessage(CHILD_ID::T4, V_TEMP).set(sensorValues.T5, 2));
+    send(MyMessage(CHILD_ID::Steinhart_SensorID, V_TEMP).set(sensorValues.T6, 2));
+
     _process();
 
     sensorValues.Steinhart = Steinhart();
-    msgTemp5.set(sensorValues.Steinhart, 2);
-    send(msgTemp5);
+    msgSteinhart.set(sensorValues.Steinhart, 2);
+    send(msgSteinhart);
     _process();
 
     DutyCycleLoop();
@@ -1015,7 +1056,7 @@ void emon()
   for (int i = 0; i < 1000; i++)
   {
     float current = calValues.emonCurrCal * (analogRead(emon_Input_PIN) - 512); // in amps I presume
-    sum += current * current;                                               // sum squares
+    sum += current * current;                                                   // sum squares
     wait(10);
   }
   sensorValues.MainsCurrent = sqrt(sum / 1000) - calValues.emonCurrOffset;
@@ -1034,7 +1075,7 @@ void getMainsCurrent()
   for (int i = 0; i < 1000; i++)
   {
     float current = calValues.emonCurrCal * (analogRead(emon_Input_PIN) - 512); // in amps I presume
-    sum += current * current;                                               // sum squares
+    sum += current * current;                                                   // sum squares
     wait(10);
   }
   sensorValues.MainsCurrent = sqrt(sum / 1000) - calValues.emonCurrOffset;
@@ -1668,8 +1709,8 @@ void DS18B20()
       else if (cfg == 0x40)
         raw = raw & ~1; // 11 bit res, 375 ms
     }
-    ds18b20Values[count].C = (float)raw / 16.0;
-    ds18b20Values[count].F = ds18b20Values[count].C * 1.8 + 32.0;
+    float C = (float)raw / 16.0;
+    ds18b20Values[count].F = C * 1.8 + 32.0;
     count = count + 1;
   }
   ds.reset_search();
@@ -2083,95 +2124,116 @@ char *getSensorString(int sensorID)
 
   switch (sensorID)
   {
-  case 1:
+  case CHILD_ID::T1:
     sprintf(tempString, "T1: %.2f", (double)sensorValues.T1);
     break;
-  case 2:
+  case CHILD_ID::T2:
     sprintf(tempString, "T2: %.2f", (double)sensorValues.T2);
     break;
-  case 3:
+  case CHILD_ID::T3:
     sprintf(tempString, "T3: %.2f", (double)sensorValues.T3);
     break;
-  case 4:
+  case CHILD_ID::T4:
     sprintf(tempString, "T4: %.2f", (double)sensorValues.T4);
     break;
-  case 5:
+  case CHILD_ID::T5:
     sprintf(tempString, "T5: %.2f", (double)sensorValues.T5);
     break;
-  case 6:
+  case CHILD_ID::Steinhart_SensorID:
     sprintf(tempString, "Steinhart: %.2f", (double)sensorValues.Steinhart);
     break;
-  case 7:
+  case CHILD_ID::Scale:
     sprintf(tempString, "Scale: %.2f", (double)sensorValues.Scale);
     break;
-  case 8:
+  case CHILD_ID::ScaleDeltaRate:
     sprintf(tempString, "ScaleRate: %.2f", (double)sensorValues.ScaleRate);
     break;
-  case 9:
-    sprintf(tempString, "Pressure1: %.2f", (double)sensorValues.Pressure1);
+  case CHILD_ID::P1:
+    sprintf(tempString, "P1: %.2f", (double)sensorValues.Pressure1);
     break;
-  case 10:
-    sprintf(tempString, "Pressure2: %.2f", (double)sensorValues.Pressure2);
+  case CHILD_ID::P2:
+    sprintf(tempString, "P2: %.2f", (double)sensorValues.Pressure2);
     break;
-  case 11:
-    sprintf(tempString, "Pressure3: %.2f", (double)sensorValues.Pressure3);
+  case CHILD_ID::P3:
+    sprintf(tempString, "P3: %.2f", (double)sensorValues.Pressure3);
     break;
-  case 12:
-    sprintf(tempString, "Pressure4: %.2f", (double)sensorValues.Pressure4);
+  case CHILD_ID::P4:
+    sprintf(tempString, "P4: %.2f", (double)sensorValues.Pressure4);
     break;
-  case 13:
+  case CHILD_ID::VccVoltage:
     sprintf(tempString, "VccVoltage: %.2f", (double)sensorValues.VccVoltage);
     break;
-  case 14:
+  case CHILD_ID::VccCurrent:
     sprintf(tempString, "VccCurrent: %.2f", (double)sensorValues.VccCurrent);
     break;
-  case 15:
+  case CHILD_ID::MainsCurrent:
     sprintf(tempString, "MainsCurrent: %.2f", (double)sensorValues.MainsCurrent);
     break;
-  case 16:
+  case CHILD_ID::SSRFail_Alarm:
     sprintf(tempString, "SSRFail_Alarm: %d", (int)sensorValues.SSRFail_Alarm);
     break;
-  case 17:
+  case CHILD_ID::relay1:
     sprintf(tempString, "relay1: %d", (int)sensorValues.relay1);
     break;
-  case 18:
+  case CHILD_ID::relay2:
     sprintf(tempString, "relay2: %d", (int)sensorValues.relay2);
     break;
-  case 19:
+  case CHILD_ID::relay3:
     sprintf(tempString, "relay3: %d", (int)sensorValues.relay3);
     break;
-  case 20:
+  case CHILD_ID::relay4:
     sprintf(tempString, "relay4: %d", (int)sensorValues.relay4);
     break;
-  case 21:
+  case CHILD_ID::relay5:
     sprintf(tempString, "relay5: %d", (int)sensorValues.relay5);
     break;
-  case 22:
+  case CHILD_ID::relay6:
     sprintf(tempString, "relay6: %d", (int)sensorValues.relay6);
     break;
-  case 23:
+  case CHILD_ID::relay7:
     sprintf(tempString, "relay7: %d", (int)sensorValues.relay7);
     break;
-  case 24:
+  case CHILD_ID::relay8:
     sprintf(tempString, "relay8: %d", (int)sensorValues.relay8);
     break;
-  case 25:
-    sprintf(tempString, "RefrigerantPumpHighPressureSwitch: %d", sensorValues.RefrigerantPumpHighPressureSwitch ? 1 : 0);
+  case CHILD_ID::RefrigerantPumpHighPressureSwitch:
+    sprintf(tempString, "RSw: %d", sensorValues.RefrigerantPumpHighPressureSwitch ? 1 : 0);
     break;
-  case 26:
-    sprintf(tempString, "FlowSwitch: %d", (int)sensorValues.FlowSwitch);
+  case CHILD_ID::FlowSwitch:
+    sprintf(tempString, "FlSw: %d", (int)sensorValues.FlowSwitch);
     break;
-  case 27:
+  case CHILD_ID::dC_1:
     sprintf(tempString, "dC1: %.2f", (double)sensorValues.dC1);
     break;
-  case 28:
+  case CHILD_ID::dC_2:
     sprintf(tempString, "dC2: %.2f", (double)sensorValues.dC2);
     break;
-  case 29:
+  case CHILD_ID::dC_3:
     sprintf(tempString, "dC3: %.2f", (double)sensorValues.dC3);
     break;
-  case 30:
+  case CHILD_ID::SSR_Armed:
     sprintf(tempString, "ssrArmed: %d", (int)sensorValues.ssrArmed);
+    break;
+  // case CHILD_ID::FreeMemory:
+  //   sprintf(tempString, "FreeMem: %d", freeMemory());
+  //   break;
+  case CHILD_ID::T6:
+    sprintf(tempString, "T6: %.2f", (double)ds18b20Values[0].F);
+    break;
+  case CHILD_ID::T7:
+    sprintf(tempString, "T7: %.2f", (double)ds18b20Values[1].F);
+    break;
+  case CHILD_ID::T8:
+    sprintf(tempString, "T8: %.2f", (double)ds18b20Values[2].F);
+    break;
+  case CHILD_ID::T9:
+    sprintf(tempString, "T9: %.2f", (double)ds18b20Values[3].F);
+    break;
+  case CHILD_ID::T10:
+    sprintf(tempString, "T10: %.2f", (double)ds18b20Values[4].F);
+    break;
+  default:
+    sprintf(tempString, "Unk");
     break;
   }
 
@@ -2183,101 +2245,103 @@ float getSensorFloat(int sensorID)
 
   switch (sensorID)
   {
-  case 1:
+  case CHILD_ID::T1:
     tempFloat = sensorValues.T1;
     break;
-  case 2:
+  case CHILD_ID::T2:
     tempFloat = sensorValues.T2;
     break;
-  case 3:
+  case CHILD_ID::T3:
     tempFloat = sensorValues.T3;
     break;
-  case 4:
+  case CHILD_ID::T4:
     tempFloat = sensorValues.T4;
     break;
-  case 5:
+  case CHILD_ID::T5:
     tempFloat = sensorValues.T5;
     break;
-  case 6:
+  case CHILD_ID::Steinhart_SensorID:
     tempFloat = sensorValues.Steinhart;
     break;
-  case 7:
+  case CHILD_ID::Scale:
     tempFloat = sensorValues.Scale;
     break;
-  case 8:
+  case CHILD_ID::ScaleDeltaRate:
     tempFloat = sensorValues.ScaleRate;
     break;
-  case 9:
+  case CHILD_ID::P1:
     tempFloat = sensorValues.Pressure1;
     break;
-  case 10:
+  case CHILD_ID::P2:
     tempFloat = sensorValues.Pressure2;
     break;
-  case 11:
+  case CHILD_ID::P3:
     tempFloat = sensorValues.Pressure3;
     break;
-  case 12:
+  case CHILD_ID::P4:
     tempFloat = sensorValues.Pressure4;
     break;
-  case 13:
+  case CHILD_ID::VccVoltage:
     tempFloat = sensorValues.VccVoltage;
     break;
-  case 14:
+  case CHILD_ID::VccCurrent:
     tempFloat = sensorValues.VccCurrent;
     break;
-  case 15:
+  case CHILD_ID::MainsCurrent:
     tempFloat = sensorValues.MainsCurrent;
     break;
-  case 16:
+  case CHILD_ID::SSRFail_Alarm:
     tempFloat = (float)sensorValues.SSRFail_Alarm;
     break;
-  case 17:
+  case CHILD_ID::relay1:
     tempFloat = (float)sensorValues.relay1;
     break;
-  case 18:
+  case CHILD_ID::relay2:
     tempFloat = (float)sensorValues.relay2;
     break;
-  case 19:
+  case CHILD_ID::relay3:
     tempFloat = (float)sensorValues.relay3;
     break;
-  case 20:
+  case CHILD_ID::relay4:
     tempFloat = (float)sensorValues.relay4;
     break;
-  case 21:
+  case CHILD_ID::relay5:
     tempFloat = (float)sensorValues.relay5;
     break;
-  case 22:
+  case CHILD_ID::relay6:
     tempFloat = (float)sensorValues.relay6;
     break;
-  case 23:
+  case CHILD_ID::relay7:
     tempFloat = (float)sensorValues.relay7;
     break;
-  case 24:
+  case CHILD_ID::relay8:
     tempFloat = (float)sensorValues.relay8;
     break;
-  case 25:
+  case CHILD_ID::RefrigerantPumpHighPressureSwitch:
     tempFloat = (float)(sensorValues.RefrigerantPumpHighPressureSwitch ? 1 : 0);
     break;
-  case 26:
+  case CHILD_ID::FlowSwitch:
     tempFloat = (float)sensorValues.FlowSwitch;
     break;
-  case 27:
+  case CHILD_ID::dC_1:
     tempFloat = sensorValues.dC1;
     break;
-  case 28:
+  case CHILD_ID::dC_2:
     tempFloat = sensorValues.dC2;
     break;
-  case 29:
+  case CHILD_ID::dC_3:
     tempFloat = sensorValues.dC3;
     break;
-  case 30:
+  case CHILD_ID::SSR_Armed:
     tempFloat = (float)sensorValues.ssrArmed;
+    break;
+  default:
+    tempFloat = -999.010101;
     break;
   }
 
   return tempFloat;
 }
-
 bool checkEEPROMCRC()
 {
   CRC32 crc;
@@ -2289,7 +2353,6 @@ bool checkEEPROMCRC()
   EEPROM.get(EEPROM_SIZE - 4, storedCRC);
   return storedCRC == crc.finalize();
 }
-
 void updateEEPROMCRC()
 {
   CRC32 crc;
