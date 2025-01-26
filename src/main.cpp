@@ -1847,7 +1847,7 @@ void receive(const MyMessage &message)
     Serial.print("/");
     Serial.println(message.sensor);
     Serial.print(" = ");
-    Serial.println(message.fValue,2);
+    Serial.println(message.data);
   }
 
   switch (message.sensor)
