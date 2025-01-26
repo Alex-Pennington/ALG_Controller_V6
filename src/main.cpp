@@ -551,7 +551,12 @@ enum EEPROMAddresses {
   PRESSURE3_OFFSET = 126,      // int, 4 bytes
   PRESSURE4_OFFSET = 130,      // int, 4 bytes
   VCC_CURRENT_OFFSET = 134,    // int, 4 bytes
-  VCC_CURRENT_MULTIPLIER = 138 // float, 4 bytes
+  VCC_CURRENT_MULTIPLIER = 138, // float, 4 bytes
+  OLED_line1_SENSORID_ADDR = 142, // int, 2 bytes
+  OLED_line2_SENSORID_ADDR = 144, // int, 2 bytes
+  PID1_SENSORID_ADDR = 146, // int, 2 bytes
+  PID2_SENSORID_ADDR = 148, // int, 2 bytes
+  PID3_SENSORID_ADDR = 150  // int, 2 bytes
   
 };
 
@@ -1188,6 +1193,11 @@ void getEEPROM() {
   EEPROM.get(EEPROMAddresses::PID3_ALARM_THRESHOLD, pid3.alarmThreshold);
   EEPROM.get(EEPROMAddresses::PRESSURE2_OFFSET, calValues.pressure2Offset);
   EEPROM.get(EEPROMAddresses::PRESSURE2_CAL, calValues.pressure2Cal);
+  EEPROM.get(EEPROMAddresses::OLED_line1_SENSORID_ADDR, OLED_line1_SENSORID);
+  EEPROM.get(EEPROMAddresses::OLED_line2_SENSORID_ADDR, OLED_line2_SENSORID);
+  EEPROM.get(EEPROMAddresses::PID1_SENSORID_ADDR, PID1_SENSORID);
+  EEPROM.get(EEPROMAddresses::PID2_SENSORID_ADDR, PID2_SENSORID);
+  EEPROM.get(EEPROMAddresses::PID3_SENSORID_ADDR, PID3_SENSORID);
   printConfig();
 }
 void FactoryResetEEPROM() {
@@ -1748,18 +1758,23 @@ void receive(const MyMessage & message)  {
       break;
     case CHILD_ID::OLED_line1:
       OLED_line1_SENSORID = message.getInt();
+      EEPROM.put(EEPROMAddresses::OLED_line1_SENSORID_ADDR, OLED_line1_SENSORID);
       break;
     case CHILD_ID::OLED_line2:
       OLED_line2_SENSORID = message.getInt();
+      EEPROM.put(EEPROMAddresses::OLED_line2_SENSORID_ADDR, OLED_line2_SENSORID);
       break;
     case CHILD_ID::PID1_SENSORID:
       PID1_SENSORID = message.getInt();
+      EEPROM.put(EEPROMAddresses::PID1_SENSORID_ADDR, PID1_SENSORID);
       break;
     case CHILD_ID::PID2_SENSORID:
       PID2_SENSORID = message.getInt();
+      EEPROM.put(EEPROMAddresses::PID2_SENSORID_ADDR, PID2_SENSORID);
       break;
     case CHILD_ID::PID3_SENSORID:
       PID3_SENSORID = message.getInt();
+      EEPROM.put(EEPROMAddresses::PID3_SENSORID_ADDR, PID3_SENSORID);
       break;
   }
 
