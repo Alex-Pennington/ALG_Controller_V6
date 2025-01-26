@@ -2519,14 +2519,17 @@ float getSensorFloat(int sensorID)
 
   return tempFloat;
 }
-bool checkEEPROMCRC()
-{
+uint32_t getEEPROMCRC() {
   CRC32 crc;
   for (int i = 0; i < EEPROM_SIZE - 4; i++)
   {
     crc.update(EEPROM.read(i));
   }
-  uint32_t newCRC = crc.finalize();
+  return crc.finalize();
+}
+bool checkEEPROMCRC()
+{
+  uint32_t newCRC = getEEPROMCRC();
   uint32_t storedCRC;
   EEPROM.get(EEPROM_SIZE - 4, storedCRC);
   Serial.print("Check: ");
@@ -2538,12 +2541,7 @@ bool checkEEPROMCRC()
 }
 void updateEEPROMCRC()
 {
-  CRC32 crc;
-  for (int i = 0; i < EEPROM_SIZE - 4; i++)
-  {
-    crc.update(EEPROM.read(i));
-  }
-  uint32_t newCRC = crc.finalize();
+  uint32_t newCRC = getEEPROMCRC();
   Serial.print("Update: ");
   Serial.print("New CRC: ");
   Serial.print(newCRC);
