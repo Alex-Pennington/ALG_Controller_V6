@@ -1159,8 +1159,7 @@ void getMainsCurrent()
   for (int i = 0; i < 1000; i++)
   {
     float current = calValues.emonCurrCal * (analogRead(emon_Input_PIN) - 512); // in amps I presume
-    sum += current * current;                                                   // sum squares
-    displayKnightRider();
+    sum += current * current;        
   }
   sensorValues.MainsCurrent = sqrt(sum / 1000) - calValues.emonCurrOffset;
   return;
