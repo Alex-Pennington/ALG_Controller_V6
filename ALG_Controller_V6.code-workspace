@@ -2,6 +2,10 @@
 	"folders": [
 		{
 			"path": "."
+		},
+		{
+			"name": "ALG_AQ_SENSOR",
+			"path": "../ALG_AQ_SENSOR"
 		}
 	],
 	"settings": {
