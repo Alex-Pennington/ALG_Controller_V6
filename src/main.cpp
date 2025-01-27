@@ -2265,34 +2265,22 @@ void setScaleCalibration(float knownWeight)
 float voltageDivider(int pin, float dividerResistor)
 {
   float ADCvalue = 0;
-  float unknownResistance = 0.0;
   for (int n = 0; n < 10; n++)
   {
-    displayKnightRider();
     ADCvalue += analogRead(pin);
   }
   ADCvalue /= 10;
-  float Vin = (sensorValues.VccVoltage / 1000.0);
-  if (ADCvalue)
-  {
-    float Vadc = ADCvalue * (Vin / 1023.0);
-    // Serial.print("Voltage Pin ");
-    // Serial.print(pin);
-    // Serial.print(" : ");
-    // Serial.print(Vadc,2);
-    // Serial.print(" : ");
-    // Serial.print(Vin,2);
-    if ((Vadc / Vin) > 0.5)
-    {
-      unknownResistance = (Vadc / Vin) * dividerResistor;
-    }
-    else
-    {
-      unknownResistance = (Vin / Vadc) * dividerResistor;
-    }
-    // Serial.print(" : ");
-    // Serial.println(unknownResistance,2);
-  }
+  float Vin = (float)getBandgap() / 1000.0;
+  float Vadc = ADCvalue * (Vin / 1023.0);
+  float unknownResistance = (Vadc * dividerResistor ) / ( Vin - Vadc);
+  // Serial.print("Voltage Pin ");
+  // Serial.print(pin);
+  // Serial.print(" : ");
+  // Serial.print(Vadc, 2);
+  // Serial.print(" : ");
+  // Serial.print(Vin, 2);
+  // Serial.print(" : ");
+  // Serial.println(unknownResistance, 2);
   return unknownResistance;
 }
 char *getSensorString(int sensorID)
