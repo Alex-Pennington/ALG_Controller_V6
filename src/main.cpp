@@ -1084,7 +1084,6 @@ void getVccCurrent()
   for (int i = 0; i < 10; i++)
   {
     adcFilter.Filter(analogRead(VccCurrentSensor));
-    wait(5); // Small delay for better averaging
     displayKnightRider();
   }
   sensorValues.VccCurrent = adcFilter.Current();
@@ -1143,7 +1142,6 @@ void emon()
   {
     float current = calValues.emonCurrCal * (analogRead(emon_Input_PIN) - 512); // in amps I presume
     sum += current * current;                                                   // sum squares
-    wait(10);
   }
   sensorValues.MainsCurrent = sqrt(sum / 1000) - calValues.emonCurrOffset;
   if ((int(sensorValues.MainsCurrent) > int(calValues.ssrFailThreshold)))
@@ -1162,7 +1160,6 @@ void getMainsCurrent()
   {
     float current = calValues.emonCurrCal * (analogRead(emon_Input_PIN) - 512); // in amps I presume
     sum += current * current;                                                   // sum squares
-    wait(5);
     displayKnightRider();
   }
   sensorValues.MainsCurrent = sqrt(sum / 1000) - calValues.emonCurrOffset;
@@ -1210,7 +1207,6 @@ float readPressure(int pin, int offset, float cal, float lastValue)
   int i = 0;
   for (i = 0; i < 10; i++)
   {
-    wait(5);
     displayKnightRider();
     adcFilter.Filter(analogRead(Pressure1PIN));
   }
@@ -1231,7 +1227,6 @@ float Steinhart()
   double adcValue = 0;
   for (int i = 0; i < 10; i++)
   {
-    wait(5); // this increased resolution signifigantly
     displayKnightRider();
     adcValue += analogRead(SteinhartPin);
   }
@@ -1566,7 +1561,7 @@ void initDefaultValues()
 
   // Reset other configurations
   sensorValues.ssrArmed = false;
-  configValues.sensorLoopTime = 23000;
+  configValues.sensorLoopTime = 10000;
   configValues.sDebug = false;
   configValues.toACK = false;
   configValues.pidLoopTime = 1000;
@@ -2273,7 +2268,6 @@ float voltageDivider(int pin, float dividerResistor)
   float unknownResistance = 0.0;
   for (int n = 0; n < 10; n++)
   {
-    wait(5);
     displayKnightRider();
     ADCvalue += analogRead(pin);
   }
@@ -2899,9 +2893,9 @@ float getThermistor(const int pinVar)
 {
   float thermistorResistance = voltageDivider(pinVar, 981.0);
   // https://www.thinksrs.com/downloads/programs/therm%20calc/ntccalibrator/ntccalculator.html
-  const float A = 1.763991699e-3;
-  const float B = 5.166809723e-4;
-  const float C = -52.81082951e-7;
+  const float A = 4.674410409e-3;
+  const float B = -1.047232549e-4;
+  const float C = -11.57957210e-7;
 
   float logR = log(thermistorResistance);
   float Kelvin = 1.0 / (A + B * logR + C * logR * logR * logR);
@@ -2924,7 +2918,7 @@ float getThermistor(const int pinVar)
  */
 void displayKnightRider()
 {
-  if ((millis() - KnightRider_timer) < (unsigned long)75)
+  if ((millis() - KnightRider_timer) < (unsigned long)50)
   {
     return;
   }
