@@ -519,7 +519,6 @@ void printConfig();
 long getBandgap(void);
 void sendInfo(String);
 void DS18B20();
-// float getThermistor(int);
 float readPressure(int pin, int offset, float cal, float lastValue);
 void displayLine(const char *line, int row);
 int freeMemory();
@@ -845,21 +844,14 @@ void setup()
   display.display();
   sendInfo("Operational");
   play_one_up();
-  wait(1000);
 }
 
 void loop()
 {
   DutyCycleLoop();
+  displayKnightRider();
   _process();
   switchesLoop();
-
-  if ((millis() - KnightRider_timer) > (unsigned long)1000)
-  {
-    displayKnightRider();
-    KnightRider_timer = millis();
-  }
-
   if ((millis() - scaleLoop_timer) > (unsigned long)configValues.scaleLoopTime)
   {
     getScale();
@@ -893,13 +885,16 @@ void loop()
     msgVccVoltage.set(sensorValues.VccVoltage, 2);
     send(msgVccVoltage);
     _process();
+    displayKnightRider();
 
     getMainsCurrent();
     msgMainsCurrent.set(sensorValues.MainsCurrent, 2);
     send(msgMainsCurrent);
     _process();
+    displayKnightRider();
 
     DS18B20();
+    displayKnightRider();
     sensorValues.T0 = ds18b20Values[0].F;
     sensorValues.T1 = ds18b20Values[1].F;
     sensorValues.T2 = ds18b20Values[2].F;
@@ -910,6 +905,7 @@ void loop()
     sensorValues.T7 = ds18b20Values[7].F;
     sensorValues.T8 = ds18b20Values[8].F;
     sensorValues.T9 = ds18b20Values[9].F;
+    displayKnightRider();
 
     send(MyMessage(CHILD_ID::T0, V_TEMP).set(sensorValues.T0, 2));
     _process();
@@ -931,38 +927,45 @@ void loop()
     _process();
     send(MyMessage(CHILD_ID::T9, V_TEMP).set(sensorValues.T9, 2));
     _process();
+    displayKnightRider();
     sensorValues.Steinhart = Steinhart();
     send(msgSteinhart.set(sensorValues.Steinhart, 2));
-    _process();
+    displayKnightRider();
     sensorValues.THMS1 = getThermistor(Thermistor1_PIN);
     send(msgTHMS1.set(sensorValues.THMS1, 2));
     _process();
+    displayKnightRider();
     sensorValues.THMS2 = getThermistor(Thermistor2_PIN);
     send(msgTHMS2.set(sensorValues.THMS2, 2));
     _process();
+    displayKnightRider();
 
     DutyCycleLoop();
-
     sensorValues.Pressure1 = readPressure(Pressure1PIN, calValues.pressure1Offset, calValues.pressure1Cal, sensorValues.Pressure1);
     msgPressure1.set(sensorValues.Pressure1, 2);
     send(msgPressure1);
     wait(SENDDELAY);
     _process();
+    displayKnightRider();
     sensorValues.Pressure2 = readPressure(Pressure2PIN, calValues.pressure2Offset, calValues.pressure2Cal, sensorValues.Pressure2);
     msgPressure2.set(sensorValues.Pressure2, 2);
     send(msgPressure2);
     wait(SENDDELAY);
     _process();
+    displayKnightRider();
     sensorValues.Pressure3 = readPressure(Pressure3PIN, calValues.pressure3Offset, calValues.pressure3Cal, sensorValues.Pressure3);
     msgPressure3.set(sensorValues.Pressure3, 2);
     send(msgPressure3);
     wait(SENDDELAY);
-    _process();
+    displayKnightRider();
+    display.display();
     sensorValues.Pressure4 = readPressure(Pressure4PIN, calValues.pressure4Offset, calValues.pressure4Cal, sensorValues.Pressure4);
     msgPressure4.set(sensorValues.Pressure4, 2);
     send(msgPressure4);
     wait(SENDDELAY);
     _process();
+    displayKnightRider();
+    display.display();
 
     msgRunTime.set((float)(millis() / 1000.0 / 60.0 / 60.0), 2);
     send(msgRunTime);
@@ -998,8 +1001,8 @@ void loop()
     displayKnightRider();
     display.display();
     SensorLoop_timer = millis();
-    Serial.print(millis() - sensorLoopTime);
-    Serial.println(" ms");
+    Serial.print((float)(millis() - sensorLoopTime) / 1000.0, 2);
+    Serial.println(" Seconds");
   }
 
   if (((millis() - pid_compute_loop_time) > (unsigned long)configValues.pidLoopTime) & firstrunSensorLoop)
@@ -1081,7 +1084,7 @@ void getVccCurrent()
   for (int i = 0; i < 10; i++)
   {
     adcFilter.Filter(analogRead(VccCurrentSensor));
-    wait(10); // Small delay for better averaging
+    displayKnightRider();
   }
   sensorValues.VccCurrent = adcFilter.Current();
   sensorValues.VccCurrent = -1.0 * (sensorValues.VccCurrent - (float)calValues.VccCurrentOffset) * calValues.VccCurrentMultiplier; //
@@ -1139,7 +1142,6 @@ void emon()
   {
     float current = calValues.emonCurrCal * (analogRead(emon_Input_PIN) - 512); // in amps I presume
     sum += current * current;                                                   // sum squares
-    wait(10);
   }
   sensorValues.MainsCurrent = sqrt(sum / 1000) - calValues.emonCurrOffset;
   if ((int(sensorValues.MainsCurrent) > int(calValues.ssrFailThreshold)))
@@ -1158,7 +1160,7 @@ void getMainsCurrent()
   {
     float current = calValues.emonCurrCal * (analogRead(emon_Input_PIN) - 512); // in amps I presume
     sum += current * current;                                                   // sum squares
-    wait(10);
+    displayKnightRider();
   }
   sensorValues.MainsCurrent = sqrt(sum / 1000) - calValues.emonCurrOffset;
   return;
@@ -1178,7 +1180,7 @@ void getScale()
   if (LoadCell.is_ready())
   {
     float tempOffset = (72 - sensorValues.T2) * calValues.scaleTempCalibrationMultiplier; // 72 is calibration temp in degrees Farhenheit
-    scaleWeightFiltered.Filter((LoadCell.get_units(10)) + tempOffset);
+    scaleWeightFiltered.Filter((LoadCell.get_units(1)) + tempOffset);
   }
   else
   {
@@ -1205,7 +1207,7 @@ float readPressure(int pin, int offset, float cal, float lastValue)
   int i = 0;
   for (i = 0; i < 10; i++)
   {
-    wait(10);
+    displayKnightRider();
     adcFilter.Filter(analogRead(Pressure1PIN));
   }
   float offsetCorrected = adcFilter.Current() - (float)offset;
@@ -1225,7 +1227,7 @@ float Steinhart()
   double adcValue = 0;
   for (int i = 0; i < 10; i++)
   {
-    wait(10); // this increased resolution signifigantly
+    displayKnightRider();
     adcValue += analogRead(SteinhartPin);
   }
   steinhartValues.adcValue = (float)adcValue / 10.0;
@@ -1559,7 +1561,7 @@ void initDefaultValues()
 
   // Reset other configurations
   sensorValues.ssrArmed = false;
-  configValues.sensorLoopTime = 23000;
+  configValues.sensorLoopTime = 10000;
   configValues.sDebug = false;
   configValues.toACK = false;
   configValues.pidLoopTime = 1000;
@@ -1737,7 +1739,7 @@ long getBandgap(void)
   ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
 #endif
 
-  wait(10);            // Wait for Vref to settle
+  wait(5);            // Wait for Vref to settle
   ADCSRA |= _BV(ADSC); // Start conversion
   while (bit_is_set(ADCSRA, ADSC))
     ; // measuring
@@ -1788,7 +1790,8 @@ void DS18B20()
     ds.reset();
     ds.select(addr);
     ds.write(0x44, 0);
-    wait(10);
+    wait(5);
+    displayKnightRider();
     ds.reset();
     ds.select(addr);
     ds.write(0xBE);
@@ -1864,7 +1867,7 @@ void receive(const MyMessage &message)
     Serial.print(" : Set sensor ");
     Serial.print(message.sender);
     Serial.print("/");
-    Serial.println(message.sensor);
+    Serial.print(message.sensor);
     Serial.print(" = ");
     Serial.println(message.data);
   }
@@ -2265,7 +2268,7 @@ float voltageDivider(int pin, float dividerResistor)
   float unknownResistance = 0.0;
   for (int n = 0; n < 10; n++)
   {
-    wait(10);
+    displayKnightRider();
     ADCvalue += analogRead(pin);
   }
   ADCvalue /= 10;
@@ -2394,15 +2397,15 @@ char *getSensorString(int sensorID)
     sprintf(tempString, "FlSw: %d", (int)sensorValues.FlowSwitch);
     break;
   case CHILD_ID::dC_1:
-    dtostrf(sensorValues.dC1, 4, 2, vBuffer);
+    dtostrf(sensorValues.dC1*100.0, 4, 2, vBuffer);
     sprintf(tempString, "dC1: %s", vBuffer);
     break;
   case CHILD_ID::dC_2:
-    dtostrf(sensorValues.dC2, 4, 2, vBuffer);
+    dtostrf(sensorValues.dC2*100.0, 4, 2, vBuffer);
     sprintf(tempString, "dC2: %s", vBuffer);
     break;
   case CHILD_ID::dC_3:
-    dtostrf(sensorValues.dC3, 4, 2, vBuffer);
+    dtostrf(sensorValues.dC3*100.0, 4, 2, vBuffer);
     sprintf(tempString, "dC3: %s", vBuffer);
     break;
   // case CHILD_ID::SSR_Armed:
@@ -2890,9 +2893,9 @@ float getThermistor(const int pinVar)
 {
   float thermistorResistance = voltageDivider(pinVar, 981.0);
   // https://www.thinksrs.com/downloads/programs/therm%20calc/ntccalibrator/ntccalculator.html
-  const float A = 1.680995265e-3;
-  const float B = 2.392149905e-4;
-  const float C = 1.594237047e-7;
+  const float A = 4.674410409e-3;
+  const float B = -1.047232549e-4;
+  const float C = -11.57957210e-7;
 
   float logR = log(thermistorResistance);
   float Kelvin = 1.0 / (A + B * logR + C * logR * logR * logR);
@@ -2915,21 +2918,30 @@ float getThermistor(const int pinVar)
  */
 void displayKnightRider()
 {
-  static int position = 0;  // Current position of the line
-  static int direction = 1; // Direction of movement (1 for right, -1 for left)
-
-  // Clear the previous line
-  display.drawLine(0, SCREEN_HEIGHT - 4, SCREEN_WIDTH, SCREEN_HEIGHT - 4, SSD1306_BLACK);
-
-  // Draw the new line at the current position
-  display.drawLine(position, SCREEN_HEIGHT - 4, position + 4, SCREEN_HEIGHT - 4, SSD1306_WHITE);
-
-  // Update the position for the next frame
-  position += direction;
-
-  // Change direction if the line reaches the edge of the screen
-  if (position <= 0 || position >= SCREEN_WIDTH - 4)
+  if ((millis() - KnightRider_timer) < (unsigned long)50)
   {
-    direction = -direction;
+    return;
+  }
+  else
+  {
+    static int position = 0;  // Current position of the line
+    static int direction = 1; // Direction of movement (1 for right, -1 for left)
+
+    // Clear the previous line
+    display.drawLine(0, SCREEN_HEIGHT - 4, SCREEN_WIDTH, SCREEN_HEIGHT - 4, SSD1306_BLACK);
+
+    // Draw the new line at the current position
+    display.drawLine(position, SCREEN_HEIGHT - 4, position + 4, SCREEN_HEIGHT - 4, SSD1306_WHITE);
+
+    // Update the position for the next frame
+    position += direction;
+
+    // Change direction if the line reaches the edge of the screen
+    if (position <= 0 || position >= SCREEN_WIDTH - 4)
+    {
+      direction = -direction;
+    }
+    display.display();
+    KnightRider_timer = millis();
   }
 }
