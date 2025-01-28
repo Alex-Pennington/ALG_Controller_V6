@@ -2880,9 +2880,10 @@ float getThermistor(const int pinVar)
 {
   float thermistorResistance = voltageDivider(pinVar, 981.0);
   // https://www.thinksrs.com/downloads/programs/therm%20calc/ntccalibrator/ntccalculator.html
-  const float A = 4.674410409e-3;
-  const float B = -1.047232549e-4;
-  const float C = -11.57957210e-7;
+  const float A = 1.137367958e-3;
+  const float B = 3.687042901e-4;
+  const float C = -7.696446692e-7;
+  // bCoeff = 3761.80
 
   float logR = log(thermistorResistance);
   float Kelvin = 1.0 / (A + B * logR + C * logR * logR * logR);
