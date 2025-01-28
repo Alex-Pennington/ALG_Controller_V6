@@ -6,6 +6,10 @@
 		{
 			"name": "ALG_AQ_SENSOR",
 			"path": "../ALG_AQ_SENSOR"
+		},
+		{
+			"name": "ALG_RELAY4",
+			"path": "../ALG_RELAY4"
 		}
 	],
 	"settings": {
