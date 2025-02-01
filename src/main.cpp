@@ -1207,7 +1207,7 @@ float readPressure(int pin, int offset, float cal, float lastValue)
   for (i = 0; i < 10; i++)
   {
     displayKnightRider();
-    adcFilter.Filter(analogRead(Pressure1PIN));
+    adcFilter.Filter(analogRead(pin));
   }
   float offsetCorrected = adcFilter.Current() - (float)offset;
   return offsetCorrected * (1.0 / cal);
