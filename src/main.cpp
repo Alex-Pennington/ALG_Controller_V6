@@ -1186,7 +1186,7 @@ void getScale()
   if (LoadCell.is_ready())
   {
     float tempOffset = (72 - sensorValues.T2) * calValues.scaleTempCalibrationMultiplier; // 72 is calibration temp in degrees Farhenheit
-    scaleWeightFiltered.Filter((LoadCell.get_units(3)) + tempOffset);
+    scaleWeightFiltered.Filter((LoadCell.get_units(10)) + tempOffset);
   }
   else
   {
