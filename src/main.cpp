@@ -2383,10 +2383,10 @@ char *getSensorString(int sensorID)
     sprintf(tempString, "r8: %d", (int)sensorValues.relay8);
     break;
   case CHILD_ID::RefrigerantPumpHighPressureSwitch:
-    sprintf(tempString, "RSw: %d", sensorValues.RefrigerantPumpHighPressureSwitch);
+    sprintf(tempString, "RSw: %d", sensorValues.refrigerantPumpHighPressureSwitch);
     break;
   case CHILD_ID::FlowSwitch:
-    sprintf(tempString, "FlSw: %d", (int)sensorValues.FlowSwitch);
+    sprintf(tempString, "FlSw: %d", (int)sensorValues.flowSwitch);
     break;
   case CHILD_ID::dC_1:
     dtostrf(sensorValues.dC1*100.0, 4, 2, vBuffer);
@@ -2535,10 +2535,10 @@ float getSensorFloat(int sensorID)
     tempFloat = (float)sensorValues.relay8;
     break;
   case CHILD_ID::RefrigerantPumpHighPressureSwitch:
-    tempFloat = (float)(sensorValues.RefrigerantPumpHighPressureSwitch ? 1 : 0);
+    tempFloat = (float)(sensorValues.refrigerantPumpHighPressureSwitch ? 1 : 0);
     break;
   case CHILD_ID::FlowSwitch:
-    tempFloat = (float)sensorValues.FlowSwitch;
+    tempFloat = (float)sensorValues.flowSwitch;
     break;
   case CHILD_ID::dC_1:
     tempFloat = sensorValues.dC1;
