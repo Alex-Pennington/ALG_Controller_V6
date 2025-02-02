@@ -409,8 +409,8 @@ struct SensorValues
   bool relay6 = false;
   bool relay7 = false;
   bool relay8 = false;
-  bool RefrigerantPumpHighPressureSwitch = false;
-  bool FlowSwitch = false;
+  bool refrigerantPumpHighPressureSwitch = false;
+  bool flowSwitch = false;
   float dC1 = 0.0;
   float dC2 = 0.0;
   float dC3 = 0.0;
@@ -1070,10 +1070,10 @@ void getSwitches()
     }
   }
 
-  int btnState_switchFlow = switches[10].getState();
+  sensorValues.flowSwitch = switches[10].getState();
   int btnState_switchRefrigerant = switches[11].getState();
 
-  send(msgFlowSwitch.set(btnState_switchFlow == 1), configValues.toACK);
+  send(msgFlowSwitch.set(sensorValues.flowSwitch == 1), configValues.toACK);
   send(msgRefrigerantSwitch.set(btnState_switchRefrigerant == 1), configValues.toACK);
 
   return;
@@ -1111,6 +1111,13 @@ void TempAlarm()
   {
     sendInfo("PID3!");
     // Serial.println("PID3!");
+    red_alert();
+    AllStop();
+  }
+  if ((pid1.mode == true) && (sensorValues.flowSwitch == false))
+  {
+    sendInfo("FSw!");
+    // Serial.println("PID1 Flow Fail");
     red_alert();
     AllStop();
   }
@@ -1361,12 +1368,10 @@ void AllStop()
   myPID1.SetMode(MANUAL);
   myPID2.SetMode(MANUAL);
   myPID3.SetMode(MANUAL);
-  msgPIDMODE_1.set(pid1.mode);
-  send(msgPIDMODE_1);
-  msgPIDMODE_2.set(pid2.mode);
-  send(msgPIDMODE_2);
-  msgPIDMODE_3.set(pid3.mode);
-  send(msgPIDMODE_3);
+  msgPIDMODE_1.set(pid1.mode); send(msgPIDMODE_1); wait(SENDDELAY);
+  msgPIDMODE_2.set(pid2.mode); send(msgPIDMODE_2); wait(SENDDELAY);
+  msgPIDMODE_3.set(pid3.mode); send(msgPIDMODE_3); wait(SENDDELAY);
+  msgSSRFailAlarm.set(1); send(msgSSRFailAlarm); wait(SENDDELAY);
 }
 void StoreEEPROM()
 {
