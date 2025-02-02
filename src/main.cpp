@@ -460,8 +460,8 @@ ExponentialFilter<float> scaleWeightFiltered(10, 0);
 #define Switch4_DOWN_Pin 36
 #define Switch5_UP_Pin 35
 #define Switch5_DOWN_Pin 34
-#define FlowSwitchPin 33
-#define RefrigerantSwitchPin 32
+#define FlowSwitch_Pin 33
+#define RefrigerantSwitch_Pin 32
 #define Thermistor1_PIN A1
 #define Thermistor2_PIN A2
 
@@ -489,8 +489,8 @@ ezButton switches[NUM_SWITCHES] = {
     ezButton(Switch4_DOWN_Pin, INTERNAL_PULLUP),
     ezButton(Switch5_UP_Pin, INTERNAL_PULLUP),
     ezButton(Switch5_DOWN_Pin, INTERNAL_PULLUP),
-    ezButton(FlowSwitchPin, INTERNAL_PULLUP),
-    ezButton(RefrigerantSwitchPin, INTERNAL_PULLUP)};
+    ezButton(FlowSwitch_Pin, INTERNAL_PULLUP),
+    ezButton(RefrigerantSwitch_Pin, INTERNAL_PULLUP)};
 
 // Scale
 HX711 LoadCell;
